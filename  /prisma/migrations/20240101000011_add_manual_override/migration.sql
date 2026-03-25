@@ -1,0 +1,1 @@
+ALTER TABLE "Guest" ADD COLUMN "isManualOverride" BOOLEAN NOT NULL DEFAULT false;

@@ -1,0 +1,432 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- USERS ---
+
+enum UserRole {
+  ADMIN
+  VIEWER
+  RSVP_MANAGER
+}
+
+model User {
+  id                       String         @id @default(cuid())
+  email                    String         @unique
+  name                     String?
+  role                     UserRole       @default(ADMIN)
+  twoFactorEnabled         Boolean        @default(false)
+  twoFactorSecret          String?
+  lockedUntil              DateTime?
+  sessionVersion           Int            @default(0)
+  emailVerified            DateTime?
+  verificationToken        String?
+  verificationTokenExpires DateTime?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
+  backupCodes              BackupCode[]
+  assignedTasks            Task[]
+  sessions                 Session[]
+  accounts                 Account[]
+  trustedDevices           TrustedDevice[]
+}
+
+model BackupCode {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model TrustedDevice {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Device identification
+  deviceName  String   // e.g., "MacBook Pro", "iPhone"
+  deviceType  String   // "desktop", "tablet", "mobile"
+  browser     String   // e.g., "Chrome 120"
+  os          String   // e.g., "macOS"
+
+  // Authentication
+  tokenHash   String   @unique  // Hashed trust token
+  expiresAt   DateTime
+
+  // Audit
+  createdAt   DateTime @default(now())
+  lastUsedAt  DateTime @default(now())
+  ipAddress   String?
+  userAgent   String?
+
+  @@index([userId])
+}
+
+// --- WEDDING DETAILS ---
+
+model WeddingConfig {
+  id                     Int       @id @default(1)
+  coupleName             String    @default("Our Wedding")
+  weddingDate            DateTime?
+  venueName              String?
+  venueAddress           String?
+  reminderEmail          String?
+  sessionTimeoutMinutes  Int       @default(60)
+  warningMinutes         Int       @default(5)
+  updatedAt              DateTime  @updatedAt
+}
+
+// --- GUESTS ---
+
+model Guest {
+  id              String     @id @default(cuid())
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  groupName       String?
+  isChild         Boolean    @default(false)
+  rsvpToken       String     @unique @default(cuid())
+  rsvpStatus      RsvpStatus @default(PENDING)
+  rsvpRespondedAt DateTime?
+
+  invitedToCeremony        Boolean  @default(true)
+  invitedToReception       Boolean  @default(true)
+  invitedToAfterparty      Boolean  @default(false)
+  attendingCeremony        Boolean?
+  attendingReception       Boolean?
+  attendingAfterparty      Boolean?
+  attendingCeremonyMaybe   Boolean  @default(false)
+  attendingReceptionMaybe  Boolean  @default(false)
+  attendingAfterpartyMaybe Boolean  @default(false)
+
+  mealChoice   String?
+  dietaryNotes String?
+
+  tableId    String?
+  table      Table?  @relation(fields: [tableId], references: [id])
+  seatNumber Int?
+
+  isManualOverride Boolean @default(false)
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tableId])
+  @@index([email])
+  @@index([groupName])
+}
+
+enum RsvpStatus {
+  PENDING
+  ACCEPTED
+  PARTIAL
+  DECLINED
+  MAYBE
+}
+
+model MealOption {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  course      String?
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+}
+
+// --- SEATING ---
+
+model Room {
+  id           String        @id @default(cuid())
+  name         String        @default("Main Reception")
+  widthMetres  Float         @default(20)
+  heightMetres Float         @default(15)
+  tables       Table[]
+  elements     RoomElement[]
+  createdAt    DateTime      @default(now())
+}
+
+model Table {
+  id          String      @id @default(cuid())
+  roomId      String
+  room        Room        @relation(fields: [roomId], references: [id])
+  name        String
+  shape       TableShape  @default(ROUND)
+  capacity    Int         @default(8)
+  positionX   Float       @default(0)
+  positionY   Float       @default(0)
+  rotation    Float       @default(0)
+  width       Float       @default(60)
+  height      Float       @default(60)
+  locked      Boolean     @default(false)
+  colour      String      @default("#e2e8f0")
+  orientation Orientation  @default(VERTICAL)
+  guests      Guest[]
+  notes       String?
+  createdAt   DateTime    @default(now())
+}
+
+enum TableShape {
+  ROUND
+  RECTANGULAR
+  OVAL
+}
+
+enum Orientation {
+  HORIZONTAL
+  VERTICAL
+}
+
+model RoomElement {
+  id        String  @id @default(cuid())
+  roomId    String
+  room      Room    @relation(fields: [roomId], references: [id])
+  type      String
+  label     String?
+  positionX Float
+  positionY Float
+  width     Float   @default(10)
+  height    Float   @default(10)
+  rotation  Float   @default(0)
+  color     String  @default("#e2e8f0")
+  locked    Boolean @default(false)
+}
+
+// --- SUPPLIER CATEGORIES ---
+
+model SupplierCategory {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  colour    String     @default("#6366f1")
+  sortOrder Int        @default(0)
+  isActive  Boolean    @default(true)
+  suppliers Supplier[]
+  createdAt DateTime   @default(now())
+}
+
+// --- SUPPLIERS ---
+
+model Supplier {
+  id               String            @id @default(cuid())
+  categoryId       String?
+  category         SupplierCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  name             String
+  contactName      String?
+  email            String?
+  phone            String?
+  website          String?
+  notes            String?
+  contractValue    Float?
+  contractSigned   Boolean           @default(false)
+  contractSignedAt DateTime?
+  status           SupplierStatus    @default(ENQUIRY)
+  bookedAt         DateTime?
+  payments         Payment[]
+  attachments      Attachment[]
+  appointments     Appointment[]
+  tasks            Task[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+// --- APPOINTMENT CATEGORIES ---
+
+model AppointmentCategory {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  colour       String        @default("#6366f1")
+  sortOrder    Int           @default(0)
+  isActive     Boolean       @default(true)
+  appointments Appointment[]
+  createdAt    DateTime      @default(now())
+}
+
+// --- APPOINTMENTS ---
+
+model Appointment {
+  id           String               @id @default(cuid())
+  title        String
+  categoryId   String?
+  category     AppointmentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  date         DateTime
+  location     String?
+  notes        String?
+  supplierId   String?
+  supplier     Supplier?            @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  reminderDays Int?
+  reminderSent Boolean              @default(false)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@index([date])
+}
+
+enum SupplierStatus {
+  ENQUIRY
+  QUOTED
+  BOOKED
+  CANCELLED
+  COMPLETE
+}
+
+model Payment {
+  id         String        @id @default(cuid())
+  supplierId String
+  supplier   Supplier      @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  label      String
+  amount     Float
+  dueDate    DateTime?
+  paidDate   DateTime?
+  status     PaymentStatus @default(PENDING)
+  notes      String?
+  createdAt  DateTime      @default(now())
+
+  @@index([status, dueDate])
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Attachment {
+  id         String    @id @default(cuid())
+  supplierId String
+  supplier   Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  paymentId  String?   // Optional link to payment (for receipts)
+  filename   String
+  storedAs   String
+  mimeType   String
+  sizeBytes  Int
+  uploadedAt DateTime  @default(now())
+
+  @@index([paymentId])
+}
+
+// --- TASKS ---
+
+enum TaskPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum RecurringInterval {
+  DAILY
+  WEEKLY
+  FORTNIGHTLY
+  MONTHLY
+}
+
+model TaskCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  colour    String   @default("#6366f1")
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  tasks     Task[]
+  createdAt DateTime @default(now())
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  notes       String?
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+  completedAt DateTime?
+  isCompleted Boolean      @default(false)
+
+  categoryId String?
+  category   TaskCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  assignedToId String?
+  assignedTo   User?   @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  isRecurring       Boolean            @default(false)
+  recurringInterval RecurringInterval?
+  recurringEndDate  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isCompleted, dueDate])
+  @@index([assignedToId])
+  @@index([categoryId])
+  @@index([supplierId])
+}
+
+// --- SECURITY ---
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  success   Boolean
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([createdAt])
+}
+
+// --- BETTER AUTH TABLES ---
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token        String   @unique
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId         String
+  providerId        String
+  accessToken       String?
+  refreshToken      String?
+  idToken           String?
+  accessTokenExpiresAt DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope             String?
+  password          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, value])
+}

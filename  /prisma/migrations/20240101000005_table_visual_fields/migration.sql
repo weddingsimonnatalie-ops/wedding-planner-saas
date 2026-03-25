@@ -1,0 +1,8 @@
+-- Add visual fields to Table
+ALTER TABLE "Table" ADD COLUMN "width"  DOUBLE PRECISION NOT NULL DEFAULT 60;
+ALTER TABLE "Table" ADD COLUMN "height" DOUBLE PRECISION NOT NULL DEFAULT 60;
+ALTER TABLE "Table" ADD COLUMN "locked" BOOLEAN       NOT NULL DEFAULT false;
+ALTER TABLE "Table" ADD COLUMN "colour" TEXT          NOT NULL DEFAULT '#e2e8f0';
+
+-- Add locked to RoomElement
+ALTER TABLE "RoomElement" ADD COLUMN "locked" BOOLEAN NOT NULL DEFAULT false;

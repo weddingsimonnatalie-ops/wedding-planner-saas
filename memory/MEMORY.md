@@ -1,0 +1,2 @@
+- [Phase 1 project status](project_phase1.md) — scaffold complete, docker compose up works, Phase 2 next
+- [User: Simon Blythe](user_simon.md) — wedding planner app owner, planning wedding with Natalie
