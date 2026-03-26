@@ -6,3 +6,5 @@ export { trialEndingReminder } from "@/lib/inngest/functions/trial-ending-remind
 export { paymentFailureEmail } from "@/lib/inngest/functions/payment-failure-email";
 export { welcomeEmail } from "@/lib/inngest/functions/welcome-email";
 export { cancellationDataExport } from "@/lib/inngest/functions/cancellation-data-export";
+export { purgeExpiredWeddings } from "@/lib/inngest/functions/purge-expired-weddings";
+export { preDeletionWarning } from "@/lib/inngest/functions/pre-deletion-warning";

@@ -8,6 +8,8 @@ import {
   paymentFailureEmail,
   welcomeEmail,
   cancellationDataExport,
+  purgeExpiredWeddings,
+  preDeletionWarning,
 } from "@/lib/inngest";
 
 export const { GET, POST, PUT } = serve({
@@ -20,5 +22,7 @@ export const { GET, POST, PUT } = serve({
     paymentFailureEmail,
     welcomeEmail,
     cancellationDataExport,
+    purgeExpiredWeddings,
+    preDeletionWarning,
   ],
 });
