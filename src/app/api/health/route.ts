@@ -30,8 +30,7 @@ async function checkRedis(): Promise<"connected" | "disconnected" | "not_configu
   }
 
   try {
-    // Dynamic import to avoid bundling ioredis when not needed
-    const { Redis } = await import("ioredis");
+    const { default: Redis } = await import("ioredis");
     const redis = new Redis(config.redisUrl, {
       maxRetriesPerRequest: 1,
       lazyConnect: true,

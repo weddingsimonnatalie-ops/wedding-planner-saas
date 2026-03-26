@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       });
     });
 
-    invalidateCache(`${weddingId}:supplier-categories`);
+    await invalidateCache(`${weddingId}:supplier-categories`);
     return NextResponse.json(category, { status: 201 });
 
   } catch (error) {

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import fs from "fs";
-import path from "path";
 import { withTenantContext } from "@/lib/tenant";
+import { deleteFile } from "@/lib/s3";
 
 import { handleDbError } from "@/lib/db-error";
 
@@ -23,8 +22,7 @@ export async function DELETE(
     );
     if (!attachment) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const filePath = path.join(process.cwd(), "uploads", id, attachment.storedAs);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    await deleteFile(attachment.storedAs);
 
     await withTenantContext(weddingId, (tx) =>
       tx.attachment.delete({ where: { id: attachmentId } })

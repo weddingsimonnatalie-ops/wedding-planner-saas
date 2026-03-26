@@ -76,7 +76,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       })
     );
 
-    invalidateCache(`${weddingId}:wedding-config`);
+    await invalidateCache(`${weddingId}:wedding-config`);
     return apiJson(wedding);
   } catch (error) {
     return handleDbError(error);

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, requireRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import fs from "fs";
-import path from "path";
 import crypto from "crypto";
 import { fileTypeFromBuffer } from "file-type";
-import { sanitizeFilename, buildContentDisposition } from "@/lib/filename";
-import { noCacheHeaders } from "@/lib/api-response";
+import { sanitizeFilename } from "@/lib/filename";
 import { withTenantContext } from "@/lib/tenant";
+import { uploadFile, getDownloadUrl, deleteFile } from "@/lib/s3";
 import { handleDbError } from "@/lib/db-error";
 
 export const dynamic = "force-dynamic";
@@ -20,13 +18,6 @@ const ALLOWED: Record<string, string> = {
 };
 
 const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
-
-const MIME_EXT: Record<string, string> = {
-  pdf: "application/pdf",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-};
 
 // ── POST: Upload receipt ───────────────────────────────────────────────────────
 
@@ -85,17 +76,7 @@ export async function POST(
     );
 
     if (existingReceipt) {
-      // Delete file from filesystem
-      const existingPath = path.join(
-        process.cwd(),
-        "uploads",
-        payment.supplier.id,
-        existingReceipt.storedAs
-      );
-      if (fs.existsSync(existingPath)) {
-        fs.unlinkSync(existingPath);
-      }
-      // Delete database record
+      await deleteFile(existingReceipt.storedAs);
       await withTenantContext(weddingId, (tx) =>
         tx.attachment.delete({ where: { id: existingReceipt.id } })
       );
@@ -104,9 +85,8 @@ export async function POST(
     // Store new receipt
     const ext = ALLOWED[detected.mime];
     const storedAs = `${crypto.randomUUID()}.${ext}`;
-    const uploadDir = path.join(process.cwd(), "uploads", payment.supplier.id);
-    fs.mkdirSync(uploadDir, { recursive: true });
-    fs.writeFileSync(path.join(uploadDir, storedAs), buffer);
+    const s3Key = `${weddingId}/receipts/${id}/${storedAs}`;
+    await uploadFile(s3Key, buffer, detected.mime);
 
     // Sanitize filename before storing in database
     const safeFilename = sanitizeFilename(file.name);
@@ -119,7 +99,7 @@ export async function POST(
           supplierId: payment.supplier.id,
           paymentId: id,
           filename: safeFilename,
-          storedAs,
+          storedAs: s3Key,
           mimeType: detected.mime,
           sizeBytes: buffer.length,
         },
@@ -169,35 +149,8 @@ export async function GET(
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
 
-    const filePath = path.join(
-      process.cwd(),
-      "uploads",
-      attachment.supplierId,
-      attachment.storedAs
-    );
-
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json({ error: "File not found" }, { status: 404 });
-    }
-
-    const ext = attachment.storedAs.split(".").pop()?.toLowerCase() ?? "";
-    const contentType = MIME_EXT[ext] ?? "application/octet-stream";
-    const fileBuffer = fs.readFileSync(filePath);
-
-    // Images and PDFs display inline
-    const inlineTypes = new Set(["pdf", "jpg", "jpeg", "png"]);
-    const disposition = inlineTypes.has(ext)
-      ? buildContentDisposition(attachment.filename, "inline")
-      : buildContentDisposition(attachment.filename, "attachment");
-
-    const res = new NextResponse(fileBuffer, {
-      headers: {
-        "Content-Type": contentType,
-        "Content-Disposition": disposition,
-      },
-    });
-    noCacheHeaders(res.headers);
-    return res;
+    const presignedUrl = await getDownloadUrl(attachment.storedAs, 300);
+    return NextResponse.redirect(presignedUrl, 302);
   } catch (error) {
     return handleDbError(error);
   }
@@ -227,16 +180,7 @@ export async function DELETE(
       return NextResponse.json({ error: "No receipt found" }, { status: 404 });
     }
 
-    // Delete file from filesystem
-    const filePath = path.join(
-      process.cwd(),
-      "uploads",
-      attachment.supplierId,
-      attachment.storedAs
-    );
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+    await deleteFile(attachment.storedAs);
 
     // Delete database record
     await withTenantContext(weddingId, (tx) =>

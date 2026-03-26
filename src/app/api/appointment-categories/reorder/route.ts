@@ -28,7 +28,7 @@ export async function PUT(req: NextRequest) {
       )
     );
 
-    invalidateCache(`${weddingId}:appointment-categories`);
+    await invalidateCache(`${weddingId}:appointment-categories`);
     return NextResponse.json({ ok: true });
 
   } catch (error) {

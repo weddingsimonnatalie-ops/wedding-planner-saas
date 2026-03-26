@@ -34,11 +34,7 @@ export async function GET(req: NextRequest) {
       tasksDueSoon,
       upcomingTasks,
     ] = await withTenantContext(weddingId, async (tx) => {
-      // Auto-mark overdue payments for this wedding
-      await tx.payment.updateMany({
-        where: { weddingId, status: "PENDING", dueDate: { lt: now } },
-        data: { status: "OVERDUE" },
-      });
+      // Overdue payment marking is now handled by the Inngest mark-overdue-payments cron (Phase 4)
 
       return Promise.all([
         tx.wedding.findUnique({ where: { id: weddingId } }),

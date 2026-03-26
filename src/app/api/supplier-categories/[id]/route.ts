@@ -39,7 +39,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       })
     );
 
-    invalidateCache(`${weddingId}:supplier-categories`);
+    await invalidateCache(`${weddingId}:supplier-categories`);
     return NextResponse.json(category);
 
   } catch (error) {
@@ -78,7 +78,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       await tx.supplierCategory.delete({ where: { id, weddingId } });
     });
 
-    invalidateCache(`${weddingId}:supplier-categories`);
+    await invalidateCache(`${weddingId}:supplier-categories`);
     return NextResponse.json({ ok: true });
 
   } catch (error) {

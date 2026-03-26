@@ -45,7 +45,7 @@ export async function PUT(
       })
     );
 
-    invalidateCache(`${weddingId}:meal-options`);
+    await invalidateCache(`${weddingId}:meal-options`);
     return NextResponse.json(option);
 
   } catch (error) {
@@ -67,7 +67,7 @@ export async function DELETE(
     await withTenantContext(weddingId, (tx) =>
       tx.mealOption.delete({ where: { id, weddingId } })
     );
-    invalidateCache(`${weddingId}:meal-options`);
+    await invalidateCache(`${weddingId}:meal-options`);
     return NextResponse.json({ ok: true });
 
   } catch (error) {

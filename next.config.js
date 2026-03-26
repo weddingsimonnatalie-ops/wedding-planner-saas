@@ -3,7 +3,7 @@ const nextConfig = {
   webpack: (config) => {
     // Konva's Node.js build references 'canvas' which is not available in Next.js
     // SeatingVisualView is dynamically imported with ssr:false so this is browser-only
-    config.externals = [...(config.externals ?? []), { canvas: "canvas" }];
+    config.externals = [...(config.externals ?? []), { canvas: "canvas", ioredis: "ioredis" }];
     return config;
   },
   async headers() {

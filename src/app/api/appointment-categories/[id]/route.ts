@@ -37,7 +37,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       })
     );
 
-    invalidateCache(`${weddingId}:appointment-categories`);
+    await invalidateCache(`${weddingId}:appointment-categories`);
     return NextResponse.json(category);
 
   } catch (error) {
@@ -76,7 +76,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       await tx.appointmentCategory.delete({ where: { id, weddingId } });
     });
 
-    invalidateCache(`${weddingId}:appointment-categories`);
+    await invalidateCache(`${weddingId}:appointment-categories`);
     return NextResponse.json({ ok: true });
 
   } catch (error) {

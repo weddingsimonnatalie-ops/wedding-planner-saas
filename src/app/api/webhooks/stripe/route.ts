@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
+import { inngest } from "@/lib/inngest/client";
 
 // Stripe webhooks must read the raw body for signature verification —
 // do not use NextResponse.json() body parsing before this route runs.
@@ -51,8 +52,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             subscriptionStatus: "TRIALING",
           },
         });
-        // TODO Phase 4: send welcome email via Inngest
-        // inngest.send({ name: "wedding/created", data: { weddingId } })
+        await inngest.send({ name: "wedding/created", data: { weddingId } });
         console.log(`checkout.session.completed: wedding ${weddingId} trialing`);
         break;
       }
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             gracePeriodEndsAt: new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000),
           },
         });
-        // TODO Phase 4: send payment failure email via Inngest
+        await inngest.send({ name: "stripe/payment.failed", data: { subscriptionId } });
         console.log(`invoice.payment_failed: subscription ${subscriptionId} past_due, grace period set`);
         break;
       }
@@ -116,14 +116,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             ),
           },
         });
-        // TODO Phase 4: send data export + deletion notice email via Inngest
+        const cancelledWedding = await prisma.wedding.findFirst({
+          where: { stripeSubscriptionId: subscription.id },
+          select: { id: true },
+        });
+        if (cancelledWedding) {
+          await inngest.send({ name: "wedding/cancelled", data: { weddingId: cancelledWedding.id } });
+        }
         console.log(`customer.subscription.deleted: subscription ${subscription.id} cancelled`);
         break;
       }
 
       case "customer.subscription.trial_will_end": {
-        // TODO Phase 4: send trial ending reminder email via Inngest
         const subscription = event.data.object as Stripe.Subscription;
+        await inngest.send({ name: "stripe/trial.will_end", data: { subscriptionId: subscription.id } });
         console.log(`customer.subscription.trial_will_end: subscription ${subscription.id}`);
         break;
       }

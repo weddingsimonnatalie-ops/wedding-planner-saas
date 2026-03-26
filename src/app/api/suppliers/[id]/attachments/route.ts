@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import fs from "fs";
-import path from "path";
 import crypto from "crypto";
 import { fileTypeFromBuffer } from "file-type";
 import { PDFDocument } from "pdf-lib";
 import { sanitizeFilename } from "@/lib/filename";
 import { withTenantContext } from "@/lib/tenant";
+import { uploadFile } from "@/lib/s3";
 
 import { handleDbError } from "@/lib/db-error";
 const ALLOWED: Record<string, string> = {
@@ -62,9 +61,8 @@ export async function POST(
     if (!supplier) return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
 
     const storedAs = `${crypto.randomUUID()}.${ext}`;
-    const uploadDir = path.join(process.cwd(), "uploads", id);
-    fs.mkdirSync(uploadDir, { recursive: true });
-    fs.writeFileSync(path.join(uploadDir, storedAs), sanitizedBuffer);
+    const s3Key = `${weddingId}/suppliers/${id}/${storedAs}`;
+    await uploadFile(s3Key, sanitizedBuffer, detected.mime);
 
     // Sanitize filename before storing in database
     const safeFilename = sanitizeFilename(file.name);
@@ -75,7 +73,7 @@ export async function POST(
           weddingId,
           supplierId: id,
           filename: safeFilename,
-          storedAs,
+          storedAs: s3Key,
           mimeType: detected.mime,
           sizeBytes: sanitizedBuffer.length,
         },

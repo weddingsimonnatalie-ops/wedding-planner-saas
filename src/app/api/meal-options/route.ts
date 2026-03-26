@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    invalidateCache(`${weddingId}:meal-options`);
+    await invalidateCache(`${weddingId}:meal-options`);
     return NextResponse.json(option, { status: 201 });
 
   } catch (error) {

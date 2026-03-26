@@ -37,7 +37,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       })
     );
 
-    invalidateCache(`${weddingId}:task-categories`);
+    await invalidateCache(`${weddingId}:task-categories`);
     return NextResponse.json(category);
 
   } catch (error) {
@@ -76,7 +76,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       await tx.taskCategory.delete({ where: { id, weddingId } });
     });
 
-    invalidateCache(`${weddingId}:task-categories`);
+    await invalidateCache(`${weddingId}:task-categories`);
     return NextResponse.json({ ok: true });
 
   } catch (error) {
