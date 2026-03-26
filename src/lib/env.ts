@@ -2,6 +2,9 @@
  * Environment variable validation
  * Run on startup to ensure all required configuration is present.
  * Throws clear errors instead of cryptic runtime failures.
+ *
+ * NOTE: Stripe keys are validated lazily in src/lib/stripe.ts (not available
+ * at Next.js build time on Railway — only injected at runtime).
  */
 
 function getEnv(name: string): string | undefined {
@@ -17,12 +20,8 @@ function requireEnv(name: string): string {
 }
 
 interface EnvConfig {
-  databaseUrl: string;
   nextauthSecret: string;
   nextauthUrl: string;
-  seedAdmin1Name: string;
-  seedAdmin1Email: string;
-  seedAdmin1Password: string;
   // Optional
   redisUrl?: string;
   smtp?: {
@@ -32,7 +31,6 @@ interface EnvConfig {
     pass: string;
     from: string;
   };
-  emailVerificationRequired: boolean;
 }
 
 let config: EnvConfig | null = null;
@@ -41,14 +39,8 @@ export function getEnvConfig(): EnvConfig {
   if (config) return config;
 
   // Required: Core
-  const dbPassword = requireEnv("DB_PASSWORD");
   const nextauthSecret = requireEnv("NEXTAUTH_SECRET");
   const nextauthUrl = requireEnv("NEXTAUTH_URL");
-
-  // Required: Seed admin
-  const seedAdmin1Name = requireEnv("SEED_ADMIN_1_NAME");
-  const seedAdmin1Email = requireEnv("SEED_ADMIN_1_EMAIL");
-  const seedAdmin1Password = requireEnv("SEED_ADMIN_1_PASSWORD");
 
   // Optional: Redis
   const redisUrl = getEnv("REDIS_URL");
@@ -78,15 +70,10 @@ export function getEnvConfig(): EnvConfig {
   }
 
   config = {
-    databaseUrl: `postgresql://wedding:${dbPassword}@db:5432/wedding`,
     nextauthSecret,
     nextauthUrl,
-    seedAdmin1Name,
-    seedAdmin1Email,
-    seedAdmin1Password,
     redisUrl,
     smtp,
-    emailVerificationRequired: getEnv("EMAIL_VERIFICATION_REQUIRED") === "true",
   };
 
   return config;
@@ -94,7 +81,7 @@ export function getEnvConfig(): EnvConfig {
 
 /**
  * Validate environment on import.
- * Call this early in startup (e.g., in instrumentation.ts or lib/prisma.ts).
+ * Call this early in startup (e.g., in instrumentation.ts).
  */
 export function validateEnv(): void {
   getEnvConfig();
