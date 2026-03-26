@@ -8,7 +8,7 @@ const s3 = new S3Client({
     accessKeyId: process.env.RAILWAY_BUCKET_ACCESS_KEY_ID!,
     secretAccessKey: process.env.RAILWAY_BUCKET_SECRET_ACCESS_KEY!,
   },
-  forcePathStyle: true,
+  forcePathStyle: false,
 });
 
 const BUCKET = process.env.RAILWAY_BUCKET_NAME ?? "wedding-planner-uploads";
