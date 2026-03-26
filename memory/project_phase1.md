@@ -1,37 +1,63 @@
 ---
-name: wedding-planner-phase1-2
-description: Phase 1 & 2 scaffold status and key implementation decisions
+name: wedding-planner-saas-phase-status
+description: SaaS migration phase completion status and key decisions
 type: project
 ---
 
-Phase 1 is complete and running. `docker compose up` works end-to-end.
+This is the SaaS multi-tenant rewrite of the personal wedding planner app.
 
-**Why:** Self-hosted wedding planning app for Simon & Natalie's wedding.
+**Why:** Turning the personal app into a product that other couples can use.
 
-**How to apply:** Start from Phase 2 (guest management) next.
+**How to apply:** Check phase status before starting new work to avoid re-implementing completed phases.
 
-Key decisions made:
-- Next.js 14 App Router, Prisma 5, next-auth v4, nodemailer v7 (v7 required by next-auth 4.24+)
-- Dockerfile: multi-stage with `node:20-alpine`; all stages need `apk add --no-cache openssl` for Prisma engine
-- Prisma binaryTargets includes `linux-musl-openssl-3.0.x` for Alpine compatibility
-- Not using Next.js standalone output mode — full node_modules copied to runner for simplicity
-- Seed command uses `node node_modules/.bin/tsx prisma/seed.ts` (tsx not on PATH in Alpine)
-- All DB-querying pages have `export const dynamic = "force-dynamic"` to prevent static rendering at build time
-- Login page uses Suspense wrapper around the component that calls `useSearchParams()`
-- Initial migration at `prisma/migrations/20240101000000_init/migration.sql` (hand-written SQL to match schema)
-- `.env` already has real credentials (Simon's Gmail app password, secure DB password, NEXTAUTH_SECRET)
-- SEED_ADMIN_2 is commented out in .env — only Simon is seeded
+## Phase Status
 
-Phase 2 is also complete. Phase 3 (Seating Planner) is next.
+### Phase 1 — Multi-tenancy Foundation ✅ Complete
+- Row-level tenancy: `weddingId` on all tenant tables + PostgreSQL RLS
+- `Wedding` model with `subscriptionStatus`, billing fields, `stripeCustomerId`
+- `WeddingMember` join table (User ↔ Wedding with role)
+- Signed JWT cookie (`wedding_id`) for tenant context via `src/lib/wedding-cookie.ts`
+- `getServerContext()` / `requireServerContext()` in `src/lib/server-context.ts`
+- `requireRole()` in `src/lib/api-auth.ts` — validates session + weddingId cookie + subscription status
+- `/select-wedding` page for switching between weddings
+- `/api/auth/set-wedding` sets the signed cookie
+- `/api/weddings` — list user's weddings
+- Middleware updated: checks Better Auth session + weddingId cookie; no Prisma (Edge runtime)
+- Subscription gate in dashboard layout (Node.js, not middleware)
+- Migrations: `20260325000000_add_multi_tenant`, `20260325000001_add_rls_policies`
 
-Phase 2 additions:
-- Full Guest CRUD: /guests, /guests/new, /guests/[id]
-- API routes: GET/POST /api/guests, GET/PUT/DELETE /api/guests/[id], /api/guests/export, /api/guests/import
-- Public RSVP: /rsvp/[token] page (no auth) + /api/rsvp/[token] GET/POST
-- Email: /api/email/rsvp (POST) using nodemailer, falls back to console log if SMTP not configured
-- Meal Options CRUD: /api/meal-options + /api/meal-options/[id]
-- User Management: /api/users + /api/users/[id] + /api/users/[id]/password, full UsersManager component
-- CSV import: /api/guests/import with two-step preview+confirm
-- CSV export: /api/guests/export
-- Components: GuestList.tsx, GuestForm.tsx, RsvpStatusBadge.tsx, CsvImportModal.tsx, MealOptionsList.tsx, UsersManager.tsx, RsvpForm.tsx
-- src/lib/email.ts (nodemailer helper), src/lib/csv.ts (parser + exporter)
+### Phase 2 — Stripe Billing ✅ Complete (verified 2026-03-26)
+- `src/lib/stripe.ts` — Stripe SDK singleton
+- `POST /api/register` — creates User+Account+Wedding+WeddingMember, Stripe Customer, Checkout session (14-day trial), sets weddingId cookie, returns checkoutUrl
+- `src/app/register/page.tsx` — sign-up form; calls Better Auth signIn after register, then redirects to Stripe Checkout
+- `POST /api/webhooks/stripe` — handles: checkout.session.completed, invoice.payment_succeeded, invoice.payment_failed, customer.subscription.deleted, customer.subscription.trial_will_end; idempotent via StripeEvent table
+- `GET|POST /api/billing/portal` — Stripe Customer Portal; uses `allowLapsed: true` so cancelled users can reactivate
+- `src/app/billing/page.tsx` — subscription status, next billing date, trial end, grace period info
+- `src/app/billing/suspended/page.tsx` — shown when CANCELLED or PAST_DUE past grace period
+- `src/components/billing/GracePeriodBanner.tsx` — amber banner in dashboard layout when PAST_DUE
+- `requireRole()` extended with `options.allowLapsed` to skip subscription gate for billing routes
+- Onboarding: `/onboarding/wedding`, `/onboarding/invite` (stub), `/onboarding/done`
+
+Verification checks passed:
+- Registration → Stripe Checkout → session → onboarding wizard ✅
+- Webhooks returning 200 for all event types ✅
+- Grace period banner shown when PAST_DUE ✅
+- Suspended redirect when grace period expired ✅
+- Stripe Customer Portal accessible from /billing ✅
+
+Post-verification additions:
+- Billing tab added to Settings page (`src/components/settings/SettingsClient.tsx`) — shows subscription status, next billing date, trial end, grace period end, and "Manage subscription in Stripe" button; accessible via `?tab=billing`
+- `/billing` standalone page still exists but primary access point is Settings → Billing tab
+- `settings/page.tsx` passes `billing` prop (subscriptionStatus, currentPeriodEnd, trialEndsAt, gracePeriodEndsAt) to SettingsClient
+
+Key implementation decisions:
+- Stripe SDK v20: `Invoice.subscription` not in TypeScript types — cast via `unknown` intermediate
+- `docker compose restart` does NOT re-read env vars — use `docker compose up -d --force-recreate`
+- Subscription gate is in dashboard layout (Node.js), NOT middleware (Edge runtime blocks Prisma)
+- Better Auth `signIn.email()` must be called client-side after registration to establish session before Stripe redirect
+
+### Phase 3 — Invitation System
+Not started.
+
+### Phase 4+
+Not started.

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { sendAppointmentReminderEmail } from "@/lib/email";
 
 export async function checkAppointmentReminders(): Promise<{ checked: number; sent: number }> {
@@ -7,67 +8,87 @@ export async function checkAppointmentReminders(): Promise<{ checked: number; se
   const todayEnd = new Date();
   todayEnd.setHours(23, 59, 59, 999);
 
-  // Find all unsent appointments that have a reminder set
-  const [appointments, config] = await Promise.all([
-    prisma.appointment.findMany({
-      where: { reminderDays: { not: null }, reminderSent: false },
-      include: {
-        supplier: { select: { name: true } },
-        category: { select: { name: true } },
-      },
-    }),
-    prisma.weddingConfig.findFirst(),
-  ]);
+  // Get all active weddings (TRIALING or ACTIVE subscription)
+  const activeWeddings = await prisma.wedding.findMany({
+    where: {
+      subscriptionStatus: { in: ["TRIALING", "ACTIVE", "PAST_DUE"] },
+    },
+    select: { id: true, reminderEmail: true },
+  });
 
-  const adminEmail = config?.reminderEmail || process.env.SMTP_FROM || process.env.SMTP_USER || "";
-  let sent = 0;
+  let totalChecked = 0;
+  let totalSent = 0;
 
-  for (const appt of appointments) {
-    if (appt.reminderDays == null) continue;
+  for (const wedding of activeWeddings) {
+    const adminEmail =
+      wedding.reminderEmail || process.env.SMTP_FROM || process.env.SMTP_USER || "";
+    if (!adminEmail) continue;
 
-    // Calculate the date when the reminder should fire
-    const reminderDate = new Date(appt.date.getTime() - appt.reminderDays * 24 * 60 * 60 * 1000);
+    const appointments = await withTenantContext(wedding.id, (tx) =>
+      tx.appointment.findMany({
+        where: {
+          weddingId: wedding.id,
+          reminderDays: { not: null },
+          reminderSent: false,
+        },
+        include: {
+          supplier: { select: { name: true } },
+          category: { select: { name: true } },
+        },
+      })
+    );
 
-    // Check if reminderDate falls within today
-    if (reminderDate >= todayStart && reminderDate <= todayEnd) {
-      const result = await sendAppointmentReminderEmail(
-        adminEmail,
-        appt.title,
-        appt.category?.name ?? "Other",
-        appt.date,
-        appt.reminderDays,
-        appt.location,
-        appt.supplier?.name ?? null,
-        appt.notes
+    totalChecked += appointments.length;
+
+    for (const appt of appointments) {
+      if (appt.reminderDays == null) continue;
+
+      const reminderDate = new Date(
+        appt.date.getTime() - appt.reminderDays * 24 * 60 * 60 * 1000
       );
 
-      if (result.ok) {
-        await prisma.appointment.update({
-          where: { id: appt.id },
-          data: { reminderSent: true },
-        });
-        sent++;
-      }
+      if (reminderDate >= todayStart && reminderDate <= todayEnd) {
+        const result = await sendAppointmentReminderEmail(
+          adminEmail,
+          appt.title,
+          appt.category?.name ?? "Other",
+          appt.date,
+          appt.reminderDays,
+          appt.location,
+          appt.supplier?.name ?? null,
+          appt.notes
+        );
 
-      console.log(`[reminders] ${appt.title}: ${result.message}`);
+        if (result.ok) {
+          await withTenantContext(wedding.id, (tx) =>
+            tx.appointment.update({
+              where: { id: appt.id },
+              data: { reminderSent: true },
+            })
+          );
+          totalSent++;
+        }
+
+        console.log(`[reminders] ${appt.title} (${wedding.id}): ${result.message}`);
+      }
     }
   }
 
-  console.log(`[reminders] Checked ${appointments.length} appointments, sent ${sent} reminders`);
-  return { checked: appointments.length, sent };
+  console.log(
+    `[reminders] Checked ${totalChecked} appointments across ${activeWeddings.length} weddings, sent ${totalSent} reminders`
+  );
+  return { checked: totalChecked, sent: totalSent };
 }
 
 export function startReminderJob() {
   console.log("[reminders] Starting appointment reminder job (interval: 60 min)");
 
-  // Run immediately on startup
-  checkAppointmentReminders().catch(err =>
+  checkAppointmentReminders().catch((err) =>
     console.error("[reminders] Error on startup check:", err)
   );
 
-  // Then every 60 minutes
   setInterval(() => {
-    checkAppointmentReminders().catch(err =>
+    checkAppointmentReminders().catch((err) =>
       console.error("[reminders] Error on interval check:", err)
     );
   }, 60 * 60 * 1000);

@@ -1,71 +1,76 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
-import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/api-auth";
 import { apiJson } from "@/lib/api-response";
+import { withTenantContext } from "@/lib/tenant";
 
 import { handleDbError } from "@/lib/db-error";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireRole(["ADMIN", "VIEWER", "RSVP_MANAGER"], req);
+    if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const now = new Date();
     const in14 = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
     const in60 = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
 
-    // Auto-mark overdue
-    await prisma.payment.updateMany({
-        where: { status: "PENDING", dueDate: { lt: now } },
-        data: { status: "OVERDUE" },
-    });
-
     const [
-        config,
-        guestGroupBy,
-        totalGuests,
-        receptionEligible,
-        assignedGuests,
-        mealGroupBy,
-        mealOptions,
-        upcomingPayments,
-        supplierGroupBy,
-        contractedAgg,
-        paidAgg,
-        upcomingAppointments,
-        tasksOverdue,
-        tasksDueSoon,
-        upcomingTasks,
-    ] = await Promise.all([
-        prisma.weddingConfig.findUnique({ where: { id: 1 } }),
-        prisma.guest.groupBy({ by: ["rsvpStatus"], _count: { id: true } }),
-        prisma.guest.count(),
-        prisma.guest.count({
+      config,
+      guestGroupBy,
+      totalGuests,
+      receptionEligible,
+      assignedGuests,
+      mealGroupBy,
+      mealOptions,
+      upcomingPayments,
+      supplierGroupBy,
+      contractedAgg,
+      paidAgg,
+      upcomingAppointments,
+      tasksOverdue,
+      tasksDueSoon,
+      upcomingTasks,
+    ] = await withTenantContext(weddingId, async (tx) => {
+      // Auto-mark overdue payments for this wedding
+      await tx.payment.updateMany({
+        where: { weddingId, status: "PENDING", dueDate: { lt: now } },
+        data: { status: "OVERDUE" },
+      });
+
+      return Promise.all([
+        tx.wedding.findUnique({ where: { id: weddingId } }),
+        tx.guest.groupBy({ by: ["rsvpStatus"], where: { weddingId }, _count: { id: true } }),
+        tx.guest.count({ where: { weddingId } }),
+        tx.guest.count({
           where: {
+            weddingId,
             invitedToReception: true,
             NOT: { AND: [{ attendingReception: false }, { rsvpStatus: { notIn: ["DECLINED"] } }] },
           },
         }),
-        prisma.guest.count({
+        tx.guest.count({
           where: {
+            weddingId,
             invitedToReception: true,
             tableId: { not: null },
             NOT: { AND: [{ attendingReception: false }, { rsvpStatus: { notIn: ["DECLINED"] } }] },
           },
         }),
-        prisma.guest.groupBy({
+        tx.guest.groupBy({
           by: ["mealChoice"],
-          where: { rsvpStatus: "ACCEPTED", mealChoice: { not: null } },
+          where: { weddingId, rsvpStatus: "ACCEPTED", mealChoice: { not: null } },
           _count: { id: true },
         }),
-        prisma.mealOption.findMany({
-          where: { isActive: true },
+        tx.mealOption.findMany({
+          where: { weddingId, isActive: true },
           select: { id: true, name: true },
         }),
-        prisma.payment.findMany({
+        tx.payment.findMany({
           where: {
+            weddingId,
             status: { in: ["PENDING", "OVERDUE"] },
             OR: [
               { dueDate: { gte: now, lte: in60 } },
@@ -76,11 +81,11 @@ export async function GET(req: NextRequest) {
           orderBy: { dueDate: "asc" },
           take: 15,
         }),
-        prisma.supplier.groupBy({ by: ["status"], _count: { id: true } }),
-        prisma.supplier.aggregate({ _sum: { contractValue: true } }),
-        prisma.payment.aggregate({ where: { status: "PAID" }, _sum: { amount: true } }),
-        prisma.appointment.findMany({
-          where: { date: { gte: now, lte: in60 } },
+        tx.supplier.groupBy({ by: ["status"], where: { weddingId }, _count: { id: true } }),
+        tx.supplier.aggregate({ where: { weddingId }, _sum: { contractValue: true } }),
+        tx.payment.aggregate({ where: { weddingId, status: "PAID" }, _sum: { amount: true } }),
+        tx.appointment.findMany({
+          where: { weddingId, date: { gte: now, lte: in60 } },
           include: {
             supplier: { select: { id: true, name: true } },
             category: { select: { name: true, colour: true } },
@@ -88,14 +93,15 @@ export async function GET(req: NextRequest) {
           orderBy: { date: "asc" },
           take: 10,
         }),
-        prisma.task.count({
-          where: { isCompleted: false, dueDate: { lt: now } },
+        tx.task.count({
+          where: { weddingId, isCompleted: false, dueDate: { lt: now } },
         }),
-        prisma.task.count({
-          where: { isCompleted: false, dueDate: { gte: now, lte: in14 } },
+        tx.task.count({
+          where: { weddingId, isCompleted: false, dueDate: { gte: now, lte: in14 } },
         }),
-        prisma.task.findMany({
+        tx.task.findMany({
           where: {
+            weddingId,
             isCompleted: false,
             OR: [
               { dueDate: { lt: now } },
@@ -108,7 +114,8 @@ export async function GET(req: NextRequest) {
           orderBy: { dueDate: "asc" },
           take: 5,
         }),
-    ]);
+      ]);
+    });
 
     // Guest breakdown
     const rsvpMap: Record<string, number> = {};

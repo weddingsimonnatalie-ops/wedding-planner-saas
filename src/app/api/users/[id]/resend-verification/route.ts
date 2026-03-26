@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
@@ -18,6 +20,17 @@ export async function POST(
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
 
+    const { weddingId } = auth;
+
+    // Verify user is a member of the current wedding
+    const member = await prisma.weddingMember.findUnique({
+      where: { userId_weddingId: { userId: id, weddingId } },
+      select: { id: true },
+    });
+    if (!member) {
+      return NextResponse.json({ error: "User not found in this wedding" }, { status: 404 });
+    }
+
     // Check if email verification is enabled
     if (process.env.EMAIL_VERIFICATION_REQUIRED !== "true") {
       return NextResponse.json(
@@ -27,7 +40,7 @@ export async function POST(
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: id },
+      where: { id },
       select: { id: true, email: true, name: true, emailVerified: true },
     });
 
@@ -51,9 +64,12 @@ export async function POST(
       },
     });
 
-    // Get couple name for email
-    const config = await prisma.weddingConfig.findUnique({ where: { id: 1 } });
-    const coupleName = config?.coupleName ?? "Wedding Planner";
+    // Get couple name for email from the current wedding
+    const wedding = await prisma.wedding.findUnique({
+      where: { id: weddingId },
+      select: { coupleName: true },
+    });
+    const coupleName = wedding?.coupleName ?? "Wedding Planner";
 
     // Send verification email
     const result = await sendVerificationEmail(user.email, user.name, verificationToken, coupleName);

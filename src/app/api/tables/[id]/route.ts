@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { TableShape, Orientation } from "@prisma/client";
 import type { TableUpdateBody } from "@/types/api";
 import { validateFields } from "@/lib/validation";
@@ -47,6 +47,7 @@ export async function PUT(
     const { id } = await params;
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const body = await req.json();
 
@@ -59,54 +60,57 @@ export async function PUT(
       return NextResponse.json({ error: errors[0] }, { status: 400 });
     }
 
-    const table = await prisma.table.update({
-    where: { id: id },
-    data: buildTableData(body),
-    include: { guests: { select: GUEST_SELECT, orderBy: [{ seatNumber: "asc" }, { lastName: "asc" }, { firstName: "asc" }] } },
-    });
+    await withTenantContext(weddingId, (tx) =>
+      tx.table.update({
+        where: { id, weddingId },
+        data: buildTableData(body),
+        include: { guests: { select: GUEST_SELECT, orderBy: [{ seatNumber: "asc" }, { lastName: "asc" }, { firstName: "asc" }] } },
+      })
+    );
 
     // Handle seat reassignment when capacity is reduced
     if (body.capacity !== undefined) {
-      const displacedGuests = await prisma.guest.findMany({
-        where: {
-          tableId: id,
-          seatNumber: { gt: body.capacity }
-        },
-        orderBy: { seatNumber: 'asc' }
-      });
-
-      if (displacedGuests.length > 0) {
-        // Find available seats (gaps) within new capacity
-        const assignedSeats = await prisma.guest.findMany({
-          where: { tableId: id, seatNumber: { lte: body.capacity } },
-          select: { seatNumber: true }
+      await withTenantContext(weddingId, async (tx) => {
+        const displacedGuests = await tx.guest.findMany({
+          where: {
+            tableId: id,
+            weddingId,
+            seatNumber: { gt: body.capacity }
+          },
+          orderBy: { seatNumber: 'asc' }
         });
-        const takenSet = new Set(assignedSeats.map(g => g.seatNumber));
-        const availableSeats: number[] = [];
-        for (let i = 1; i <= body.capacity; i++) {
-          if (!takenSet.has(i)) availableSeats.push(i);
-        }
 
-        // Reassign displaced guests to available seats (or unassign if no seats available)
-        const updates: Promise<unknown>[] = [];
-        for (const guest of displacedGuests) {
-          const newSeat = availableSeats.shift();
-          updates.push(
-            prisma.guest.update({
-              where: { id: guest.id },
+        if (displacedGuests.length > 0) {
+          // Find available seats (gaps) within new capacity
+          const assignedSeats = await tx.guest.findMany({
+            where: { tableId: id, weddingId, seatNumber: { lte: body.capacity } },
+            select: { seatNumber: true }
+          });
+          const takenSet = new Set(assignedSeats.map(g => g.seatNumber));
+          const availableSeats: number[] = [];
+          for (let i = 1; i <= body.capacity; i++) {
+            if (!takenSet.has(i)) availableSeats.push(i);
+          }
+
+          // Reassign displaced guests to available seats (or unassign if no seats available)
+          for (const guest of displacedGuests) {
+            const newSeat = availableSeats.shift();
+            await tx.guest.update({
+              where: { id: guest.id, weddingId },
               data: { seatNumber: newSeat ?? null }
-            })
-          );
+            });
+          }
         }
-        await Promise.all(updates);
-      }
+      });
     }
 
     // Re-fetch with updated guests for the response
-    const updatedTable = await prisma.table.findUnique({
-      where: { id },
-      include: { guests: { select: GUEST_SELECT, orderBy: [{ seatNumber: "asc" }, { lastName: "asc" }, { firstName: "asc" }] } },
-    });
+    const updatedTable = await withTenantContext(weddingId, (tx) =>
+      tx.table.findUnique({
+        where: { id, weddingId },
+        include: { guests: { select: GUEST_SELECT, orderBy: [{ seatNumber: "asc" }, { lastName: "asc" }, { firstName: "asc" }] } },
+      })
+    );
 
     return NextResponse.json(updatedTable);
 
@@ -125,6 +129,7 @@ export async function PATCH(
     const { id } = await params;
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const body = await req.json();
 
@@ -137,54 +142,57 @@ export async function PATCH(
       return NextResponse.json({ error: errors[0] }, { status: 400 });
     }
 
-    const table = await prisma.table.update({
-    where: { id: id },
-    data: buildTableData(body),
-    include: { guests: { select: GUEST_SELECT, orderBy: [{ seatNumber: "asc" }, { lastName: "asc" }, { firstName: "asc" }] } },
-    });
+    await withTenantContext(weddingId, (tx) =>
+      tx.table.update({
+        where: { id, weddingId },
+        data: buildTableData(body),
+        include: { guests: { select: GUEST_SELECT, orderBy: [{ seatNumber: "asc" }, { lastName: "asc" }, { firstName: "asc" }] } },
+      })
+    );
 
     // Handle seat reassignment when capacity is reduced
     if (body.capacity !== undefined) {
-      const displacedGuests = await prisma.guest.findMany({
-        where: {
-          tableId: id,
-          seatNumber: { gt: body.capacity }
-        },
-        orderBy: { seatNumber: 'asc' }
-      });
-
-      if (displacedGuests.length > 0) {
-        // Find available seats (gaps) within new capacity
-        const assignedSeats = await prisma.guest.findMany({
-          where: { tableId: id, seatNumber: { lte: body.capacity } },
-          select: { seatNumber: true }
+      await withTenantContext(weddingId, async (tx) => {
+        const displacedGuests = await tx.guest.findMany({
+          where: {
+            tableId: id,
+            weddingId,
+            seatNumber: { gt: body.capacity }
+          },
+          orderBy: { seatNumber: 'asc' }
         });
-        const takenSet = new Set(assignedSeats.map(g => g.seatNumber));
-        const availableSeats: number[] = [];
-        for (let i = 1; i <= body.capacity; i++) {
-          if (!takenSet.has(i)) availableSeats.push(i);
-        }
 
-        // Reassign displaced guests to available seats (or unassign if no seats available)
-        const updates: Promise<unknown>[] = [];
-        for (const guest of displacedGuests) {
-          const newSeat = availableSeats.shift();
-          updates.push(
-            prisma.guest.update({
-              where: { id: guest.id },
+        if (displacedGuests.length > 0) {
+          // Find available seats (gaps) within new capacity
+          const assignedSeats = await tx.guest.findMany({
+            where: { tableId: id, weddingId, seatNumber: { lte: body.capacity } },
+            select: { seatNumber: true }
+          });
+          const takenSet = new Set(assignedSeats.map(g => g.seatNumber));
+          const availableSeats: number[] = [];
+          for (let i = 1; i <= body.capacity; i++) {
+            if (!takenSet.has(i)) availableSeats.push(i);
+          }
+
+          // Reassign displaced guests to available seats (or unassign if no seats available)
+          for (const guest of displacedGuests) {
+            const newSeat = availableSeats.shift();
+            await tx.guest.update({
+              where: { id: guest.id, weddingId },
               data: { seatNumber: newSeat ?? null }
-            })
-          );
+            });
+          }
         }
-        await Promise.all(updates);
-      }
+      });
     }
 
     // Re-fetch with updated guests for the response
-    const updatedTable = await prisma.table.findUnique({
-      where: { id },
-      include: { guests: { select: GUEST_SELECT, orderBy: [{ seatNumber: "asc" }, { lastName: "asc" }, { firstName: "asc" }] } },
-    });
+    const updatedTable = await withTenantContext(weddingId, (tx) =>
+      tx.table.findUnique({
+        where: { id, weddingId },
+        include: { guests: { select: GUEST_SELECT, orderBy: [{ seatNumber: "asc" }, { lastName: "asc" }, { firstName: "asc" }] } },
+      })
+    );
 
     return NextResponse.json(updatedTable);
 
@@ -202,13 +210,16 @@ export async function DELETE(
     const { id } = await params;
     const auth = await requireAdmin(_req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
-    await prisma.guest.updateMany({
-    where: { tableId: id },
-    data: { tableId: null, seatNumber: null },
+    await withTenantContext(weddingId, async (tx) => {
+      await tx.guest.updateMany({
+        where: { tableId: id, weddingId },
+        data: { tableId: null, seatNumber: null },
+      });
+      await tx.table.delete({ where: { id, weddingId } });
     });
 
-    await prisma.table.delete({ where: { id: id } });
     return NextResponse.json({ ok: true });
 
   } catch (error) {

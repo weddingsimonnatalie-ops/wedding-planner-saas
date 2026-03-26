@@ -1,62 +1,47 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { apiJson } from "@/lib/api-response";
+import { handleDbError } from "@/lib/db-error";
 
-// Validation constants
-const MIN_TIMEOUT = 5; // Minimum 5 minutes
-const MAX_TIMEOUT = 480; // Maximum 8 hours
-const MIN_WARNING = 1; // Minimum 1 minute warning
-const MAX_WARNING = 30; // Maximum 30 minute warning
+const MIN_TIMEOUT = 5;
+const MAX_TIMEOUT = 480;
+const MIN_WARNING = 1;
+const MAX_WARNING = 30;
 
-/**
- * GET /api/settings/session-timeout
- * Get current session timeout settings
- */
-export async function GET(req: NextRequest) {
-  const auth = await requireRole(["ADMIN", "VIEWER", "RSVP_MANAGER"], req);
-  if (!auth.authorized) {
-    return auth.response;
-  }
-
+export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
-    const config = await prisma.weddingConfig.findFirst({
-      select: {
-        sessionTimeoutMinutes: true,
-        warningMinutes: true,
-      },
-    });
+    const auth = await requireRole(["ADMIN", "VIEWER", "RSVP_MANAGER"], req);
+    if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
-    // Default values if not set
+    const wedding = await withTenantContext(weddingId, (tx) =>
+      tx.wedding.findUnique({
+        where: { id: weddingId },
+        select: { sessionTimeout: true, sessionWarningTime: true },
+      })
+    );
+
     return apiJson({
-      timeoutMinutes: config?.sessionTimeoutMinutes ?? 60,
-      warningMinutes: config?.warningMinutes ?? 5,
+      timeoutMinutes: wedding?.sessionTimeout ?? 30,
+      warningMinutes: wedding?.sessionWarningTime ?? 5,
     });
   } catch (error) {
-    console.error("Error fetching session timeout settings:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch session timeout settings" },
-      { status: 500 }
-    );
+    return handleDbError(error);
   }
 }
 
-/**
- * PUT /api/settings/session-timeout
- * Update session timeout settings (admin only)
- */
-export async function PUT(req: NextRequest) {
-  const auth = await requireRole(["ADMIN"], req);
-  if (!auth.authorized) {
-    return auth.response;
-  }
-
+export async function PUT(req: NextRequest): Promise<NextResponse> {
   try {
-    const body = await req.json();
-    const timeoutMinutes = body.timeoutMinutes;
-    const warningMinutes = body.warningMinutes;
+    const auth = await requireRole(["ADMIN"], req);
+    if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
-    // Validate timeout
+    const body = await req.json();
+    const { timeoutMinutes, warningMinutes } = body;
+
     if (
       typeof timeoutMinutes !== "number" ||
       timeoutMinutes < MIN_TIMEOUT ||
@@ -68,7 +53,6 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Validate warning
     if (
       typeof warningMinutes !== "number" ||
       warningMinutes < MIN_WARNING ||
@@ -80,7 +64,6 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Warning must be less than timeout
     if (warningMinutes >= timeoutMinutes) {
       return NextResponse.json(
         { error: "Warning time must be less than timeout" },
@@ -88,25 +71,15 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Update config (there's always one row with id=1)
-    await prisma.weddingConfig.update({
-      where: { id: 1 },
-      data: {
-        sessionTimeoutMinutes: timeoutMinutes,
-        warningMinutes: warningMinutes,
-      },
-    });
-
-    return apiJson({
-      success: true,
-      timeoutMinutes,
-      warningMinutes,
-    });
-  } catch (error) {
-    console.error("Error updating session timeout settings:", error);
-    return NextResponse.json(
-      { error: "Failed to update session timeout settings" },
-      { status: 500 }
+    await withTenantContext(weddingId, (tx) =>
+      tx.wedding.update({
+        where: { id: weddingId },
+        data: { sessionTimeout: timeoutMinutes, sessionWarningTime: warningMinutes },
+      })
     );
+
+    return apiJson({ success: true, timeoutMinutes, warningMinutes });
+  } catch (error) {
+    return handleDbError(error);
   }
 }

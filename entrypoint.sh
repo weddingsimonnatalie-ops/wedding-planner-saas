@@ -87,8 +87,12 @@ trap cleanup SIGTERM SIGINT
 echo "==> Running database migrations..."
 node_modules/.bin/prisma migrate deploy
 
-echo "==> Running seed..."
-node_modules/.bin/prisma db seed
+if [ "${SKIP_SEED:-false}" = "true" ]; then
+  echo "==> Skipping seed (SKIP_SEED=true)"
+else
+  echo "==> Running seed..."
+  node_modules/.bin/prisma db seed
+fi
 
 echo "==> Starting appointment reminder daemon..."
 node_modules/.bin/tsx src/scripts/reminder-daemon.ts &

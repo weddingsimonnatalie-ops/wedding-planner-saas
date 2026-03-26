@@ -4,13 +4,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-better";
 import { requireAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { apiJson } from "@/lib/api-response";
 import { TaskPriority } from "@prisma/client";
 import { validateFields } from "@/lib/validation";
+import { verifyWeddingCookieId, COOKIE_NAME } from "@/lib/wedding-cookie";
 
 import { handleDbError } from "@/lib/db-error";const INCLUDE = {
   category: { select: { id: true, name: true, colour: true } },
-  assignedTo: { select: { id: true, name: true, email: true, role: true } },
+  assignedTo: { select: { id: true, name: true, email: true } },
   supplier: { select: { id: true, name: true } },
 } as const;
 
@@ -18,6 +20,11 @@ export async function GET(req: NextRequest) {
   try {
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const cookieValue = req.cookies.get(COOKIE_NAME)?.value;
+    if (!cookieValue) return NextResponse.json({ error: "No wedding context" }, { status: 401 });
+    const weddingId = await verifyWeddingCookieId(cookieValue);
+    if (!weddingId) return NextResponse.json({ error: "Invalid wedding context" }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
     const completed = searchParams.get("completed");
@@ -39,7 +46,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Invalid take parameter (must be 1-500)" }, { status: 400 });
     }
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { weddingId };
 
     if (completed === "true") where.isCompleted = true;
     else if (completed === "false") where.isCompleted = false;
@@ -57,16 +64,18 @@ export async function GET(req: NextRequest) {
         where.dueDate = { lt: new Date() };
     }
 
-    // Get total count for pagination metadata
-    const total = await prisma.task.count({ where });
-
-    const tasks = await prisma.task.findMany({
-        where,
-        include: INCLUDE,
-        orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
-        ...(skip !== undefined ? { skip } : {}),
-        ...(take !== undefined ? { take } : {}),
-    });
+    const [total, tasks] = await withTenantContext(weddingId, (tx) =>
+      Promise.all([
+        tx.task.count({ where }),
+        tx.task.findMany({
+          where,
+          include: INCLUDE,
+          orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
+          ...(skip !== undefined ? { skip } : {}),
+          ...(take !== undefined ? { take } : {}),
+        }),
+      ])
+    );
 
     // Return with pagination metadata if paginated, otherwise return array for backwards compatibility
     if (skip !== undefined || take !== undefined) {
@@ -89,6 +98,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const body = await req.json();
     const {
@@ -110,17 +120,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Run all validation queries in parallel (fixes sequential awaits)
-    const [category, user, supplier] = await Promise.all([
-      categoryId !== undefined && categoryId !== null
-        ? prisma.taskCategory.findUnique({ where: { id: categoryId } })
-        : null,
-      assignedToId !== undefined && assignedToId !== null
-        ? prisma.user.findUnique({ where: { id: assignedToId } })
-        : null,
-      supplierId !== undefined && supplierId !== null
-        ? prisma.supplier.findUnique({ where: { id: supplierId } })
-        : null,
-    ]);
+    const [category, user, supplier] = await withTenantContext(weddingId, (tx) =>
+      Promise.all([
+        categoryId !== undefined && categoryId !== null
+          ? tx.taskCategory.findUnique({ where: { id: categoryId, weddingId } })
+          : null,
+        assignedToId !== undefined && assignedToId !== null
+          ? prisma.user.findUnique({ where: { id: assignedToId } })
+          : null,
+        supplierId !== undefined && supplierId !== null
+          ? tx.supplier.findUnique({ where: { id: supplierId, weddingId } })
+          : null,
+      ])
+    );
 
     // Check validation results
     if (categoryId !== undefined && categoryId !== null && !category) {
@@ -133,8 +145,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid supplierId" }, { status: 400 });
     }
 
-    const task = await prisma.task.create({
+    const task = await withTenantContext(weddingId, (tx) =>
+      tx.task.create({
         data: {
+          weddingId,
           title: title.trim(),
           notes: notes?.trim() || null,
           priority: priority ?? "MEDIUM",
@@ -147,7 +161,8 @@ export async function POST(req: NextRequest) {
           recurringEndDate: isRecurring && recurringEndDate ? new Date(recurringEndDate) : null,
         },
         include: INCLUDE,
-    });
+      })
+    );
 
     return NextResponse.json(task, { status: 201 });
 

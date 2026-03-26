@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { validateFields } from "@/lib/validation";
+import { withTenantContext } from "@/lib/tenant";
 
 import { handleDbError } from "@/lib/db-error";
 
@@ -13,6 +14,8 @@ export async function POST(
     const { id } = await params;
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+
+    const { weddingId } = auth;
 
     const data = await req.json();
     if (!data.label?.trim()) return NextResponse.json({ error: "Label required" }, { status: 400 });
@@ -27,19 +30,24 @@ export async function POST(
       return NextResponse.json({ error: errors[0] }, { status: 400 });
     }
 
-    // Validate supplier exists
-    const supplier = await prisma.supplier.findUnique({ where: { id } });
+    // Validate supplier exists and belongs to this wedding
+    const supplier = await withTenantContext(weddingId, (tx) =>
+      tx.supplier.findUnique({ where: { id, weddingId } })
+    );
     if (!supplier) return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
 
-    const payment = await prisma.payment.create({
-    data: {
-        supplierId: id,
-        label: data.label.trim(),
-        amount: Number(data.amount),
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        notes: data.notes?.trim() || null,
-    },
-    });
+    const payment = await withTenantContext(weddingId, (tx) =>
+      tx.payment.create({
+        data: {
+          weddingId,
+          supplierId: id,
+          label: data.label.trim(),
+          amount: Number(data.amount),
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          notes: data.notes?.trim() || null,
+        },
+      })
+    );
 
     return NextResponse.json(payment, { status: 201 });
 

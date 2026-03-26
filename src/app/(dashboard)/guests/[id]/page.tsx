@@ -1,43 +1,49 @@
 export const dynamic = "force-dynamic";
 
-import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { GuestForm } from "@/components/guests/GuestForm";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getSession } from "@/lib/session";
 import { can } from "@/lib/permissions";
+import { requireServerContext } from "@/lib/server-context";
+import { withTenantContext } from "@/lib/tenant";
 
 export default async function EditGuestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await getSession();
-  const [guest, groups, mealOptions] = await Promise.all([
-    prisma.guest.findUnique({ where: { id } }),
-    prisma.guest.findMany({
-      select: { groupName: true },
-      distinct: ["groupName"],
-      where: { groupName: { not: null } },
-      orderBy: { groupName: "asc" },
-    }).then((rows) => rows.map((r) => r.groupName!)),
-    prisma.mealOption.findMany({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
-  ]);
+  const ctx = await requireServerContext();
+  const { weddingId, role } = ctx;
+
+  const [guest, groups, mealOptions] = await withTenantContext(weddingId, (tx) =>
+    Promise.all([
+      tx.guest.findUnique({ where: { id, weddingId } }),
+      tx.guest.findMany({
+        select: { groupName: true },
+        distinct: ["groupName"],
+        where: { weddingId, groupName: { not: null } },
+        orderBy: { groupName: "asc" },
+      }).then((rows) => rows.map((r) => r.groupName!)),
+      tx.mealOption.findMany({
+        where: { weddingId, isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+    ])
+  );
 
   if (!guest) notFound();
 
   // Load table + its guests for seat occupancy if guest is assigned
   const tableWithGuests = guest.tableId
-    ? await prisma.table.findUnique({
-        where: { id: guest.tableId },
-        select: {
-          id: true,
-          name: true,
-          capacity: true,
-          guests: { select: { id: true, firstName: true, lastName: true, seatNumber: true } },
-        },
-      })
+    ? await withTenantContext(weddingId, (tx) =>
+        tx.table.findUnique({
+          where: { id: guest.tableId!, weddingId },
+          select: {
+            id: true,
+            name: true,
+            capacity: true,
+            guests: { select: { id: true, firstName: true, lastName: true, seatNumber: true } },
+          },
+        })
+      )
     : null;
 
   return (
@@ -56,7 +62,7 @@ export default async function EditGuestPage({ params }: { params: Promise<{ id: 
           groups={groups}
           mealOptions={mealOptions}
           tableWithGuests={tableWithGuests as any}
-          readOnly={!can.editGuests(session?.user?.role ?? "VIEWER")}
+          readOnly={!can.editGuests(role)}
         />
       </div>
     </div>

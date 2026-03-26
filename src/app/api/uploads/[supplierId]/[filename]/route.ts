@@ -1,14 +1,13 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
-import { can } from "@/lib/permissions";
-import { UserRole } from "@prisma/client";
+import { requireRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
 import { noCacheHeaders } from "@/lib/api-response";
 import { buildContentDisposition } from "@/lib/filename";
+import { withTenantContext } from "@/lib/tenant";
 
 import { handleDbError } from "@/lib/db-error";
 
@@ -22,25 +21,29 @@ const MIME: Record<string, string> = {
 };
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ supplierId: string; filename: string }> }
 ): Promise<NextResponse> {
   try {
     const { supplierId, filename } = await params;
-    const session = await auth.api.getSession({ headers: _req.headers });
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!can.accessSuppliers((session.user as { role: UserRole }).role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const auth = await requireRole(["ADMIN", "VIEWER"], req);
+    if (!auth.authorized) return auth.response;
+
+    const { weddingId } = auth;
 
     // Use path.basename to prevent path traversal
     const storedAs = path.basename(filename);
 
-    // Fetch attachment from database to get the original filename
-    const attachment = await prisma.attachment.findFirst({
-      where: {
-        supplierId: supplierId,
-        storedAs,
-      },
-    });
+    // Verify the supplier belongs to this wedding, then fetch the attachment
+    const attachment = await withTenantContext(weddingId, (tx) =>
+      tx.attachment.findFirst({
+        where: {
+          supplierId,
+          storedAs,
+          weddingId,
+        },
+      })
+    );
 
     if (!attachment) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });

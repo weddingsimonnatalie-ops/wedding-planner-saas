@@ -3,10 +3,11 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-better";
 import { requireAdmin } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { TableShape, Orientation } from "@prisma/client";
 import { apiJson } from "@/lib/api-response";
 import { validateFields } from "@/lib/validation";
+import { verifyWeddingCookieId, COOKIE_NAME } from "@/lib/wedding-cookie";
 
 import { handleDbError } from "@/lib/db-error";const GUEST_SELECT = {
   id: true,
@@ -27,10 +28,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const tables = await prisma.table.findMany({
+    const cookieValue = req.cookies.get(COOKIE_NAME)?.value;
+    if (!cookieValue) return NextResponse.json({ error: "No wedding context" }, { status: 401 });
+    const weddingId = await verifyWeddingCookieId(cookieValue);
+    if (!weddingId) return NextResponse.json({ error: "Invalid wedding context" }, { status: 401 });
+
+    const tables = await withTenantContext(weddingId, (tx) =>
+      tx.table.findMany({
+        where: { weddingId },
         include: { guests: { select: GUEST_SELECT, orderBy: [{ seatNumber: "asc" }, { lastName: "asc" }, { firstName: "asc" }] } },
         orderBy: { createdAt: "asc" },
-    });
+      })
+    );
 
     return apiJson(tables);
 
@@ -44,6 +53,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const { roomId, name, shape, capacity, positionX, positionY, orientation } = await req.json();
 
@@ -64,24 +74,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       ? orientation as Orientation
       : "VERTICAL";
 
-    // Use the first room if no roomId provided
-    let resolvedRoomId = roomId;
-    if (!resolvedRoomId) {
-        let room = await prisma.room.findFirst({ orderBy: { createdAt: "asc" } });
+    const table = await withTenantContext(weddingId, async (tx) => {
+      // Use the first room if no roomId provided
+      let resolvedRoomId = roomId;
+      if (!resolvedRoomId) {
+        let room = await tx.room.findFirst({ where: { weddingId }, orderBy: { createdAt: "asc" } });
         if (!room) {
-          room = await prisma.room.create({
-            data: { name: "Main Reception", widthMetres: 20, heightMetres: 15 },
+          room = await tx.room.create({
+            data: { weddingId, name: "Main Reception", widthMetres: 20, heightMetres: 15 },
           });
         }
         resolvedRoomId = room.id;
-    } else {
-        // Validate roomId exists
-        const room = await prisma.room.findUnique({ where: { id: resolvedRoomId } });
-        if (!room) return NextResponse.json({ error: "Invalid roomId" }, { status: 400 });
-    }
+      } else {
+        // Validate roomId exists and belongs to this wedding
+        const room = await tx.room.findUnique({ where: { id: resolvedRoomId, weddingId } });
+        if (!room) throw new Error("INVALID_ROOM");
+      }
 
-    const table = await prisma.table.create({
+      return tx.table.create({
         data: {
+          weddingId,
           roomId: resolvedRoomId,
           name: name.trim(),
           shape: (shape as TableShape) ?? "ROUND",
@@ -91,11 +103,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           orientation: validOrientation,
         },
         include: { guests: { select: GUEST_SELECT, orderBy: [{ seatNumber: "asc" }, { lastName: "asc" }, { firstName: "asc" }] } },
+      });
     });
 
     return NextResponse.json(table, { status: 201 });
 
   } catch (error) {
+    if (error instanceof Error && error.message === "INVALID_ROOM") {
+      return NextResponse.json({ error: "Invalid roomId" }, { status: 400 });
+    }
     return handleDbError(error);
   }
 

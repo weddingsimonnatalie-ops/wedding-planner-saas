@@ -17,24 +17,26 @@ enum UserRole {
 }
 
 model User {
-  id                       String         @id @default(cuid())
-  email                    String         @unique
+  id                       String          @id @default(cuid())
+  email                    String          @unique
   name                     String?
-  role                     UserRole       @default(ADMIN)
-  twoFactorEnabled         Boolean        @default(false)
+  // role REMOVED — role is now per-wedding on WeddingMember
+  twoFactorEnabled         Boolean         @default(false)
   twoFactorSecret          String?
   lockedUntil              DateTime?
-  sessionVersion           Int            @default(0)
+  sessionVersion           Int             @default(0)
   emailVerified            DateTime?
   verificationToken        String?
   verificationTokenExpires DateTime?
-  createdAt                DateTime       @default(now())
-  updatedAt                DateTime       @updatedAt
-  backupCodes              BackupCode[]
-  assignedTasks            Task[]
-  sessions                 Session[]
-  accounts                 Account[]
-  trustedDevices           TrustedDevice[]
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
+
+  weddings       WeddingMember[]
+  backupCodes    BackupCode[]
+  assignedTasks  Task[]
+  sessions       Session[]
+  accounts       Account[]
+  trustedDevices TrustedDevice[]
 }
 
 model BackupCode {
@@ -47,47 +49,120 @@ model BackupCode {
 }
 
 model TrustedDevice {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Device identification
-  deviceName  String   // e.g., "MacBook Pro", "iPhone"
-  deviceType  String   // "desktop", "tablet", "mobile"
-  browser     String   // e.g., "Chrome 120"
-  os          String   // e.g., "macOS"
-
-  // Authentication
-  tokenHash   String   @unique  // Hashed trust token
-  expiresAt   DateTime
-
-  // Audit
-  createdAt   DateTime @default(now())
-  lastUsedAt  DateTime @default(now())
-  ipAddress   String?
-  userAgent   String?
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceName String
+  deviceType String
+  browser    String
+  os         String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+  ipAddress  String?
+  userAgent  String?
 
   @@index([userId])
 }
 
-// --- WEDDING DETAILS ---
+// --- WEDDING / MULTI-TENANCY ---
 
-model WeddingConfig {
-  id                     Int       @id @default(1)
-  coupleName             String    @default("Our Wedding")
-  weddingDate            DateTime?
-  venueName              String?
-  venueAddress           String?
-  reminderEmail          String?
-  sessionTimeoutMinutes  Int       @default(60)
-  warningMinutes         Int       @default(5)
-  updatedAt              DateTime  @updatedAt
+enum SubStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  PAUSED
+}
+
+model Wedding {
+  id                   String          @id @default(cuid())
+  coupleName           String          @default("Our Wedding")
+  weddingDate          DateTime?
+  venueName            String?
+  venueAddress         String?
+  reminderEmail        String?
+  sessionTimeout       Int             @default(30)
+  sessionWarningTime   Int             @default(5)
+
+  // Stripe
+  stripeCustomerId     String?         @unique
+  stripeSubscriptionId String?         @unique
+  subscriptionStatus   SubStatus       @default(TRIALING)
+  subscriptionPlan     String?
+  currentPeriodEnd     DateTime?
+  trialEndsAt          DateTime?
+  gracePeriodEndsAt    DateTime?
+
+  // Data retention
+  cancelledAt          DateTime?
+  deleteScheduledAt    DateTime?
+
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  members               WeddingMember[]
+  invites               WeddingInvite[]
+  guests                Guest[]
+  tables                Table[]
+  rooms                 Room[]
+  roomElements          RoomElement[]
+  suppliers             Supplier[]
+  payments              Payment[]
+  appointments          Appointment[]
+  tasks                 Task[]
+  mealOptions           MealOption[]
+  supplierCategories    SupplierCategory[]
+  appointmentCategories AppointmentCategory[]
+  taskCategories        TaskCategory[]
+  attachments           Attachment[]
+}
+
+model WeddingMember {
+  id        String   @id @default(cuid())
+  userId    String
+  weddingId String
+  role      UserRole @default(VIEWER)
+  joinedAt  DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wedding Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weddingId])
+  @@index([userId])
+  @@index([weddingId])
+}
+
+model WeddingInvite {
+  id        String    @id @default(cuid())
+  weddingId String
+  token     String    @unique @default(cuid())
+  role      UserRole  @default(RSVP_MANAGER)
+  email     String?
+  expiresAt DateTime
+  usedAt    DateTime?
+  usedBy    String?
+  createdAt DateTime  @default(now())
+
+  wedding Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  @@index([weddingId])
+}
+
+model StripeEvent {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  eventType   String
+  processedAt DateTime @default(now())
 }
 
 // --- GUESTS ---
 
 model Guest {
   id              String     @id @default(cuid())
+  weddingId       String
+  wedding         Wedding    @relation(fields: [weddingId], references: [id], onDelete: Cascade)
   firstName       String
   lastName        String
   email           String?
@@ -121,9 +196,11 @@ model Guest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([weddingId])
   @@index([tableId])
   @@index([email])
-  @@index([groupName])
+  @@index([weddingId, groupName])
+  @@index([weddingId, rsvpStatus])
 }
 
 enum RsvpStatus {
@@ -136,27 +213,37 @@ enum RsvpStatus {
 
 model MealOption {
   id          String  @id @default(cuid())
+  weddingId   String
+  wedding     Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
   name        String
   description String?
   course      String?
   isActive    Boolean @default(true)
   sortOrder   Int     @default(0)
+
+  @@index([weddingId])
 }
 
 // --- SEATING ---
 
 model Room {
   id           String        @id @default(cuid())
+  weddingId    String
+  wedding      Wedding       @relation(fields: [weddingId], references: [id], onDelete: Cascade)
   name         String        @default("Main Reception")
   widthMetres  Float         @default(20)
   heightMetres Float         @default(15)
   tables       Table[]
   elements     RoomElement[]
   createdAt    DateTime      @default(now())
+
+  @@index([weddingId])
 }
 
 model Table {
   id          String      @id @default(cuid())
+  weddingId   String
+  wedding     Wedding     @relation(fields: [weddingId], references: [id], onDelete: Cascade)
   roomId      String
   room        Room        @relation(fields: [roomId], references: [id])
   name        String
@@ -169,10 +256,12 @@ model Table {
   height      Float       @default(60)
   locked      Boolean     @default(false)
   colour      String      @default("#e2e8f0")
-  orientation Orientation  @default(VERTICAL)
+  orientation Orientation @default(VERTICAL)
   guests      Guest[]
   notes       String?
   createdAt   DateTime    @default(now())
+
+  @@index([weddingId])
 }
 
 enum TableShape {
@@ -188,6 +277,8 @@ enum Orientation {
 
 model RoomElement {
   id        String  @id @default(cuid())
+  weddingId String
+  wedding   Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
   roomId    String
   room      Room    @relation(fields: [roomId], references: [id])
   type      String
@@ -199,24 +290,32 @@ model RoomElement {
   rotation  Float   @default(0)
   color     String  @default("#e2e8f0")
   locked    Boolean @default(false)
+
+  @@index([weddingId])
 }
 
 // --- SUPPLIER CATEGORIES ---
 
 model SupplierCategory {
   id        String     @id @default(cuid())
-  name      String     @unique
+  weddingId String
+  wedding   Wedding    @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  name      String
   colour    String     @default("#6366f1")
   sortOrder Int        @default(0)
   isActive  Boolean    @default(true)
   suppliers Supplier[]
   createdAt DateTime   @default(now())
+
+  @@index([weddingId])
 }
 
 // --- SUPPLIERS ---
 
 model Supplier {
   id               String            @id @default(cuid())
+  weddingId        String
+  wedding          Wedding           @relation(fields: [weddingId], references: [id], onDelete: Cascade)
   categoryId       String?
   category         SupplierCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   name             String
@@ -236,24 +335,32 @@ model Supplier {
   tasks            Task[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+
+  @@index([weddingId])
 }
 
 // --- APPOINTMENT CATEGORIES ---
 
 model AppointmentCategory {
   id           String        @id @default(cuid())
-  name         String        @unique
+  weddingId    String
+  wedding      Wedding       @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  name         String
   colour       String        @default("#6366f1")
   sortOrder    Int           @default(0)
   isActive     Boolean       @default(true)
   appointments Appointment[]
   createdAt    DateTime      @default(now())
+
+  @@index([weddingId])
 }
 
 // --- APPOINTMENTS ---
 
 model Appointment {
   id           String               @id @default(cuid())
+  weddingId    String
+  wedding      Wedding              @relation(fields: [weddingId], references: [id], onDelete: Cascade)
   title        String
   categoryId   String?
   category     AppointmentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -267,6 +374,7 @@ model Appointment {
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
 
+  @@index([weddingId])
   @@index([date])
 }
 
@@ -280,6 +388,8 @@ enum SupplierStatus {
 
 model Payment {
   id         String        @id @default(cuid())
+  weddingId  String
+  wedding    Wedding       @relation(fields: [weddingId], references: [id], onDelete: Cascade)
   supplierId String
   supplier   Supplier      @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   label      String
@@ -290,6 +400,7 @@ model Payment {
   notes      String?
   createdAt  DateTime      @default(now())
 
+  @@index([weddingId])
   @@index([status, dueDate])
 }
 
@@ -301,16 +412,19 @@ enum PaymentStatus {
 }
 
 model Attachment {
-  id         String    @id @default(cuid())
+  id         String   @id @default(cuid())
+  weddingId  String
+  wedding    Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
   supplierId String
-  supplier   Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  paymentId  String?   // Optional link to payment (for receipts)
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  paymentId  String?
   filename   String
   storedAs   String
   mimeType   String
   sizeBytes  Int
-  uploadedAt DateTime  @default(now())
+  uploadedAt DateTime @default(now())
 
+  @@index([weddingId])
   @@index([paymentId])
 }
 
@@ -331,16 +445,22 @@ enum RecurringInterval {
 
 model TaskCategory {
   id        String   @id @default(cuid())
-  name      String   @unique
+  weddingId String
+  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  name      String
   colour    String   @default("#6366f1")
   sortOrder Int      @default(0)
   isActive  Boolean  @default(true)
   tasks     Task[]
   createdAt DateTime @default(now())
+
+  @@index([weddingId])
 }
 
 model Task {
   id          String       @id @default(cuid())
+  weddingId   String
+  wedding     Wedding      @relation(fields: [weddingId], references: [id], onDelete: Cascade)
   title       String
   notes       String?
   priority    TaskPriority @default(MEDIUM)
@@ -364,6 +484,7 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([weddingId])
   @@index([isCompleted, dueDate])
   @@index([assignedToId])
   @@index([categoryId])
@@ -387,34 +508,34 @@ model LoginAttempt {
 // --- BETTER AUTH TABLES ---
 
 model Session {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token        String   @unique
-  expiresAt    DateTime
-  ipAddress    String?
-  userAgent    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 model Account {
-  id                String   @id @default(cuid())
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountId         String
-  providerId        String
-  accessToken       String?
-  refreshToken      String?
-  idToken           String?
-  accessTokenExpiresAt DateTime?
+  id                   String    @id @default(cuid())
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId            String
+  providerId           String
+  accessToken          String?
+  refreshToken         String?
+  idToken              String?
+  accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
-  scope             String?
-  password          String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  scope                String?
+  password             String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   @@unique([providerId, accountId])
   @@index([userId])

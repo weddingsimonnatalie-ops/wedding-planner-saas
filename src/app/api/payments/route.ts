@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
 import { requireRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { apiJson } from "@/lib/api-response";
+import { withTenantContext } from "@/lib/tenant";
 
 import { handleDbError } from "@/lib/db-error";
 
@@ -12,6 +12,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const auth = await requireRole(["ADMIN", "VIEWER"], req);
     if (!auth.authorized) return auth.response;
+
+    const { weddingId } = auth;
 
     const { searchParams } = new URL(req.url);
 
@@ -27,32 +29,37 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "Invalid take parameter (must be 1-100)" }, { status: 400 });
     }
 
-    const payments = await prisma.payment.findMany({
+    const payments = await withTenantContext(weddingId, (tx) =>
+      tx.payment.findMany({
+        where: { weddingId },
         include: {
           supplier: { include: { category: true } },
         },
         orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
         ...(skip !== undefined ? { skip } : {}),
         ...(take !== undefined ? { take } : {}),
-    });
+      })
+    );
 
     // Get payment IDs and supplier IDs for parallel queries
     const paymentIds = payments.map(p => p.id);
     const supplierIds = Array.from(new Set(payments.map(p => p.supplierId)));
 
     // Run receipts and paid-by-supplier queries in parallel (fixes sequential awaits)
-    const [receipts, paidBySupplierResult] = await Promise.all([
-      prisma.attachment.findMany({
-        where: { paymentId: { in: paymentIds } },
-      }),
-      supplierIds.length > 0
-        ? prisma.payment.groupBy({
-            by: ["supplierId"],
-            where: { supplierId: { in: supplierIds }, status: "PAID" },
-            _sum: { amount: true },
-          })
-        : Promise.resolve([]),
-    ]);
+    const [receipts, paidBySupplierResult] = await withTenantContext(weddingId, (tx) =>
+      Promise.all([
+        tx.attachment.findMany({
+          where: { paymentId: { in: paymentIds }, weddingId },
+        }),
+        supplierIds.length > 0
+          ? tx.payment.groupBy({
+              by: ["supplierId"],
+              where: { supplierId: { in: supplierIds }, weddingId, status: "PAID" },
+              _sum: { amount: true },
+            })
+          : Promise.resolve([]),
+      ])
+    );
 
     const receiptMap = new Map(receipts.map(r => [r.paymentId, r]));
     const paidBySupplier: Record<string, number> = Object.fromEntries(

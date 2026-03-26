@@ -34,7 +34,7 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       db:
         condition: service_healthy
@@ -82,6 +82,14 @@ services:
       EMAIL_VERIFICATION_REQUIRED: ${EMAIL_VERIFICATION_REQUIRED:-false}
       # Graceful shutdown timeout in seconds (optional, default: 30)
       GRACEFUL_TIMEOUT: ${GRACEFUL_TIMEOUT:-30}
+      # Stripe billing
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_PRICE_ID_STANDARD: ${STRIPE_PRICE_ID_STANDARD}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+      TRIAL_DAYS: ${TRIAL_DAYS:-14}
+      GRACE_PERIOD_DAYS: ${GRACE_PERIOD_DAYS:-7}
+      DATA_RETENTION_DAYS: ${DATA_RETENTION_DAYS:-90}
     volumes:
       - ./data/uploads:/app/uploads
 

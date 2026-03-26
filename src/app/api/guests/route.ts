@@ -1,9 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
-import { requireAdminOrRsvpManager } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { requireRole, requireAdminOrRsvpManager } from "@/lib/api-auth";
+import { withTenantContext } from "@/lib/tenant";
 import { RsvpStatus } from "@prisma/client";
 import { apiJson } from "@/lib/api-response";
 import { validateFields } from "@/lib/validation";
@@ -12,8 +11,9 @@ import { handleDbError } from "@/lib/db-error";
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireRole(["ADMIN", "VIEWER", "RSVP_MANAGER"], req);
+    if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const { searchParams } = req.nextUrl;
     const status = searchParams.get("status");
@@ -51,6 +51,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         : {};
 
     const where: Record<string, unknown> = {
+      weddingId,
       ...(status && status !== "ALL" ? { rsvpStatus: status as RsvpStatus } : {}),
       ...(group === "none" ? { OR: [{ groupName: null }, { groupName: "" }] } : group ? { groupName: group } : {}),
       ...(tableId ? { tableId } : tableAssigned === "yes" ? { tableId: { not: null } } : tableAssigned === "no" ? { tableId: null } : {}),
@@ -67,27 +68,31 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         : {}),
     };
 
-    // Get total count for pagination metadata
-    const total = await prisma.guest.count({ where });
+    const result = await withTenantContext(weddingId, async (tx) => {
+      // Get total count for pagination metadata
+      const total = await tx.guest.count({ where });
 
-    const guests = await prisma.guest.findMany({
-        where,
-        include: { table: { select: { id: true, name: true } } },
-        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-        ...(skip !== undefined ? { skip } : {}),
-        ...(take !== undefined ? { take } : {}),
+      const guests = await tx.guest.findMany({
+          where,
+          include: { table: { select: { id: true, name: true } } },
+          orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+          ...(skip !== undefined ? { skip } : {}),
+          ...(take !== undefined ? { take } : {}),
+      });
+
+      return { guests, total };
     });
 
     // Return with pagination metadata if paginated, otherwise return array for backwards compatibility
     if (skip !== undefined || take !== undefined) {
       return apiJson({
-        guests,
-        total,
-        hasMore: take !== undefined ? skip! + guests.length < total : false,
+        guests: result.guests,
+        total: result.total,
+        hasMore: take !== undefined ? skip! + result.guests.length < result.total : false,
       });
     }
 
-    return apiJson(guests);
+    return apiJson(result.guests);
 
   } catch (error) {
     return handleDbError(error);
@@ -99,6 +104,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const auth = await requireAdminOrRsvpManager(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const body = await req.json();
     const {
@@ -131,33 +137,40 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: errors[0] }, { status: 400 });
     }
 
-    // Check for duplicate email
-    if (email?.trim()) {
-        const existing = await prisma.guest.findFirst({
-            where: { email: email.trim() },
-        });
-        if (existing) {
-            return NextResponse.json(
-                { error: "A guest with this email already exists" },
-                { status: 409 }
-            );
-        }
-    }
+    const guest = await withTenantContext(weddingId, async (tx) => {
+      // Check for duplicate email (scoped to this wedding)
+      if (email?.trim()) {
+          const existing = await tx.guest.findFirst({
+              where: { email: email.trim(), weddingId },
+          });
+          if (existing) {
+              return null; // signal duplicate
+          }
+      }
 
-    const guest = await prisma.guest.create({
-        data: {
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          email: email?.trim() || null,
-          phone: phone?.trim() || null,
-          groupName: groupName?.trim() || null,
-          isChild: Boolean(isChild),
-          invitedToCeremony: invitedToCeremony !== false,
-          invitedToReception: invitedToReception !== false,
-          invitedToAfterparty: Boolean(invitedToAfterparty),
-          notes: notes?.trim() || null,
-        },
+      return tx.guest.create({
+          data: {
+            weddingId,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            email: email?.trim() || null,
+            phone: phone?.trim() || null,
+            groupName: groupName?.trim() || null,
+            isChild: Boolean(isChild),
+            invitedToCeremony: invitedToCeremony !== false,
+            invitedToReception: invitedToReception !== false,
+            invitedToAfterparty: Boolean(invitedToAfterparty),
+            notes: notes?.trim() || null,
+          },
+      });
     });
+
+    if (guest === null) {
+      return NextResponse.json(
+          { error: "A guest with this email already exists" },
+          { status: 409 }
+      );
+    }
 
     return NextResponse.json(guest, { status: 201 });
 

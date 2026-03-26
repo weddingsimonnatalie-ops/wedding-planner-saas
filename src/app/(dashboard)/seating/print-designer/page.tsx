@@ -1,35 +1,40 @@
 export const dynamic = "force-dynamic";
 
-import { getSession } from "@/lib/session";
-import { redirect } from "next/navigation";
-import { can } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { requireServerContext } from "@/lib/server-context";
+import { withTenantContext } from "@/lib/tenant";
 import { PrintDesigner } from "@/components/seating/PrintDesigner";
 
 export default async function PrintDesignerPage() {
-  const session = await getSession();
-  if (!can.editSeating(session?.user?.role ?? "VIEWER")) redirect("/");
+  const ctx = await requireServerContext(["ADMIN"]);
+  const { weddingId } = ctx;
 
-  const [weddingConfig, tables, mealOptions] = await Promise.all([
-    prisma.weddingConfig.findFirst(),
-    prisma.table.findMany({
-      include: {
-        guests: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            seatNumber: true,
-            mealChoice: true,
-            dietaryNotes: true,
+  const [wedding, tables, mealOptions] = await withTenantContext(weddingId, (tx) =>
+    Promise.all([
+      tx.wedding.findUnique({
+        where: { id: weddingId },
+        select: { coupleName: true, weddingDate: true, venueName: true },
+      }),
+      tx.table.findMany({
+        where: { weddingId },
+        include: {
+          guests: {
+            where: { weddingId },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              seatNumber: true,
+              mealChoice: true,
+              dietaryNotes: true,
+            },
+            orderBy: [{ seatNumber: "asc" }, { lastName: "asc" }, { firstName: "asc" }],
           },
-          orderBy: [{ seatNumber: "asc" }, { lastName: "asc" }, { firstName: "asc" }],
         },
-      },
-      orderBy: { name: "asc" },
-    }),
-    prisma.mealOption.findMany({ select: { id: true, name: true } }),
-  ]);
+        orderBy: { name: "asc" },
+      }),
+      tx.mealOption.findMany({ where: { weddingId }, select: { id: true, name: true } }),
+    ])
+  );
 
   const mealMap = Object.fromEntries(mealOptions.map((m) => [m.id, m.name]));
 
@@ -52,11 +57,11 @@ export default async function PrintDesignerPage() {
       <h1 className="text-2xl font-semibold mb-4">Print Seating Chart</h1>
       <PrintDesigner
         weddingConfig={
-          weddingConfig
+          wedding
             ? {
-                coupleName: weddingConfig.coupleName,
-                weddingDate: weddingConfig.weddingDate,
-                venueName: weddingConfig.venueName,
+                coupleName: wedding.coupleName,
+                weddingDate: wedding.weddingDate,
+                venueName: wedding.venueName,
               }
             : null
         }

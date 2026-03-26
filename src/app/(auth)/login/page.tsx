@@ -314,11 +314,24 @@ function LoginForm() {
         console.error("Failed to set trusted device:", err);
       }
     }
-    // Use window.location.href instead of router.push for post-login redirect.
-    // This forces a full page reload which ensures the session cookie is properly
-    // read by the middleware. Client-side navigation can cause a login loop
-    // because the middleware may not see the new session cookie immediately.
-    window.location.href = callbackUrl;
+
+    // Set the signed weddingId cookie based on the user's memberships.
+    // This returns a redirect URL: "/" for one wedding, "/select-wedding" for
+    // multiple, or "/register" for none.
+    let destination = callbackUrl;
+    try {
+      const res = await fetch("/api/auth/set-wedding", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.redirect) destination = data.redirect;
+      }
+    } catch (err) {
+      console.error("Failed to set wedding context:", err);
+    }
+
+    // Use window.location.href for a full page reload so the session and
+    // weddingId cookies are read correctly by middleware on first navigation.
+    window.location.href = destination;
   }
 
   const timeoutBanner = reason === "timeout" && (

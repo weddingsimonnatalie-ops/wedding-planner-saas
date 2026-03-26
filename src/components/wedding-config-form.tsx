@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { WeddingConfig } from "@prisma/client";
+// Matches the fields from the Wedding model used in this form
+interface WeddingConfigLike {
+  coupleName: string;
+  weddingDate: Date | null;
+  venueName: string | null;
+  venueAddress: string | null;
+}
 
 interface WeddingConfigFormProps {
-  config: WeddingConfig | null;
+  config: WeddingConfigLike | null;
 }
 
 export function WeddingConfigForm({ config }: WeddingConfigFormProps) {

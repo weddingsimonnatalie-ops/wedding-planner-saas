@@ -1,16 +1,16 @@
-import { getSession } from "@/lib/session";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { requireServerContext } from "@/lib/server-context";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const session = await getSession();
+  const ctx = await requireServerContext();
   return (
     <ErrorBoundary label="Dashboard">
       <DashboardClient
-        userName={session?.user?.name ?? session?.user?.email ?? undefined}
-        role={session?.user?.role}
+        userName={ctx.userName ?? ctx.userEmail ?? undefined}
+        role={ctx.role}
       />
     </ErrorBoundary>
   );

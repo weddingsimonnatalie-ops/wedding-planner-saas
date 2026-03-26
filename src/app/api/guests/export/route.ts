@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrRsvpManager } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { guestsToCsv } from "@/lib/csv";
 import { noCacheHeaders } from "@/lib/api-response";
 
@@ -12,11 +12,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const auth = await requireAdminOrRsvpManager(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
-    const guests = await prisma.guest.findMany({
-        include: { table: { select: { name: true } } },
-        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-    });
+    const guests = await withTenantContext(weddingId, (tx) =>
+      tx.guest.findMany({
+          where: { weddingId },
+          include: { table: { select: { name: true } } },
+          orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      })
+    );
 
     const csv = guestsToCsv(guests);
 

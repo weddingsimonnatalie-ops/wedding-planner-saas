@@ -1,24 +1,29 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
-import { requireAdmin } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { requireAdmin, requireRole } from "@/lib/api-auth";
 import { apiJson } from "@/lib/api-response";
 import { validateFields } from "@/lib/validation";
 import { getCached, invalidateCache } from "@/lib/cache";
+import { withTenantContext } from "@/lib/tenant";
 
 import { handleDbError } from "@/lib/db-error";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireRole(["ADMIN", "VIEWER", "RSVP_MANAGER"], req);
+    if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const categories = await getCached(
-      "supplier-categories",
+      `${weddingId}:supplier-categories`,
       300_000,
-      () => prisma.supplierCategory.findMany({ orderBy: { sortOrder: "asc" } })
+      () => withTenantContext(weddingId, (tx) =>
+        tx.supplierCategory.findMany({
+          where: { weddingId },
+          orderBy: { sortOrder: "asc" },
+        })
+      )
     );
 
     return apiJson(categories);
@@ -33,6 +38,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const data = await req.json();
     if (!data.name?.trim()) {
@@ -47,18 +53,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: errors[0] }, { status: 400 });
     }
 
-    const maxOrder = await prisma.supplierCategory.aggregate({ _max: { sortOrder: true } });
-    const nextOrder = (maxOrder._max.sortOrder ?? -10) + 10;
+    const category = await withTenantContext(weddingId, async (tx) => {
+      const maxOrder = await tx.supplierCategory.aggregate({
+        where: { weddingId },
+        _max: { sortOrder: true },
+      });
+      const nextOrder = (maxOrder._max.sortOrder ?? -10) + 10;
 
-    const category = await prisma.supplierCategory.create({
+      return tx.supplierCategory.create({
         data: {
+          weddingId,
           name: data.name.trim(),
           colour: data.colour ?? "#6366f1",
           sortOrder: data.sortOrder ?? nextOrder,
         },
+      });
     });
 
-    invalidateCache("supplier-categories");
+    invalidateCache(`${weddingId}:supplier-categories`);
     return NextResponse.json(category, { status: 201 });
 
   } catch (error) {

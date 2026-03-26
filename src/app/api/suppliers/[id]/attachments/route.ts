@@ -7,6 +7,7 @@ import crypto from "crypto";
 import { fileTypeFromBuffer } from "file-type";
 import { PDFDocument } from "pdf-lib";
 import { sanitizeFilename } from "@/lib/filename";
+import { withTenantContext } from "@/lib/tenant";
 
 import { handleDbError } from "@/lib/db-error";
 const ALLOWED: Record<string, string> = {
@@ -26,6 +27,8 @@ export async function POST(
     const { id } = await params;
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+
+    const { weddingId } = auth;
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -52,7 +55,10 @@ export async function POST(
     const ext = ALLOWED[detected.mime];
     if (file.size > MAX_BYTES) return NextResponse.json({ error: "File too large (max 20 MB)" }, { status: 400 });
 
-    const supplier = await prisma.supplier.findUnique({ where: { id: id } });
+    // Verify supplier exists and belongs to this wedding
+    const supplier = await withTenantContext(weddingId, (tx) =>
+      tx.supplier.findUnique({ where: { id, weddingId } })
+    );
     if (!supplier) return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
 
     const storedAs = `${crypto.randomUUID()}.${ext}`;
@@ -63,15 +69,18 @@ export async function POST(
     // Sanitize filename before storing in database
     const safeFilename = sanitizeFilename(file.name);
 
-    const attachment = await prisma.attachment.create({
-      data: {
-        supplierId: id,
-        filename: safeFilename,
-        storedAs,
-        mimeType: detected.mime,
-        sizeBytes: sanitizedBuffer.length,
-      },
-    });
+    const attachment = await withTenantContext(weddingId, (tx) =>
+      tx.attachment.create({
+        data: {
+          weddingId,
+          supplierId: id,
+          filename: safeFilename,
+          storedAs,
+          mimeType: detected.mime,
+          sizeBytes: sanitizedBuffer.length,
+        },
+      })
+    );
 
     return NextResponse.json(attachment, { status: 201 });
 

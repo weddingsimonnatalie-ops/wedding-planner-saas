@@ -2,11 +2,11 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrRsvpManager } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 
 import { handleDbError } from "@/lib/db-error";const INCLUDE = {
   category: { select: { id: true, name: true, colour: true } },
-  assignedTo: { select: { id: true, name: true, email: true, role: true } },
+  assignedTo: { select: { id: true, name: true, email: true } },
   supplier: { select: { id: true, name: true } },
 } as const;
 
@@ -28,23 +28,28 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const auth = await requireAdminOrRsvpManager(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const { completed } = await req.json();
 
-    const existing = await prisma.task.findUnique({ where: { id: id } });
+    const existing = await withTenantContext(weddingId, (tx) =>
+      tx.task.findUnique({ where: { id, weddingId } })
+    );
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const now = new Date();
 
     // Update the task
-    const task = await prisma.task.update({
-        where: { id: id },
+    const task = await withTenantContext(weddingId, (tx) =>
+      tx.task.update({
+        where: { id, weddingId },
         data: {
           isCompleted: Boolean(completed),
           completedAt: completed ? now : null,
         },
         include: INCLUDE,
-    });
+      })
+    );
 
     // If completing a recurring task, create the next occurrence
     if (completed && existing.isRecurring && existing.recurringInterval) {
@@ -56,22 +61,25 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           !existing.recurringEndDate || nextDue <= existing.recurringEndDate;
 
         if (shouldCreate) {
-          const nextTask = await prisma.task.create({
-            data: {
-              title: existing.title,
-              notes: existing.notes,
-              priority: existing.priority,
-              dueDate: nextDue,
-              categoryId: existing.categoryId,
-              assignedToId: existing.assignedToId,
-              supplierId: existing.supplierId,
-              isRecurring: true,
-              recurringInterval: existing.recurringInterval,
-              recurringEndDate: existing.recurringEndDate,
-              isCompleted: false,
-            },
-            include: INCLUDE,
-          });
+          const nextTask = await withTenantContext(weddingId, (tx) =>
+            tx.task.create({
+              data: {
+                weddingId,
+                title: existing.title,
+                notes: existing.notes,
+                priority: existing.priority,
+                dueDate: nextDue,
+                categoryId: existing.categoryId,
+                assignedToId: existing.assignedToId,
+                supplierId: existing.supplierId,
+                isRecurring: true,
+                recurringInterval: existing.recurringInterval,
+                recurringEndDate: existing.recurringEndDate,
+                isCompleted: false,
+              },
+              include: INCLUDE,
+            })
+          );
           return NextResponse.json({ task, nextTask });
         }
     }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrRsvpManager } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { sendRsvpEmail } from "@/lib/email";
 import { getBulkLimits } from "@/lib/rate-limit";
 
@@ -10,6 +10,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const auth = await requireAdminOrRsvpManager(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const { guestIds } = await req.json();
     if (!Array.isArray(guestIds) || guestIds.length === 0) {
@@ -24,19 +25,24 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         );
     }
 
-    const config = await prisma.weddingConfig.findUnique({ where: { id: 1 } });
+    const { config, guests } = await withTenantContext(weddingId, async (tx) => {
+      const config = await tx.wedding.findUnique({ where: { id: weddingId }, select: { coupleName: true, weddingDate: true } });
+
+      // Batch fetch all guests in a single query, scoped to this wedding (fixes N+1 and prevents cross-tenant access)
+      const guests = await tx.guest.findMany({
+          where: { id: { in: guestIds }, weddingId },
+          select: { id: true, firstName: true, lastName: true, email: true, rsvpToken: true },
+      });
+
+      return { config, guests };
+    });
+
     const coupleName = config?.coupleName ?? "Our Wedding";
+    const guestMap = new Map(guests.map(g => [g.id, g]));
 
     const sent: Array<{ guestId: string; name: string; email: string }> = [];
     const failed: Array<{ guestId: string; name: string; email: string; error: string }> = [];
     const skipped: Array<{ guestId: string; name: string; reason: string }> = [];
-
-    // Batch fetch all guests in a single query (fixes N+1)
-    const guests = await prisma.guest.findMany({
-        where: { id: { in: guestIds } },
-        select: { id: true, firstName: true, lastName: true, email: true, rsvpToken: true }
-    });
-    const guestMap = new Map(guests.map(g => [g.id, g]));
 
     for (const guestId of guestIds) {
         const guest = guestMap.get(guestId);

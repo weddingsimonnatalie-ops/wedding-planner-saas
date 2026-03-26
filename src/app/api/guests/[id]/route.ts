@@ -1,9 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
-import { requireAdminOrRsvpManager } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { requireRole, requireAdminOrRsvpManager } from "@/lib/api-auth";
+import { withTenantContext } from "@/lib/tenant";
 import { RsvpStatus } from "@prisma/client";
 import { calculateRsvpStatus } from "@/lib/rsvpStatus";
 import { apiJson } from "@/lib/api-response";
@@ -17,13 +16,16 @@ export async function GET(
 ): Promise<NextResponse> {
   try {
     const { id } = await params;
-    const session = await auth.api.getSession({ headers: _req.headers });
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireRole(["ADMIN", "VIEWER", "RSVP_MANAGER"], _req);
+    if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
-    const guest = await prisma.guest.findUnique({
-    where: { id },
-    include: { table: { select: { id: true, name: true } } },
-    });
+    const guest = await withTenantContext(weddingId, (tx) =>
+      tx.guest.findUnique({
+        where: { id, weddingId },
+        include: { table: { select: { id: true, name: true } } },
+      })
+    );
 
     if (!guest) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return apiJson(guest);
@@ -42,6 +44,7 @@ export async function PUT(
     const { id } = await params;
     const auth = await requireAdminOrRsvpManager(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const body = await req.json();
     const {
@@ -81,32 +84,6 @@ export async function PUT(
       return NextResponse.json({ error: errors[0] }, { status: 400 });
     }
 
-    // Check for duplicate email (exclude current guest)
-    if (email?.trim()) {
-      const existing = await prisma.guest.findFirst({
-        where: {
-          email: email.trim(),
-          NOT: { id: id },
-        },
-      });
-      if (existing) {
-        return NextResponse.json(
-          { error: "A guest with this email already exists" },
-          { status: 409 }
-        );
-      }
-    }
-
-    // Validate mealChoice references an active meal option (if provided)
-    if (mealChoice !== undefined && mealChoice !== null && mealChoice !== "") {
-      const mealOption = await prisma.mealOption.findFirst({
-        where: { id: mealChoice, isActive: true },
-      });
-      if (!mealOption) {
-        return NextResponse.json({ error: "Invalid meal option" }, { status: 400 });
-      }
-    }
-
     const invCeremony   = invitedToCeremony !== false;
     const invReception  = invitedToReception !== false;
     const invAfterparty = Boolean(invitedToAfterparty);
@@ -127,29 +104,67 @@ export async function PUT(
         )
     : (rsvpStatus as RsvpStatus | undefined);
 
-    const guest = await prisma.guest.update({
-    where: { id: id },
-    data: {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email?.trim() || null,
-        phone: phone?.trim() || null,
-        groupName: groupName?.trim() || null,
-        isChild: Boolean(isChild),
-        invitedToCeremony:   invCeremony,
-        invitedToReception:  invReception,
-        invitedToAfterparty: invAfterparty,
-        notes: notes?.trim() || null,
-        ...(computedStatus !== undefined ? { rsvpStatus: computedStatus as RsvpStatus } : {}),
-        ...(attendingCeremony   !== undefined ? { attendingCeremony,   attendingCeremonyMaybe:   false } : {}),
-        ...(attendingReception  !== undefined ? { attendingReception,  attendingReceptionMaybe:  false } : {}),
-        ...(attendingAfterparty !== undefined ? { attendingAfterparty, attendingAfterpartyMaybe: false } : {}),
-        ...(mealChoice   !== undefined ? { mealChoice: mealChoice || null }             : {}),
-        ...(dietaryNotes !== undefined ? { dietaryNotes: dietaryNotes?.trim() || null } : {}),
-    },
+    const result = await withTenantContext(weddingId, async (tx) => {
+      // Check for duplicate email (exclude current guest, scoped to this wedding)
+      if (email?.trim()) {
+        const existing = await tx.guest.findFirst({
+          where: {
+            email: email.trim(),
+            weddingId,
+            NOT: { id },
+          },
+        });
+        if (existing) {
+          return { duplicate: true, guest: null };
+        }
+      }
+
+      // Validate mealChoice references an active meal option (if provided)
+      if (mealChoice !== undefined && mealChoice !== null && mealChoice !== "") {
+        const mealOption = await tx.mealOption.findFirst({
+          where: { id: mealChoice, isActive: true },
+        });
+        if (!mealOption) {
+          return { invalidMeal: true, guest: null };
+        }
+      }
+
+      const guest = await tx.guest.update({
+        where: { id, weddingId },
+        data: {
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            email: email?.trim() || null,
+            phone: phone?.trim() || null,
+            groupName: groupName?.trim() || null,
+            isChild: Boolean(isChild),
+            invitedToCeremony:   invCeremony,
+            invitedToReception:  invReception,
+            invitedToAfterparty: invAfterparty,
+            notes: notes?.trim() || null,
+            ...(computedStatus !== undefined ? { rsvpStatus: computedStatus as RsvpStatus } : {}),
+            ...(attendingCeremony   !== undefined ? { attendingCeremony,   attendingCeremonyMaybe:   false } : {}),
+            ...(attendingReception  !== undefined ? { attendingReception,  attendingReceptionMaybe:  false } : {}),
+            ...(attendingAfterparty !== undefined ? { attendingAfterparty, attendingAfterpartyMaybe: false } : {}),
+            ...(mealChoice   !== undefined ? { mealChoice: mealChoice || null }             : {}),
+            ...(dietaryNotes !== undefined ? { dietaryNotes: dietaryNotes?.trim() || null } : {}),
+        },
+      });
+
+      return { guest };
     });
 
-    return NextResponse.json(guest);
+    if (result.duplicate) {
+      return NextResponse.json(
+        { error: "A guest with this email already exists" },
+        { status: 409 }
+      );
+    }
+    if (result.invalidMeal) {
+      return NextResponse.json({ error: "Invalid meal option" }, { status: 400 });
+    }
+
+    return NextResponse.json(result.guest);
 
   } catch (error) {
     return handleDbError(error);
@@ -165,6 +180,7 @@ export async function PATCH(
     const { id } = await params;
     const auth = await requireAdminOrRsvpManager(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const body = await req.json();
     const { rsvpStatus, seatNumber } = body;
@@ -173,79 +189,87 @@ export async function PATCH(
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
     }
 
-    // Fetch current guest for invitation flags (status override) and tableId (seat validation)
-    const needsFetch = (rsvpStatus !== undefined && rsvpStatus !== "PARTIAL") || (seatNumber !== undefined && seatNumber !== null);
-    const current = needsFetch
-    ? await prisma.guest.findUnique({
-          where: { id: id },
-          select: { invitedToCeremony: true, invitedToReception: true, invitedToAfterparty: true, tableId: true },
-        })
-    : null;
+    const result = await withTenantContext(weddingId, async (tx) => {
+      // Fetch current guest for invitation flags (status override) and tableId (seat validation)
+      const needsFetch = (rsvpStatus !== undefined && rsvpStatus !== "PARTIAL") || (seatNumber !== undefined && seatNumber !== null);
+      const current = needsFetch
+        ? await tx.guest.findUnique({
+              where: { id, weddingId },
+              select: { invitedToCeremony: true, invitedToReception: true, invitedToAfterparty: true, tableId: true },
+            })
+        : null;
 
-    // Derive attending fields from the override status (PARTIAL leaves them unchanged)
-    let attendingOverride: Record<string, boolean | null> = {};
-    if (rsvpStatus !== undefined && rsvpStatus !== "PARTIAL" && current) {
-    if (rsvpStatus === "ACCEPTED") {
-        attendingOverride = {
-          attendingCeremony:   current.invitedToCeremony   ? true  : null,
-          attendingReception:  current.invitedToReception  ? true  : null,
-          attendingAfterparty: current.invitedToAfterparty ? true  : null,
-        };
-    } else if (rsvpStatus === "DECLINED") {
-        attendingOverride = {
-          attendingCeremony:   current.invitedToCeremony   ? false : null,
-          attendingReception:  current.invitedToReception  ? false : null,
-          attendingAfterparty: current.invitedToAfterparty ? false : null,
-        };
-    } else {
-        // PENDING or MAYBE — clear all attending fields
-        attendingOverride = {
-          attendingCeremony:   null,
-          attendingReception:  null,
-          attendingAfterparty: null,
-        };
-    }
-    }
-
-    // Validate seatNumber if provided
-    if (seatNumber !== undefined && seatNumber !== null && current?.tableId) {
-    const table = await prisma.table.findUnique({
-        where: { id: current.tableId },
-        select: { capacity: true },
-    });
-    if (table) {
-        if (seatNumber < 1 || seatNumber > table.capacity) {
-          return NextResponse.json(
-            { error: `Seat number must be between 1 and ${table.capacity}` },
-            { status: 400 }
-          );
+      // Derive attending fields from the override status (PARTIAL leaves them unchanged)
+      let attendingOverride: Record<string, boolean | null> = {};
+      if (rsvpStatus !== undefined && rsvpStatus !== "PARTIAL" && current) {
+        if (rsvpStatus === "ACCEPTED") {
+            attendingOverride = {
+              attendingCeremony:   current.invitedToCeremony   ? true  : null,
+              attendingReception:  current.invitedToReception  ? true  : null,
+              attendingAfterparty: current.invitedToAfterparty ? true  : null,
+            };
+        } else if (rsvpStatus === "DECLINED") {
+            attendingOverride = {
+              attendingCeremony:   current.invitedToCeremony   ? false : null,
+              attendingReception:  current.invitedToReception  ? false : null,
+              attendingAfterparty: current.invitedToAfterparty ? false : null,
+            };
+        } else {
+            // PENDING or MAYBE — clear all attending fields
+            attendingOverride = {
+              attendingCeremony:   null,
+              attendingReception:  null,
+              attendingAfterparty: null,
+            };
         }
-        const conflict = await prisma.guest.findFirst({
-          where: { tableId: current.tableId, seatNumber, NOT: { id: id } },
-          select: { firstName: true, lastName: true },
+      }
+
+      // Validate seatNumber if provided
+      if (seatNumber !== undefined && seatNumber !== null && current?.tableId) {
+        const table = await tx.table.findUnique({
+            where: { id: current.tableId },
+            select: { capacity: true },
         });
-        if (conflict) {
-          return NextResponse.json(
-            { error: `Seat ${seatNumber} is already taken by ${conflict.firstName} ${conflict.lastName}` },
-            { status: 400 }
-          );
+        if (table) {
+            if (seatNumber < 1 || seatNumber > table.capacity) {
+              return {
+                error: `Seat number must be between 1 and ${table.capacity}`,
+                status: 400,
+              };
+            }
+            const conflict = await tx.guest.findFirst({
+              where: { tableId: current.tableId, seatNumber, NOT: { id } },
+              select: { firstName: true, lastName: true },
+            });
+            if (conflict) {
+              return {
+                error: `Seat ${seatNumber} is already taken by ${conflict.firstName} ${conflict.lastName}`,
+                status: 400,
+              };
+            }
         }
-    }
-    }
+      }
 
-    const guest = await prisma.guest.update({
-    where: { id: id },
-    data: {
-        ...(rsvpStatus !== undefined ? {
-          rsvpStatus: rsvpStatus as RsvpStatus,
-          isManualOverride: rsvpStatus !== "PENDING",
-        } : {}),
-        ...attendingOverride,
-        ...(seatNumber !== undefined ? { seatNumber: seatNumber === null ? null : Number(seatNumber) } : {}),
-    },
+      const guest = await tx.guest.update({
+        where: { id, weddingId },
+        data: {
+            ...(rsvpStatus !== undefined ? {
+              rsvpStatus: rsvpStatus as RsvpStatus,
+              isManualOverride: rsvpStatus !== "PENDING",
+            } : {}),
+            ...attendingOverride,
+            ...(seatNumber !== undefined ? { seatNumber: seatNumber === null ? null : Number(seatNumber) } : {}),
+        },
+      });
+
+      return { guest };
     });
 
-    return NextResponse.json(guest);
+    if ("error" in result) {
+      return NextResponse.json({ error: result.error }, { status: result.status });
+    }
+
+    return NextResponse.json(result.guest);
 
   } catch (error) {
     return handleDbError(error);
@@ -261,8 +285,11 @@ export async function DELETE(
     const { id } = await params;
     const auth = await requireAdminOrRsvpManager(_req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
-    await prisma.guest.delete({ where: { id } });
+    await withTenantContext(weddingId, (tx) =>
+      tx.guest.delete({ where: { id, weddingId } })
+    );
     return NextResponse.json({ ok: true });
 
   } catch (error) {

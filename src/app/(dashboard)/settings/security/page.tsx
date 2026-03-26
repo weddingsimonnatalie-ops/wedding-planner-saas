@@ -1,15 +1,14 @@
 export const dynamic = "force-dynamic";
 
-import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
+import { requireServerContext } from "@/lib/server-context";
 import { TwoFactorSettings } from "@/components/settings/TwoFactorSettings";
 import { TrustedDevicesList } from "@/components/settings/TrustedDevicesList";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
 export default async function SecurityPage() {
-  const session = await getSession();
-  if (session?.user?.role !== "ADMIN") redirect("/");
+  await requireServerContext(["ADMIN"]);
   return (
     <div className="max-w-2xl space-y-6">
       <div className="flex items-center gap-2">

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
 import { validateFields } from "@/lib/validation";
 import { invalidateCache } from "@/lib/cache";
+import { withTenantContext } from "@/lib/tenant";
 
 import { handleDbError } from "@/lib/db-error";
 
@@ -14,6 +14,7 @@ export async function PUT(
     const { id } = await params;
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const { name, description, course, isActive, sortOrder } = await req.json();
 
@@ -31,18 +32,20 @@ export async function PUT(
       return NextResponse.json({ error: errors[0] }, { status: 400 });
     }
 
-    const option = await prisma.mealOption.update({
-    where: { id: id },
-    data: {
-        name: name.trim(),
-        description: description?.trim() || null,
-        course: course?.trim() || null,
-        isActive: Boolean(isActive),
-        sortOrder: sortOrder ?? 0,
-    },
-    });
+    const option = await withTenantContext(weddingId, (tx) =>
+      tx.mealOption.update({
+        where: { id, weddingId },
+        data: {
+          name: name.trim(),
+          description: description?.trim() || null,
+          course: course?.trim() || null,
+          isActive: Boolean(isActive),
+          sortOrder: sortOrder ?? 0,
+        },
+      })
+    );
 
-    invalidateCache("meal-options");
+    invalidateCache(`${weddingId}:meal-options`);
     return NextResponse.json(option);
 
   } catch (error) {
@@ -59,9 +62,12 @@ export async function DELETE(
     const { id } = await params;
     const auth = await requireAdmin(_req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
-    await prisma.mealOption.delete({ where: { id: id } });
-    invalidateCache("meal-options");
+    await withTenantContext(weddingId, (tx) =>
+      tx.mealOption.delete({ where: { id, weddingId } })
+    );
+    invalidateCache(`${weddingId}:meal-options`);
     return NextResponse.json({ ok: true });
 
   } catch (error) {

@@ -1,25 +1,28 @@
 export const dynamic = "force-dynamic";
 
-import { getSession } from "@/lib/session";
-import { redirect } from "next/navigation";
-import { can } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
 import { SupplierList } from "@/components/suppliers/SupplierList";
+import { requireServerContext } from "@/lib/server-context";
+import { withTenantContext } from "@/lib/tenant";
 
 export default async function SuppliersPage() {
-  const session = await getSession();
-  if (!can.accessSuppliers(session?.user?.role ?? "VIEWER")) redirect("/");
+  const ctx = await requireServerContext(["ADMIN", "VIEWER"]);
+  const { weddingId } = ctx;
 
-  // Auto-mark overdue payments across all suppliers
-  await prisma.payment.updateMany({
-    where: { status: "PENDING", dueDate: { lt: new Date() } },
-    data: { status: "OVERDUE" },
-  });
+  // Auto-mark overdue payments across all suppliers for this wedding
+  await withTenantContext(weddingId, (tx) =>
+    tx.payment.updateMany({
+      where: { weddingId, status: "PENDING", dueDate: { lt: new Date() } },
+      data: { status: "OVERDUE" },
+    })
+  );
 
-  const suppliers = await prisma.supplier.findMany({
-    include: { payments: true, category: true },
-    orderBy: [{ name: "asc" }],
-  });
+  const suppliers = await withTenantContext(weddingId, (tx) =>
+    tx.supplier.findMany({
+      where: { weddingId },
+      include: { payments: true, category: true },
+      orderBy: [{ name: "asc" }],
+    })
+  );
 
   return (
     <div className="flex flex-col">

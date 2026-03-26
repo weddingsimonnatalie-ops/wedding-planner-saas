@@ -3,10 +3,11 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-better";
 import { requireAdmin } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { apiJson } from "@/lib/api-response";
 import { validateFields } from "@/lib/validation";
 import { getCached, invalidateCache } from "@/lib/cache";
+import { verifyWeddingCookieId, COOKIE_NAME } from "@/lib/wedding-cookie";
 
 import { handleDbError } from "@/lib/db-error";
 
@@ -15,10 +16,17 @@ export async function GET(req: NextRequest) {
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const cookieValue = req.cookies.get(COOKIE_NAME)?.value;
+    if (!cookieValue) return NextResponse.json({ error: "No wedding context" }, { status: 401 });
+    const weddingId = await verifyWeddingCookieId(cookieValue);
+    if (!weddingId) return NextResponse.json({ error: "Invalid wedding context" }, { status: 401 });
+
     const categories = await getCached(
-      "task-categories",
+      `${weddingId}:task-categories`,
       300_000,
-      () => prisma.taskCategory.findMany({ orderBy: { sortOrder: "asc" } })
+      () => withTenantContext(weddingId, (tx) =>
+        tx.taskCategory.findMany({ where: { weddingId }, orderBy: { sortOrder: "asc" } })
+      )
     );
 
     return apiJson(categories);
@@ -33,6 +41,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const data = await req.json();
     if (!data.name?.trim()) {
@@ -47,18 +56,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: errors[0] }, { status: 400 });
     }
 
-    const maxOrder = await prisma.taskCategory.aggregate({ _max: { sortOrder: true } });
-    const nextOrder = (maxOrder._max.sortOrder ?? -10) + 10;
+    const category = await withTenantContext(weddingId, async (tx) => {
+      const maxOrder = await tx.taskCategory.aggregate({
+        where: { weddingId },
+        _max: { sortOrder: true },
+      });
+      const nextOrder = (maxOrder._max.sortOrder ?? -10) + 10;
 
-    const category = await prisma.taskCategory.create({
+      return tx.taskCategory.create({
         data: {
+          weddingId,
           name: data.name.trim(),
           colour: data.colour ?? "#6366f1",
           sortOrder: data.sortOrder ?? nextOrder,
         },
+      });
     });
 
-    invalidateCache("task-categories");
+    invalidateCache(`${weddingId}:task-categories`);
     return NextResponse.json(category, { status: 201 });
 
   } catch (error) {

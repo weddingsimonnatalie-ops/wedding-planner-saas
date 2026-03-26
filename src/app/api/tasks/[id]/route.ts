@@ -4,12 +4,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-better";
 import { requireAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { apiJson } from "@/lib/api-response";
 import { validateFields } from "@/lib/validation";
+import { verifyWeddingCookieId, COOKIE_NAME } from "@/lib/wedding-cookie";
 
 import { handleDbError } from "@/lib/db-error";const INCLUDE = {
   category: { select: { id: true, name: true, colour: true } },
-  assignedTo: { select: { id: true, name: true, email: true, role: true } },
+  assignedTo: { select: { id: true, name: true, email: true } },
   supplier: { select: { id: true, name: true } },
 } as const;
 
@@ -21,10 +23,17 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const session = await auth.api.getSession({ headers: _req.headers });
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const task = await prisma.task.findUnique({
-        where: { id: id },
+    const cookieValue = _req.cookies.get(COOKIE_NAME)?.value;
+    if (!cookieValue) return NextResponse.json({ error: "No wedding context" }, { status: 401 });
+    const weddingId = await verifyWeddingCookieId(cookieValue);
+    if (!weddingId) return NextResponse.json({ error: "Invalid wedding context" }, { status: 401 });
+
+    const task = await withTenantContext(weddingId, (tx) =>
+      tx.task.findUnique({
+        where: { id, weddingId },
         include: INCLUDE,
-    });
+      })
+    );
 
     if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return apiJson(task);
@@ -40,6 +49,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const body = await req.json();
     const {
@@ -62,7 +72,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
     }
 
     if (categoryId !== undefined && categoryId !== null) {
-        const category = await prisma.taskCategory.findUnique({ where: { id: categoryId } });
+        const category = await withTenantContext(weddingId, (tx) =>
+          tx.taskCategory.findUnique({ where: { id: categoryId, weddingId } })
+        );
         if (!category) return NextResponse.json({ error: "Invalid categoryId" }, { status: 400 });
     }
 
@@ -72,12 +84,15 @@ export async function PUT(req: NextRequest, { params }: Params) {
     }
 
     if (supplierId !== undefined && supplierId !== null) {
-        const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } });
+        const supplier = await withTenantContext(weddingId, (tx) =>
+          tx.supplier.findUnique({ where: { id: supplierId, weddingId } })
+        );
         if (!supplier) return NextResponse.json({ error: "Invalid supplierId" }, { status: 400 });
     }
 
-    const task = await prisma.task.update({
-        where: { id: id },
+    const task = await withTenantContext(weddingId, (tx) =>
+      tx.task.update({
+        where: { id, weddingId },
         data: {
           ...(title !== undefined ? { title: title?.trim() || "" } : {}),
           ...(notes !== undefined ? { notes: notes?.trim() || null } : {}),
@@ -93,7 +108,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
           ...(completedAt !== undefined ? { completedAt: completedAt ? new Date(completedAt) : null } : {}),
         },
         include: INCLUDE,
-    });
+      })
+    );
 
     return NextResponse.json(task);
 
@@ -108,8 +124,11 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     const { id } = await params;
     const auth = await requireAdmin(_req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
-    await prisma.task.delete({ where: { id: id } });
+    await withTenantContext(weddingId, (tx) =>
+      tx.task.delete({ where: { id, weddingId } })
+    );
     return NextResponse.json({ ok: true });
 
   } catch (error) {

@@ -2,7 +2,18 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { UserRole, WeddingConfig, MealOption } from "@prisma/client";
+import { UserRole, MealOption } from "@prisma/client";
+
+// Matches the fields from the Wedding model used in this component
+interface WeddingConfig {
+  coupleName: string;
+  weddingDate: Date | null;
+  venueName: string | null;
+  venueAddress: string | null;
+  reminderEmail: string | null;
+  sessionTimeout: number;
+  sessionWarningTime: number;
+}
 import { UsersManager } from "./UsersManager";
 import { MealOptionsList } from "./MealOptionsList";
 import { CategoriesManager } from "./CategoriesManager";
@@ -10,6 +21,14 @@ import { NotificationsForm } from "./NotificationsForm";
 import { SessionTimeoutSettings } from "./SessionTimeoutSettings";
 import { WeddingConfigForm } from "@/components/wedding-config-form";
 import Link from "next/link";
+import { CreditCard, Calendar } from "lucide-react";
+
+interface BillingInfo {
+  subscriptionStatus: string;
+  currentPeriodEnd: Date | null;
+  trialEndsAt: Date | null;
+  gracePeriodEndsAt: Date | null;
+}
 
 interface SettingsClientProps {
   config: WeddingConfig | null;
@@ -27,9 +46,10 @@ interface SettingsClientProps {
   }>;
   currentUserEmail: string;
   emailVerificationRequired: boolean;
+  billing: BillingInfo | null;
 }
 
-type Tab = "general" | "meals" | "categories" | "users";
+type Tab = "general" | "meals" | "categories" | "users" | "billing";
 
 export function SettingsClient({
   config,
@@ -38,6 +58,7 @@ export function SettingsClient({
   users,
   currentUserEmail,
   emailVerificationRequired,
+  billing,
 }: SettingsClientProps) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -46,6 +67,7 @@ export function SettingsClient({
     if (tabParam === "meals") return "meals";
     if (tabParam === "categories") return "categories";
     if (tabParam === "users") return "users";
+    if (tabParam === "billing") return "billing";
     return "general";
   });
 
@@ -54,7 +76,24 @@ export function SettingsClient({
     { id: "meals", label: "Meals" },
     { id: "categories", label: "Categories" },
     { id: "users", label: "Users" },
+    { id: "billing", label: "Billing" },
   ];
+
+  const statusLabel: Record<string, string> = {
+    TRIALING: "Trial",
+    ACTIVE: "Active",
+    PAST_DUE: "Payment overdue",
+    CANCELLED: "Cancelled",
+    PAUSED: "Paused",
+  };
+
+  const statusColour: Record<string, string> = {
+    TRIALING: "text-blue-600 bg-blue-50",
+    ACTIVE: "text-green-600 bg-green-50",
+    PAST_DUE: "text-amber-600 bg-amber-50",
+    CANCELLED: "text-red-600 bg-red-50",
+    PAUSED: "text-gray-600 bg-gray-50",
+  };
 
   return (
     <div className="space-y-6">
@@ -97,8 +136,8 @@ export function SettingsClient({
               Configure how long users stay logged in before being timed out due to inactivity.
             </p>
             <SessionTimeoutSettings
-              initialTimeoutMinutes={config?.sessionTimeoutMinutes ?? 60}
-              initialWarningMinutes={config?.warningMinutes ?? 5}
+              initialTimeoutMinutes={config?.sessionTimeout ?? 60}
+              initialWarningMinutes={config?.sessionWarningTime ?? 5}
             />
           </div>
         </div>
@@ -140,6 +179,71 @@ export function SettingsClient({
               Categories for organising your tasks.
             </p>
             <CategoriesManager entityType="task" apiBase="/api/task-categories" />
+          </div>
+        </div>
+      )}
+
+      {/* Billing tab */}
+      {tab === "billing" && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-base font-medium text-gray-900">Subscription</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Wedding Planner · Standard plan · £12/month</p>
+              </div>
+              {billing && (
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColour[billing.subscriptionStatus] ?? "text-gray-600 bg-gray-50"}`}>
+                  {statusLabel[billing.subscriptionStatus] ?? billing.subscriptionStatus}
+                </span>
+              )}
+            </div>
+
+            {billing?.currentPeriodEnd && billing.subscriptionStatus === "ACTIVE" && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                <Calendar className="w-4 h-4" />
+                <span>
+                  Next billing:{" "}
+                  {new Date(billing.currentPeriodEnd).toLocaleDateString("en-GB", {
+                    day: "numeric", month: "long", year: "numeric",
+                  })}
+                </span>
+              </div>
+            )}
+
+            {billing?.trialEndsAt && billing.subscriptionStatus === "TRIALING" && (
+              <div className="flex items-center gap-2 text-sm text-blue-600 mb-4">
+                <Calendar className="w-4 h-4" />
+                <span>
+                  Trial ends:{" "}
+                  {new Date(billing.trialEndsAt).toLocaleDateString("en-GB", {
+                    day: "numeric", month: "long", year: "numeric",
+                  })}
+                </span>
+              </div>
+            )}
+
+            {billing?.gracePeriodEndsAt && billing.subscriptionStatus === "PAST_DUE" && (
+              <div className="flex items-center gap-2 text-sm text-amber-600 mb-4">
+                <Calendar className="w-4 h-4" />
+                <span>
+                  Grace period ends:{" "}
+                  {new Date(billing.gracePeriodEndsAt).toLocaleDateString("en-GB", {
+                    day: "numeric", month: "long", year: "numeric",
+                  })}
+                </span>
+              </div>
+            )}
+
+            <form action="/api/billing/portal" method="POST">
+              <button
+                type="submit"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                <CreditCard className="w-4 h-4" />
+                Manage subscription in Stripe
+              </button>
+            </form>
           </div>
         </div>
       )}

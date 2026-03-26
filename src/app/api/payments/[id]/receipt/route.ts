@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireAdmin, requireRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
@@ -7,6 +7,7 @@ import crypto from "crypto";
 import { fileTypeFromBuffer } from "file-type";
 import { sanitizeFilename, buildContentDisposition } from "@/lib/filename";
 import { noCacheHeaders } from "@/lib/api-response";
+import { withTenantContext } from "@/lib/tenant";
 import { handleDbError } from "@/lib/db-error";
 
 export const dynamic = "force-dynamic";
@@ -38,11 +39,15 @@ export async function POST(
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
 
-    // Verify payment exists and get supplier info
-    const payment = await prisma.payment.findUnique({
-      where: { id },
-      include: { supplier: { select: { id: true } } },
-    });
+    const { weddingId } = auth;
+
+    // Verify payment exists, belongs to this wedding, and get supplier info
+    const payment = await withTenantContext(weddingId, (tx) =>
+      tx.payment.findUnique({
+        where: { id, weddingId },
+        include: { supplier: { select: { id: true } } },
+      })
+    );
 
     if (!payment) {
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
@@ -73,9 +78,11 @@ export async function POST(
     }
 
     // Delete existing receipt if any
-    const existingReceipt = await prisma.attachment.findFirst({
-      where: { paymentId: id },
-    });
+    const existingReceipt = await withTenantContext(weddingId, (tx) =>
+      tx.attachment.findFirst({
+        where: { paymentId: id, weddingId },
+      })
+    );
 
     if (existingReceipt) {
       // Delete file from filesystem
@@ -89,7 +96,9 @@ export async function POST(
         fs.unlinkSync(existingPath);
       }
       // Delete database record
-      await prisma.attachment.delete({ where: { id: existingReceipt.id } });
+      await withTenantContext(weddingId, (tx) =>
+        tx.attachment.delete({ where: { id: existingReceipt.id } })
+      );
     }
 
     // Store new receipt
@@ -103,16 +112,19 @@ export async function POST(
     const safeFilename = sanitizeFilename(file.name);
 
     // Create attachment record linked to payment
-    const attachment = await prisma.attachment.create({
-      data: {
-        supplierId: payment.supplier.id,
-        paymentId: id,
-        filename: safeFilename,
-        storedAs,
-        mimeType: detected.mime,
-        sizeBytes: buffer.length,
-      },
-    });
+    const attachment = await withTenantContext(weddingId, (tx) =>
+      tx.attachment.create({
+        data: {
+          weddingId,
+          supplierId: payment.supplier.id,
+          paymentId: id,
+          filename: safeFilename,
+          storedAs,
+          mimeType: detected.mime,
+          sizeBytes: buffer.length,
+        },
+      })
+    );
 
     return NextResponse.json(attachment, { status: 201 });
   } catch (error) {
@@ -129,20 +141,29 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // Find receipt attachment for this payment
-    const attachment = await prisma.attachment.findFirst({
-      where: { paymentId: id },
-      include: { supplier: true },
-    });
+    const auth = await requireRole(["ADMIN", "VIEWER"], req);
+    if (!auth.authorized) return auth.response;
+
+    const { weddingId } = auth;
+
+    // Find receipt attachment for this payment, scoped to wedding
+    const attachment = await withTenantContext(weddingId, (tx) =>
+      tx.attachment.findFirst({
+        where: { paymentId: id, weddingId },
+        include: { supplier: true },
+      })
+    );
 
     if (!attachment) {
       return NextResponse.json({ error: "No receipt found" }, { status: 404 });
     }
 
-    // Verify payment exists
-    const payment = await prisma.payment.findUnique({
-      where: { id },
-    });
+    // Verify payment exists and belongs to this wedding
+    const payment = await withTenantContext(weddingId, (tx) =>
+      tx.payment.findUnique({
+        where: { id, weddingId },
+      })
+    );
 
     if (!payment) {
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
@@ -193,10 +214,14 @@ export async function DELETE(
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
 
-    // Find receipt attachment
-    const attachment = await prisma.attachment.findFirst({
-      where: { paymentId: id },
-    });
+    const { weddingId } = auth;
+
+    // Find receipt attachment scoped to wedding
+    const attachment = await withTenantContext(weddingId, (tx) =>
+      tx.attachment.findFirst({
+        where: { paymentId: id, weddingId },
+      })
+    );
 
     if (!attachment) {
       return NextResponse.json({ error: "No receipt found" }, { status: 404 });
@@ -214,7 +239,9 @@ export async function DELETE(
     }
 
     // Delete database record
-    await prisma.attachment.delete({ where: { id: attachment.id } });
+    await withTenantContext(weddingId, (tx) =>
+      tx.attachment.delete({ where: { id: attachment.id } })
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

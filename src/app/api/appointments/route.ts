@@ -3,9 +3,10 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-better";
 import { requireAdmin } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { apiJson } from "@/lib/api-response";
 import { validateFields } from "@/lib/validation";
+import { verifyWeddingCookieId, COOKIE_NAME } from "@/lib/wedding-cookie";
 
 import { handleDbError } from "@/lib/db-error";
 
@@ -14,13 +15,21 @@ export async function GET(req: NextRequest) {
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const appointments = await prisma.appointment.findMany({
+    const cookieValue = req.cookies.get(COOKIE_NAME)?.value;
+    if (!cookieValue) return NextResponse.json({ error: "No wedding context" }, { status: 401 });
+    const weddingId = await verifyWeddingCookieId(cookieValue);
+    if (!weddingId) return NextResponse.json({ error: "Invalid wedding context" }, { status: 401 });
+
+    const appointments = await withTenantContext(weddingId, (tx) =>
+      tx.appointment.findMany({
+        where: { weddingId },
         include: {
           supplier: { select: { id: true, name: true } },
           category: { select: { id: true, name: true, colour: true } },
         },
         orderBy: { date: "asc" },
-    });
+      })
+    );
 
     return apiJson(appointments);
 
@@ -34,6 +43,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const body = await req.json();
     const { title, categoryId, date, location, notes, supplierId, reminderDays } = body;
@@ -52,17 +62,23 @@ export async function POST(req: NextRequest) {
     }
 
     if (categoryId !== undefined && categoryId !== null) {
-        const category = await prisma.appointmentCategory.findUnique({ where: { id: categoryId } });
+        const category = await withTenantContext(weddingId, (tx) =>
+          tx.appointmentCategory.findUnique({ where: { id: categoryId, weddingId } })
+        );
         if (!category) return NextResponse.json({ error: "Invalid categoryId" }, { status: 400 });
     }
 
     if (supplierId !== undefined && supplierId !== null) {
-        const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } });
+        const supplier = await withTenantContext(weddingId, (tx) =>
+          tx.supplier.findUnique({ where: { id: supplierId, weddingId } })
+        );
         if (!supplier) return NextResponse.json({ error: "Invalid supplierId" }, { status: 400 });
     }
 
-    const appt = await prisma.appointment.create({
+    const appt = await withTenantContext(weddingId, (tx) =>
+      tx.appointment.create({
         data: {
+          weddingId,
           title: title.trim(),
           categoryId: categoryId || null,
           date: new Date(date),
@@ -75,7 +91,8 @@ export async function POST(req: NextRequest) {
           supplier: { select: { id: true, name: true } },
           category: { select: { id: true, name: true, colour: true } },
         },
-    });
+      })
+    );
 
     return NextResponse.json(appt, { status: 201 });
 

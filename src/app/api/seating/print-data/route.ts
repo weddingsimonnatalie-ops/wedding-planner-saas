@@ -2,8 +2,9 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth-better";
-import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { apiJson } from "@/lib/api-response";
+import { verifyWeddingCookieId, COOKIE_NAME } from "@/lib/wedding-cookie";
 
 import { handleDbError } from "@/lib/db-error";
 
@@ -12,9 +13,19 @@ export async function GET(req: NextRequest) {
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const [weddingConfig, tables, mealOptions] = await Promise.all([
-        prisma.weddingConfig.findFirst(),
-        prisma.table.findMany({
+    const cookieValue = req.cookies.get(COOKIE_NAME)?.value;
+    if (!cookieValue) return NextResponse.json({ error: "No wedding context" }, { status: 401 });
+    const weddingId = await verifyWeddingCookieId(cookieValue);
+    if (!weddingId) return NextResponse.json({ error: "Invalid wedding context" }, { status: 401 });
+
+    const [weddingConfig, tables, mealOptions] = await withTenantContext(weddingId, (tx) =>
+      Promise.all([
+        tx.wedding.findUnique({ where: { id: weddingId }, select: { coupleName: true, weddingDate: true, venueName: true } }),
+        tx.table.findMany({
+          where: {
+            weddingId,
+            guests: { some: {} },
+          },
           include: {
             guests: {
               select: {
@@ -28,11 +39,11 @@ export async function GET(req: NextRequest) {
               orderBy: [{ seatNumber: "asc" }, { lastName: "asc" }, { firstName: "asc" }],
             },
           },
-          where: { guests: { some: {} } },
           orderBy: { name: "asc" },
         }),
-        prisma.mealOption.findMany({ select: { id: true, name: true } }),
-    ]);
+        tx.mealOption.findMany({ where: { weddingId }, select: { id: true, name: true } }),
+      ])
+    );
 
     const mealMap = Object.fromEntries(mealOptions.map((m) => [m.id, m.name]));
 

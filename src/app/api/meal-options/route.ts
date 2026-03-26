@@ -1,24 +1,29 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
-import { requireAdmin } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { requireAdmin, requireRole } from "@/lib/api-auth";
 import { apiJson } from "@/lib/api-response";
 import { validateFields } from "@/lib/validation";
 import { getCached, invalidateCache } from "@/lib/cache";
+import { withTenantContext } from "@/lib/tenant";
 
 import { handleDbError } from "@/lib/db-error";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await requireRole(["ADMIN", "VIEWER", "RSVP_MANAGER"], req);
+    if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const options = await getCached(
-      "meal-options",
+      `${weddingId}:meal-options`,
       300_000,
-      () => prisma.mealOption.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] })
+      () => withTenantContext(weddingId, (tx) =>
+        tx.mealOption.findMany({
+          where: { weddingId },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        })
+      )
     );
     return apiJson(options);
 
@@ -32,6 +37,7 @@ export async function POST(req: NextRequest) {
   try {
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const { name, description, course, isActive, sortOrder } = await req.json();
 
@@ -49,17 +55,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: errors[0] }, { status: 400 });
     }
 
-    const option = await prisma.mealOption.create({
+    const option = await withTenantContext(weddingId, (tx) =>
+      tx.mealOption.create({
         data: {
+          weddingId,
           name: name.trim(),
           description: description?.trim() || null,
           course: course?.trim() || null,
           isActive: isActive !== false,
           sortOrder: sortOrder ?? 0,
         },
-    });
+      })
+    );
 
-    invalidateCache("meal-options");
+    invalidateCache(`${weddingId}:meal-options`);
     return NextResponse.json(option, { status: 201 });
 
   } catch (error) {

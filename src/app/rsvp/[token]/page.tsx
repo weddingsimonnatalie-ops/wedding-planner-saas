@@ -1,27 +1,38 @@
 export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { notFound } from "next/navigation";
 import { Heart } from "lucide-react";
 import { RsvpForm } from "@/components/rsvp/RsvpForm";
 
 export default async function RsvpPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+
+  // Guest lookup by rsvpToken — globally unique, no weddingId needed for the lookup itself
   const guest = await prisma.guest.findUnique({
     where: { rsvpToken: token },
   });
 
   if (!guest) notFound();
 
-  const mealOptions = await prisma.mealOption.findMany({
-    where: { isActive: true },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-  });
+  // Scope meal options and wedding config to this guest's wedding
+  const weddingId = guest.weddingId;
+  const [mealOptions, wedding] = await withTenantContext(weddingId, (tx) =>
+    Promise.all([
+      tx.mealOption.findMany({
+        where: { weddingId, isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+      tx.wedding.findUnique({
+        where: { id: weddingId },
+        select: { coupleName: true, weddingDate: true, venueName: true },
+      }),
+    ])
+  );
 
-  const config = await prisma.weddingConfig.findUnique({ where: { id: 1 } });
-
-  const weddingDate = config?.weddingDate
-    ? new Date(config.weddingDate).toLocaleDateString("en-GB", {
+  const weddingDate = wedding?.weddingDate
+    ? new Date(wedding.weddingDate).toLocaleDateString("en-GB", {
         weekday: "long",
         day: "numeric",
         month: "long",
@@ -37,13 +48,13 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
             <Heart className="w-6 h-6 text-white fill-white" />
           </div>
           <h1 className="text-xl font-semibold text-gray-900">
-            {config?.coupleName ?? "You're Invited!"}
+            {wedding?.coupleName ?? "You're Invited!"}
           </h1>
           {weddingDate && (
             <p className="text-sm text-gray-500 mt-1">{weddingDate}</p>
           )}
-          {config?.venueName && (
-            <p className="text-sm text-gray-400">{config.venueName}</p>
+          {wedding?.venueName && (
+            <p className="text-sm text-gray-400">{wedding.venueName}</p>
           )}
         </div>
 

@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
 import { validateFields } from "@/lib/validation";
 import { invalidateCache } from "@/lib/cache";
+import { withTenantContext } from "@/lib/tenant";
 
-import { handleDbError } from "@/lib/db-error";type Params = { params: Promise<{ id: string }> };
+import { handleDbError } from "@/lib/db-error";
+
+type Params = { params: Promise<{ id: string }> };
 
 export async function PUT(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const data = await req.json();
 
@@ -24,17 +27,19 @@ export async function PUT(req: NextRequest, { params }: Params) {
       }
     }
 
-    const category = await prisma.supplierCategory.update({
-        where: { id: id },
+    const category = await withTenantContext(weddingId, (tx) =>
+      tx.supplierCategory.update({
+        where: { id, weddingId },
         data: {
           ...(data.name !== undefined ? { name: data.name.trim() } : {}),
           ...(data.colour !== undefined ? { colour: data.colour } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
           ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
         },
-    });
+      })
+    );
 
-    invalidateCache("supplier-categories");
+    invalidateCache(`${weddingId}:supplier-categories`);
     return NextResponse.json(category);
 
   } catch (error) {
@@ -48,11 +53,14 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const { searchParams } = new URL(req.url);
     const force = searchParams.get("force") === "true";
 
-    const count = await prisma.supplier.count({ where: { categoryId: id } });
+    const count = await withTenantContext(weddingId, (tx) =>
+      tx.supplier.count({ where: { categoryId: id, weddingId } })
+    );
     if (count > 0 && !force) {
         return NextResponse.json(
           { error: `${count} supplier${count === 1 ? "" : "s"} use this category`, count },
@@ -60,15 +68,17 @@ export async function DELETE(req: NextRequest, { params }: Params) {
         );
     }
 
-    if (force && count > 0) {
-        await prisma.supplier.updateMany({
-          where: { categoryId: id },
+    await withTenantContext(weddingId, async (tx) => {
+      if (force && count > 0) {
+        await tx.supplier.updateMany({
+          where: { categoryId: id, weddingId },
           data: { categoryId: null },
         });
-    }
+      }
+      await tx.supplierCategory.delete({ where: { id, weddingId } });
+    });
 
-    await prisma.supplierCategory.delete({ where: { id: id } });
-    invalidateCache("supplier-categories");
+    invalidateCache(`${weddingId}:supplier-categories`);
     return NextResponse.json({ ok: true });
 
   } catch (error) {

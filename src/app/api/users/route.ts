@@ -16,10 +16,35 @@ export async function GET(req: NextRequest) {
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
 
-    const users = await prisma.user.findMany({
-        select: { id: true, name: true, email: true, role: true, emailVerified: true, createdAt: true },
-        orderBy: { createdAt: "asc" },
+    const { weddingId } = auth;
+
+    // List all WeddingMember records for this wedding, including user data
+    const members = await prisma.weddingMember.findMany({
+      where: { weddingId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            emailVerified: true,
+            twoFactorEnabled: true,
+            lockedUntil: true,
+            createdAt: true,
+          },
+        },
+      },
+      orderBy: { joinedAt: "asc" },
     });
+
+    // Return flattened user info with role from WeddingMember
+    const users = members.map((m) => ({
+      ...m.user,
+      role: m.role,
+      memberId: m.id,
+      joinedAt: m.joinedAt,
+    }));
+
     return apiJson(users);
 
   } catch (error) {
@@ -28,10 +53,18 @@ export async function GET(req: NextRequest) {
 
 }
 
+/**
+ * NOTE: In SaaS, users join weddings via invitation (Phase 3).
+ * This POST endpoint is retained for dev/admin use only and should not be
+ * exposed in production UI. It creates a user and links them to the current
+ * wedding via WeddingMember.
+ */
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+
+    const { weddingId } = auth;
 
     const { name, email, password, role } = await req.json();
 
@@ -74,7 +107,6 @@ export async function POST(req: NextRequest) {
         data: {
           name: name?.trim() || null,
           email: email.trim(),
-          role: validRole,
           emailVerified: requireVerification ? null : new Date(),
           verificationToken,
           verificationTokenExpires,
@@ -85,18 +117,28 @@ export async function POST(req: NextRequest) {
               password: hashed,
             },
           },
+          // Create WeddingMember linking this user to the current wedding
+          weddings: {
+            create: {
+              weddingId,
+              role: validRole,
+            },
+          },
         },
-        select: { id: true, name: true, email: true, role: true, emailVerified: true, createdAt: true },
+        select: { id: true, name: true, email: true, emailVerified: true, createdAt: true },
     });
 
     // Send verification email if required
     if (requireVerification && verificationToken) {
-      const config = await prisma.weddingConfig.findUnique({ where: { id: 1 } });
+      const config = await prisma.wedding.findUnique({
+        where: { id: weddingId },
+        select: { coupleName: true },
+      });
       const coupleName = config?.coupleName ?? "Wedding Planner";
       await sendVerificationEmail(user.email, user.name, verificationToken, coupleName);
     }
 
-    return NextResponse.json(user, { status: 201 });
+    return NextResponse.json({ ...user, role: validRole }, { status: 201 });
 
   } catch (error) {
     return handleDbError(error);

@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrRsvpManager } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { RsvpStatus } from "@prisma/client";
 import { isValidRsvpStatus } from "@/lib/validation";
 import { getBulkLimits } from "@/lib/rate-limit";
@@ -13,6 +13,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const auth = await requireAdminOrRsvpManager(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const body = await req.json();
     const { guestIds, rsvpStatus } = body;
@@ -33,78 +34,86 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ error: "Invalid rsvpStatus" }, { status: 400 });
     }
 
-    // Validate all guestIds exist
-    const existingGuests = await prisma.guest.findMany({
-        where: { id: { in: guestIds } },
-        select: { id: true },
+    const updated = await withTenantContext(weddingId, async (tx) => {
+      // Validate all guestIds exist within this wedding (prevents cross-tenant access)
+      const existingGuests = await tx.guest.findMany({
+          where: { id: { in: guestIds }, weddingId },
+          select: { id: true },
+      });
+
+      if (existingGuests.length !== guestIds.length) {
+          return null; // signal validation failure
+      }
+
+      const isOverride = rsvpStatus !== "PENDING";
+
+      // PARTIAL: update status only, leave attending fields as-is (mixed responses)
+      if (rsvpStatus === "PARTIAL") {
+          const result = await tx.guest.updateMany({
+            where: { id: { in: guestIds }, weddingId },
+            data: { rsvpStatus: "PARTIAL", isManualOverride: true },
+          });
+          return result.count;
+      }
+
+      // PENDING / MAYBE: clear all attending fields
+      if (rsvpStatus === "PENDING" || rsvpStatus === "MAYBE") {
+          const result = await tx.guest.updateMany({
+            where: { id: { in: guestIds }, weddingId },
+            data: {
+              rsvpStatus: rsvpStatus as RsvpStatus,
+              isManualOverride: isOverride,
+              attendingCeremony:   null,
+              attendingReception:  null,
+              attendingAfterparty: null,
+            },
+          });
+          return result.count;
+      }
+
+      // ACCEPTED / DECLINED: set attending fields per-event based on invitation flags
+      // Run sequentially inside the same tenant transaction (cannot nest $transaction)
+      const attending = rsvpStatus === "ACCEPTED";
+
+      const statusResult = await tx.guest.updateMany({
+        where: { id: { in: guestIds }, weddingId },
+        data: { rsvpStatus: rsvpStatus as RsvpStatus, isManualOverride: true },
+      });
+      // Invited to each event → set attending true/false
+      await tx.guest.updateMany({
+        where: { id: { in: guestIds }, weddingId, invitedToCeremony: true },
+        data: { attendingCeremony: attending },
+      });
+      await tx.guest.updateMany({
+        where: { id: { in: guestIds }, weddingId, invitedToReception: true },
+        data: { attendingReception: attending },
+      });
+      await tx.guest.updateMany({
+        where: { id: { in: guestIds }, weddingId, invitedToAfterparty: true },
+        data: { attendingAfterparty: attending },
+      });
+      // Not invited → null
+      await tx.guest.updateMany({
+        where: { id: { in: guestIds }, weddingId, invitedToCeremony: false },
+        data: { attendingCeremony: null },
+      });
+      await tx.guest.updateMany({
+        where: { id: { in: guestIds }, weddingId, invitedToReception: false },
+        data: { attendingReception: null },
+      });
+      await tx.guest.updateMany({
+        where: { id: { in: guestIds }, weddingId, invitedToAfterparty: false },
+        data: { attendingAfterparty: null },
+      });
+
+      return statusResult.count;
     });
 
-    if (existingGuests.length !== guestIds.length) {
-        return NextResponse.json({ error: "One or more guestIds not found" }, { status: 400 });
+    if (updated === null) {
+      return NextResponse.json({ error: "One or more guestIds not found" }, { status: 400 });
     }
 
-    const isOverride = rsvpStatus !== "PENDING";
-
-    // PARTIAL: update status only, leave attending fields as-is (mixed responses)
-    if (rsvpStatus === "PARTIAL") {
-        const result = await prisma.guest.updateMany({
-          where: { id: { in: guestIds } },
-          data: { rsvpStatus: "PARTIAL", isManualOverride: true },
-        });
-        return NextResponse.json({ updated: result.count });
-    }
-
-    // PENDING / MAYBE: clear all attending fields
-    if (rsvpStatus === "PENDING" || rsvpStatus === "MAYBE") {
-        const result = await prisma.guest.updateMany({
-          where: { id: { in: guestIds } },
-          data: {
-            rsvpStatus: rsvpStatus as RsvpStatus,
-            isManualOverride: isOverride,
-            attendingCeremony:   null,
-            attendingReception:  null,
-            attendingAfterparty: null,
-          },
-        });
-        return NextResponse.json({ updated: result.count });
-    }
-
-    // ACCEPTED / DECLINED: set attending fields per-event based on invitation flags
-    const attending = rsvpStatus === "ACCEPTED";
-    const [statusResult] = await prisma.$transaction([
-        prisma.guest.updateMany({
-          where: { id: { in: guestIds } },
-          data: { rsvpStatus: rsvpStatus as RsvpStatus, isManualOverride: true },
-        }),
-        // Invited to each event → set attending true/false
-        prisma.guest.updateMany({
-          where: { id: { in: guestIds }, invitedToCeremony: true },
-          data: { attendingCeremony: attending },
-        }),
-        prisma.guest.updateMany({
-          where: { id: { in: guestIds }, invitedToReception: true },
-          data: { attendingReception: attending },
-        }),
-        prisma.guest.updateMany({
-          where: { id: { in: guestIds }, invitedToAfterparty: true },
-          data: { attendingAfterparty: attending },
-        }),
-        // Not invited → null
-        prisma.guest.updateMany({
-          where: { id: { in: guestIds }, invitedToCeremony: false },
-          data: { attendingCeremony: null },
-        }),
-        prisma.guest.updateMany({
-          where: { id: { in: guestIds }, invitedToReception: false },
-          data: { attendingReception: null },
-        }),
-        prisma.guest.updateMany({
-          where: { id: { in: guestIds }, invitedToAfterparty: false },
-          data: { attendingAfterparty: null },
-        }),
-    ]);
-
-    return NextResponse.json({ updated: statusResult.count });
+    return NextResponse.json({ updated });
 
   } catch (error) {
     return handleDbError(error);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { validateFields } from "@/lib/validation";
 import { invalidateCache } from "@/lib/cache";
 
@@ -11,6 +11,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const data = await req.json();
 
@@ -24,17 +25,19 @@ export async function PUT(req: NextRequest, { params }: Params) {
       }
     }
 
-    const category = await prisma.taskCategory.update({
-        where: { id: id },
+    const category = await withTenantContext(weddingId, (tx) =>
+      tx.taskCategory.update({
+        where: { id, weddingId },
         data: {
           ...(data.name !== undefined ? { name: data.name.trim() } : {}),
           ...(data.colour !== undefined ? { colour: data.colour } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
           ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
         },
-    });
+      })
+    );
 
-    invalidateCache("task-categories");
+    invalidateCache(`${weddingId}:task-categories`);
     return NextResponse.json(category);
 
   } catch (error) {
@@ -48,11 +51,14 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     const { id } = await params;
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const { searchParams } = new URL(req.url);
     const force = searchParams.get("force") === "true";
 
-    const count = await prisma.task.count({ where: { categoryId: id } });
+    const count = await withTenantContext(weddingId, (tx) =>
+      tx.task.count({ where: { categoryId: id, weddingId } })
+    );
     if (count > 0 && !force) {
         return NextResponse.json(
           { error: `${count} task${count === 1 ? "" : "s"} use this category`, count },
@@ -60,15 +66,17 @@ export async function DELETE(req: NextRequest, { params }: Params) {
         );
     }
 
-    if (force && count > 0) {
-        await prisma.task.updateMany({
-          where: { categoryId: id },
+    await withTenantContext(weddingId, async (tx) => {
+      if (force && count > 0) {
+        await tx.task.updateMany({
+          where: { categoryId: id, weddingId },
           data: { categoryId: null },
         });
-    }
+      }
+      await tx.taskCategory.delete({ where: { id, weddingId } });
+    });
 
-    await prisma.taskCategory.delete({ where: { id: id } });
-    invalidateCache("task-categories");
+    invalidateCache(`${weddingId}:task-categories`);
     return NextResponse.json({ ok: true });
 
   } catch (error) {

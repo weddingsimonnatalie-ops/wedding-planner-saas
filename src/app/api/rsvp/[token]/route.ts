@@ -7,6 +7,7 @@ import { apiJson } from "@/lib/api-response";
 import { handleDbError } from "@/lib/db-error";
 import { checkRateLimit, extractIp, getRsvpRateLimit } from "@/lib/rate-limit";
 import { validateLength } from "@/lib/validation";
+import { withTenantContext } from "@/lib/tenant";
 
 type Choice = "yes" | "no" | "maybe";
 
@@ -45,10 +46,12 @@ export async function GET(
       );
     }
 
+    // Guest lookup is by globally unique rsvpToken — no weddingId filter needed
     const guest = await prisma.guest.findUnique({
       where: { rsvpToken: token },
       select: {
         id: true,
+        weddingId: true,
         firstName: true,
         lastName: true,
         rsvpStatus: true,
@@ -69,10 +72,12 @@ export async function GET(
 
     if (!guest) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const mealOptions = await prisma.mealOption.findMany({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    });
+    const mealOptions = await withTenantContext(guest.weddingId, (tx) =>
+      tx.mealOption.findMany({
+        where: { weddingId: guest.weddingId, isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      })
+    );
 
     return apiJson({ guest, mealOptions });
   } catch (error) {
@@ -107,6 +112,7 @@ export async function POST(
       );
     }
 
+    // Guest lookup is by globally unique rsvpToken — no weddingId filter needed
     const guest = await prisma.guest.findUnique({
       where: { rsvpToken: token },
     });
@@ -126,11 +132,13 @@ export async function POST(
     const reception = guest.invitedToReception ? toFields(receptionCh) : { attending: null as boolean | null, maybe: false };
     const afterparty = guest.invitedToAfterparty ? toFields(afterpartyCh) : { attending: null as boolean | null, maybe: false };
 
-    // Validate mealChoice references an active meal option (if provided)
+    // Validate mealChoice references an active meal option for this wedding (if provided)
     if (mealChoice && mealChoice.trim()) {
-      const mealOption = await prisma.mealOption.findFirst({
-        where: { id: mealChoice.trim(), isActive: true },
-      });
+      const mealOption = await withTenantContext(guest.weddingId, (tx) =>
+        tx.mealOption.findFirst({
+          where: { id: mealChoice.trim(), weddingId: guest.weddingId, isActive: true },
+        })
+      );
       if (!mealOption) {
         return NextResponse.json({ error: "Invalid meal option" }, { status: 400 });
       }

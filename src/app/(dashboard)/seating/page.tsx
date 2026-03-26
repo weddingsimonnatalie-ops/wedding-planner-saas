@@ -1,8 +1,9 @@
 export const dynamic = "force-dynamic";
 
-import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { SeatingClient } from "@/components/seating/SeatingClient";
+import { requireServerContext } from "@/lib/server-context";
+import { withTenantContext } from "@/lib/tenant";
 
 const GUEST_SELECT = {
   id: true,
@@ -19,20 +20,24 @@ const GUEST_SELECT = {
 } as const;
 
 export default async function SeatingPage() {
-  const session = await getSession();
+  const ctx = await requireServerContext();
+  const { weddingId, role } = ctx;
 
   // Ensure a default room exists
-  let room = await prisma.room.findFirst({
-    include: {
-      elements: true,
-      tables: { include: { guests: { select: GUEST_SELECT } }, orderBy: { createdAt: "asc" } },
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  let room = await withTenantContext(weddingId, (tx) =>
+    tx.room.findFirst({
+      where: { weddingId },
+      include: {
+        elements: true,
+        tables: { include: { guests: { select: GUEST_SELECT } }, orderBy: { createdAt: "asc" } },
+      },
+      orderBy: { createdAt: "asc" },
+    })
+  );
 
   if (!room) {
     room = await prisma.room.create({
-      data: { name: "Main Reception", widthMetres: 20, heightMetres: 15 },
+      data: { weddingId, name: "Main Reception", widthMetres: 20, heightMetres: 15 },
       include: {
         elements: true,
         tables: { include: { guests: { select: GUEST_SELECT } }, orderBy: { createdAt: "asc" } },
@@ -40,27 +45,30 @@ export default async function SeatingPage() {
     });
   }
 
-  const [unassignedGuests, mealOptions] = await Promise.all([
-    prisma.guest.findMany({
-      where: {
-        tableId: null,
-        invitedToReception: true,
-        NOT: {
-          AND: [
-            { attendingReception: false },
-            { rsvpStatus: { notIn: ["ACCEPTED", "PARTIAL"] } },
-          ],
+  const [unassignedGuests, mealOptions] = await withTenantContext(weddingId, (tx) =>
+    Promise.all([
+      tx.guest.findMany({
+        where: {
+          weddingId,
+          tableId: null,
+          invitedToReception: true,
+          NOT: {
+            AND: [
+              { attendingReception: false },
+              { rsvpStatus: { notIn: ["ACCEPTED", "PARTIAL"] } },
+            ],
+          },
         },
-      },
-      select: GUEST_SELECT,
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-    }),
-    prisma.mealOption.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
-  ]);
+        select: GUEST_SELECT,
+        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      }),
+      tx.mealOption.findMany({
+        where: { weddingId, isActive: true },
+        select: { id: true, name: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+    ])
+  );
 
   return (
     <div className="h-full flex flex-col">
@@ -69,7 +77,7 @@ export default async function SeatingPage() {
         initialTables={room.tables as any}
         initialUnassigned={unassignedGuests}
         mealOptions={mealOptions}
-        role={session?.user?.role}
+        role={role}
       />
     </div>
   );

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrRsvpManager } from "@/lib/api-auth";
-import { prisma } from "@/lib/prisma";
+import { withTenantContext } from "@/lib/tenant";
 import { parseGuestCsv } from "@/lib/csv";
 
-import { handleDbError } from "@/lib/db-error";type DupAction = "skip" | "update" | "create";
+import { handleDbError } from "@/lib/db-error";
+
+type DupAction = "skip" | "update" | "create";
 
 // POST with { csv: string } → returns preview
 // POST with { csv: string, confirm: true, duplicateActions: Record<string, DupAction> } → creates/updates records
@@ -11,6 +13,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const auth = await requireAdminOrRsvpManager(req);
     if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const body = await req.json();
     const { csv, confirm, duplicateActions } = body;
@@ -25,23 +28,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ error: errors.join("; ") }, { status: 400 });
     }
 
-    // Duplicate detection against existing DB records
-    const existingGuests = await prisma.guest.findMany({
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          phone: true,
-          groupName: true,
-          isChild: true,
-          rsvpStatus: true,
-          invitedToCeremony: true,
-          invitedToReception: true,
-          invitedToAfterparty: true,
-          notes: true,
-        },
-    });
+    // Duplicate detection against existing DB records (scoped to this wedding)
+    const existingGuests = await withTenantContext(weddingId, (tx) =>
+      tx.guest.findMany({
+          where: { weddingId },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            groupName: true,
+            isChild: true,
+            rsvpStatus: true,
+            invitedToCeremony: true,
+            invitedToReception: true,
+            invitedToAfterparty: true,
+            notes: true,
+          },
+      })
+    );
 
     const existingMap = new Map(
         existingGuests.map((g) => [
@@ -97,26 +103,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         };
 
         if (action === "create") {
-          await prisma.guest.create({ data: guestData });
+          await withTenantContext(weddingId, (tx) =>
+            tx.guest.create({ data: { ...guestData, weddingId } })
+          );
           created++;
         } else if (action === "update") {
           const key = `${row.firstName.toLowerCase()}|${row.lastName.toLowerCase()}`;
           const existing = existingMap.get(key);
           if (existing) {
             // Only overwrite fields that are non-empty in the CSV
-            await prisma.guest.update({
-              where: { id: existing.id },
-              data: {
-                ...(row.email ? { email: row.email } : {}),
-                ...(row.phone ? { phone: row.phone } : {}),
-                ...(row.groupName ? { groupName: row.groupName } : {}),
-                isChild: row.isChild,
-                invitedToCeremony: row.invitedToCeremony,
-                invitedToReception: row.invitedToReception,
-                invitedToAfterparty: row.invitedToAfterparty,
-                ...(row.notes ? { notes: row.notes } : {}),
-              },
-            });
+            await withTenantContext(weddingId, (tx) =>
+              tx.guest.update({
+                where: { id: existing.id, weddingId },
+                data: {
+                  ...(row.email ? { email: row.email } : {}),
+                  ...(row.phone ? { phone: row.phone } : {}),
+                  ...(row.groupName ? { groupName: row.groupName } : {}),
+                  isChild: row.isChild,
+                  invitedToCeremony: row.invitedToCeremony,
+                  invitedToReception: row.invitedToReception,
+                  invitedToAfterparty: row.invitedToAfterparty,
+                  ...(row.notes ? { notes: row.notes } : {}),
+                },
+              })
+            );
             updated++;
           } else {
             skipped++;

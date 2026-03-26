@@ -1,8 +1,9 @@
 export const dynamic = "force-dynamic";
 
-import { prisma } from "@/lib/prisma";
 import { RsvpStatus } from "@prisma/client";
 import { GuestList } from "@/components/guests/GuestList";
+import { requireServerContext } from "@/lib/server-context";
+import { withTenantContext } from "@/lib/tenant";
 
 interface PageProps {
   searchParams: Promise<{
@@ -18,6 +19,9 @@ interface PageProps {
 }
 
 export default async function GuestsPage({ searchParams }: PageProps) {
+  const ctx = await requireServerContext();
+  const { weddingId } = ctx;
+
   const { search, status, group, tableAssigned, tableId, event, meal, dietary } = await searchParams;
 
   const overrideStatuses = { in: ["ACCEPTED", "PARTIAL"] };
@@ -33,41 +37,52 @@ export default async function GuestsPage({ searchParams }: PageProps) {
     : event === "not_attending_afterparty" ? { invitedToAfterparty: true,attendingAfterparty: false }
     : {};
 
-  const [guests, mealOptions, tables] = await Promise.all([
-    prisma.guest.findMany({
-      where: {
-        ...(status && status !== "ALL" ? { rsvpStatus: status as RsvpStatus } : {}),
-        ...(group === "none" ? { OR: [{ groupName: null }, { groupName: "" }] } : group ? { groupName: group } : {}),
-        ...(tableId ? { tableId } : tableAssigned === "yes" ? { tableId: { not: null } } : tableAssigned === "no" ? { tableId: null } : {}),
-        ...eventFilter,
-        ...(meal === "none" ? { mealChoice: null } : meal ? { mealChoice: meal } : {}),
-        ...(dietary === "has_notes" ? { dietaryNotes: { not: null }, NOT: { dietaryNotes: "" } } : dietary === "no_notes" ? { OR: [{ dietaryNotes: null }, { dietaryNotes: "" }] } : {}),
-        ...(search
-          ? {
-              OR: [
-                { firstName: { contains: search, mode: "insensitive" } },
-                { lastName: { contains: search, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      },
-      include: { table: { select: { id: true, name: true } } },
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-    }),
-    prisma.mealOption.findMany({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
-    prisma.table.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
-
-  // Total counts (always unfiltered)
-  const allGuests = await prisma.guest.findMany({
-    select: { rsvpStatus: true, tableId: true },
-  });
+  const [guests, mealOptions, tables, allGuests, groupRows] = await withTenantContext(weddingId, (tx) =>
+    Promise.all([
+      tx.guest.findMany({
+        where: {
+          weddingId,
+          ...(status && status !== "ALL" ? { rsvpStatus: status as RsvpStatus } : {}),
+          ...(group === "none" ? { OR: [{ groupName: null }, { groupName: "" }] } : group ? { groupName: group } : {}),
+          ...(tableId ? { tableId } : tableAssigned === "yes" ? { tableId: { not: null } } : tableAssigned === "no" ? { tableId: null } : {}),
+          ...eventFilter,
+          ...(meal === "none" ? { mealChoice: null } : meal ? { mealChoice: meal } : {}),
+          ...(dietary === "has_notes" ? { dietaryNotes: { not: null }, NOT: { dietaryNotes: "" } } : dietary === "no_notes" ? { OR: [{ dietaryNotes: null }, { dietaryNotes: "" }] } : {}),
+          ...(search
+            ? {
+                OR: [
+                  { firstName: { contains: search, mode: "insensitive" } },
+                  { lastName: { contains: search, mode: "insensitive" } },
+                ],
+              }
+            : {}),
+        },
+        include: { table: { select: { id: true, name: true } } },
+        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      }),
+      tx.mealOption.findMany({
+        where: { weddingId, isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+      tx.table.findMany({
+        where: { weddingId },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      // Total counts (always unfiltered)
+      tx.guest.findMany({
+        where: { weddingId },
+        select: { rsvpStatus: true, tableId: true },
+      }),
+      // Distinct groups for filter dropdown
+      tx.guest.findMany({
+        select: { groupName: true },
+        distinct: ["groupName"],
+        where: { weddingId, groupName: { not: null } },
+        orderBy: { groupName: "asc" },
+      }),
+    ])
+  );
 
   const totalGuests = allGuests.length;
   const stats = {
@@ -92,13 +107,6 @@ export default async function GuestsPage({ searchParams }: PageProps) {
     unassigned: guests.filter((g) => !g.tableId).length,
   } : stats;
 
-  // Distinct groups for filter dropdown
-  const groupRows = await prisma.guest.findMany({
-    select: { groupName: true },
-    distinct: ["groupName"],
-    where: { groupName: { not: null } },
-    orderBy: { groupName: "asc" },
-  });
   const groups = groupRows.map((r) => r.groupName!).filter(Boolean);
 
   return (

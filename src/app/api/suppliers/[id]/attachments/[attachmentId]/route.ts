@@ -3,25 +3,32 @@ import { requireAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
+import { withTenantContext } from "@/lib/tenant";
 
 import { handleDbError } from "@/lib/db-error";
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string; attachmentId: string }> }
 ): Promise<NextResponse> {
   try {
     const { id, attachmentId } = await params;
-    const auth = await requireAdmin(_req);
+    const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
 
-    const attachment = await prisma.attachment.findUnique({ where: { id: attachmentId } });
+    const { weddingId } = auth;
+
+    const attachment = await withTenantContext(weddingId, (tx) =>
+      tx.attachment.findFirst({ where: { id: attachmentId, supplierId: id, weddingId } })
+    );
     if (!attachment) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const filePath = path.join(process.cwd(), "uploads", id, attachment.storedAs);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
-    await prisma.attachment.delete({ where: { id: attachmentId } });
+    await withTenantContext(weddingId, (tx) =>
+      tx.attachment.delete({ where: { id: attachmentId } })
+    );
     return NextResponse.json({ ok: true });
 
   } catch (error) {

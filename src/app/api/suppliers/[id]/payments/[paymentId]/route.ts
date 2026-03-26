@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { validateFields } from "@/lib/validation";
+import { withTenantContext } from "@/lib/tenant";
 
 import { handleDbError } from "@/lib/db-error";
 
@@ -14,13 +15,19 @@ export async function PUT(
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
 
+    const { weddingId } = auth;
+
     const data = await req.json();
 
-    // Validate supplier and payment exist
-    const supplier = await prisma.supplier.findUnique({ where: { id } });
+    // Validate supplier and payment exist and belong to this wedding
+    const supplier = await withTenantContext(weddingId, (tx) =>
+      tx.supplier.findUnique({ where: { id, weddingId } })
+    );
     if (!supplier) return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
 
-    const existingPayment = await prisma.payment.findUnique({ where: { id: paymentId } });
+    const existingPayment = await withTenantContext(weddingId, (tx) =>
+      tx.payment.findUnique({ where: { id: paymentId, weddingId } })
+    );
     if (!existingPayment) return NextResponse.json({ error: "Payment not found" }, { status: 404 });
 
     // Validate field lengths
@@ -32,17 +39,19 @@ export async function PUT(
       return NextResponse.json({ error: errors[0] }, { status: 400 });
     }
 
-    const payment = await prisma.payment.update({
-    where: { id: paymentId },
-    data: {
-        ...(data.label !== undefined ? { label: data.label?.trim() || "" } : {}),
-        ...(data.amount !== undefined ? { amount: Number(data.amount) } : {}),
-        ...(data.dueDate !== undefined ? { dueDate: data.dueDate ? new Date(data.dueDate) : null } : {}),
-        ...(data.status !== undefined ? { status: data.status } : {}),
-        ...(data.paidDate !== undefined ? { paidDate: data.paidDate ? new Date(data.paidDate) : null } : {}),
-        ...(data.notes !== undefined ? { notes: data.notes?.trim() || null } : {}),
-    },
-    });
+    const payment = await withTenantContext(weddingId, (tx) =>
+      tx.payment.update({
+        where: { id: paymentId, weddingId },
+        data: {
+          ...(data.label !== undefined ? { label: data.label?.trim() || "" } : {}),
+          ...(data.amount !== undefined ? { amount: Number(data.amount) } : {}),
+          ...(data.dueDate !== undefined ? { dueDate: data.dueDate ? new Date(data.dueDate) : null } : {}),
+          ...(data.status !== undefined ? { status: data.status } : {}),
+          ...(data.paidDate !== undefined ? { paidDate: data.paidDate ? new Date(data.paidDate) : null } : {}),
+          ...(data.notes !== undefined ? { notes: data.notes?.trim() || null } : {}),
+        },
+      })
+    );
 
     return NextResponse.json(payment);
 
@@ -53,22 +62,30 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string; paymentId: string }> }
 ): Promise<NextResponse> {
   try {
     const { id, paymentId } = await params;
-    const auth = await requireAdmin(_req);
+    const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
 
-    // Validate supplier and payment exist before deletion
-    const supplier = await prisma.supplier.findUnique({ where: { id } });
+    const { weddingId } = auth;
+
+    // Validate supplier and payment exist and belong to this wedding before deletion
+    const supplier = await withTenantContext(weddingId, (tx) =>
+      tx.supplier.findUnique({ where: { id, weddingId } })
+    );
     if (!supplier) return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
 
-    const existingPayment = await prisma.payment.findUnique({ where: { id: paymentId } });
+    const existingPayment = await withTenantContext(weddingId, (tx) =>
+      tx.payment.findUnique({ where: { id: paymentId, weddingId } })
+    );
     if (!existingPayment) return NextResponse.json({ error: "Payment not found" }, { status: 404 });
 
-    await prisma.payment.delete({ where: { id: paymentId } });
+    await withTenantContext(weddingId, (tx) =>
+      tx.payment.delete({ where: { id: paymentId, weddingId } })
+    );
     return NextResponse.json({ ok: true });
 
   } catch (error) {
