@@ -44,6 +44,14 @@ interface SettingsClientProps {
     emailVerified: Date | string | null;
     createdAt: Date | string;
   }>;
+  invites: Array<{
+    id: string;
+    email: string | null;
+    role: UserRole;
+    expiresAt: Date | string;
+    createdAt: Date | string;
+  }>;
+  ownerUserId: string | null;
   currentUserEmail: string;
   emailVerificationRequired: boolean;
   billing: BillingInfo | null;
@@ -56,6 +64,8 @@ export function SettingsClient({
   mealOptions,
   mealCounts,
   users,
+  invites,
+  ownerUserId,
   currentUserEmail,
   emailVerificationRequired,
   billing,
@@ -258,6 +268,8 @@ export function SettingsClient({
             </p>
             <UsersManager
               initialUsers={users}
+              initialInvites={invites}
+              ownerUserId={ownerUserId}
               currentUserEmail={currentUserEmail}
               emailVerificationRequired={emailVerificationRequired}
             />

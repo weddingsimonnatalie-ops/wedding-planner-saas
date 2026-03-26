@@ -253,4 +253,73 @@ export async function sendVerificationEmail(
   }
 }
 
+/**
+ * Send a wedding invitation email to a new team member.
+ */
+export async function sendInviteEmail(
+  to: string,
+  coupleName: string,
+  inviteUrl: string,
+  role: string
+): Promise<{ ok: boolean; message: string }> {
+  const transporter = getTransporter();
+  const from = process.env.SMTP_FROM ?? "noreply@localhost";
+
+  const roleLabel: Record<string, string> = {
+    ADMIN: "Admin",
+    VIEWER: "Viewer",
+    RSVP_MANAGER: "RSVP Manager",
+  };
+  const roleName = roleLabel[role] ?? role;
+
+  const subject = `You've been invited to help plan ${coupleName}'s wedding`;
+
+  const text = `You've been invited to join ${coupleName}'s wedding planning team as ${roleName}.\n\nAccept your invite here: ${inviteUrl}\n\nThis link expires in 7 days.`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family: Georgia, serif; background: #f9f7f4; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9f7f4; padding: 40px 16px;">
+    <tr><td align="center">
+      <table cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 8px; padding: 48px 40px; max-width: 520px; width: 100%;">
+        <tr><td style="text-align: center; padding-bottom: 32px; border-bottom: 1px solid #e5e0d8;">
+          <h1 style="font-size: 26px; color: #1a1a1a; margin: 0; font-weight: normal;">${esc(coupleName)}</h1>
+        </td></tr>
+        <tr><td style="padding-top: 32px;">
+          <p style="font-size: 16px; color: #333; margin: 0 0 16px;">You&rsquo;ve been invited to join the wedding planning team.</p>
+          <p style="font-size: 16px; color: #333; margin: 0 0 32px; line-height: 1.6;">
+            You&rsquo;ll be added as <strong>${esc(roleName)}</strong>. Click the button below to accept your invite and get started.
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr><td align="center" style="padding-bottom: 32px;">
+              <a href="${safeUrl(inviteUrl)}" style="display: inline-block; background: #9b7e5c; color: #ffffff; text-decoration: none; padding: 14px 48px; border-radius: 6px; font-size: 16px; font-weight: bold; letter-spacing: 0.5px;">Accept invite</a>
+            </td></tr>
+          </table>
+          <p style="font-size: 13px; color: #aaa; margin: 0 0 6px;">Or copy this link:</p>
+          <p style="font-size: 13px; word-break: break-all; margin: 0 0 32px;"><a href="${safeUrl(inviteUrl)}" style="color: #9b7e5c;">${esc(inviteUrl)}</a></p>
+          <p style="font-size: 13px; color: #888; margin: 0; border-top: 1px solid #e5e0d8; padding-top: 24px;">This link expires in 7 days. If you weren&rsquo;t expecting this invitation, you can safely ignore it.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  if (!transporter) {
+    console.log(`[email] SMTP not configured. Invite would be sent to ${to}:`);
+    console.log(`[email] Invite URL: ${inviteUrl}`);
+    return { ok: true, message: "Email logged to console (SMTP not configured)" };
+  }
+
+  try {
+    await transporter.sendMail({ from, to, subject, text, html });
+    return { ok: true, message: `Invite sent to ${to}` };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[email] Failed to send invite to ${to}: ${msg}`);
+    return { ok: false, message: `Failed to send: ${msg}` };
+  }
+}
+
 export { generateVerificationToken };

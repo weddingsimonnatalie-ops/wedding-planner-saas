@@ -46,6 +46,16 @@ export async function PUT(
       if (!member) {
         return NextResponse.json({ error: "User not found in this wedding" }, { status: 404 });
       }
+
+      // Cannot reset the account owner's password (earliest joinedAt = original registrant)
+      const firstMember = await prisma.weddingMember.findFirst({
+        where: { weddingId },
+        orderBy: { joinedAt: "asc" },
+        select: { userId: true },
+      });
+      if (firstMember?.userId === id) {
+        return NextResponse.json({ error: "Cannot reset the account owner's password" }, { status: 403 });
+      }
     }
 
     const user = await prisma.user.findUnique({

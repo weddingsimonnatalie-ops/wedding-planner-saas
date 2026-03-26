@@ -68,6 +68,16 @@ export async function PUT(
       return NextResponse.json({ error: "User not found in this wedding" }, { status: 404 });
     }
 
+    // Cannot edit the account owner (earliest joinedAt = original registrant)
+    const firstMember = await prisma.weddingMember.findFirst({
+      where: { weddingId },
+      orderBy: { joinedAt: "asc" },
+      select: { userId: true },
+    });
+    if (firstMember?.userId === id && auth.user.id !== id) {
+      return NextResponse.json({ error: "Cannot edit the account owner" }, { status: 403 });
+    }
+
     const { name, email } = await req.json();
     if (!email?.trim()) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -160,6 +170,16 @@ export async function DELETE(
     });
     if (!member) {
       return NextResponse.json({ error: "User not found in this wedding" }, { status: 404 });
+    }
+
+    // Cannot remove the account owner (earliest joinedAt = original registrant)
+    const firstMember = await prisma.weddingMember.findFirst({
+      where: { weddingId },
+      orderBy: { joinedAt: "asc" },
+      select: { userId: true },
+    });
+    if (firstMember?.userId === id) {
+      return NextResponse.json({ error: "Cannot remove the account owner from this wedding" }, { status: 403 });
     }
 
     // Must keep at least one member in the wedding

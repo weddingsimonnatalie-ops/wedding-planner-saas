@@ -9,7 +9,7 @@ export default async function SettingsPage() {
   const ctx = await requireServerContext(["ADMIN"]);
   const { weddingId } = ctx;
 
-  const [config, mealOptions, mealCounts, members] = await withTenantContext(
+  const [config, mealOptions, mealCounts, members, invites] = await withTenantContext(
     weddingId,
     async (tx) =>
       Promise.all([
@@ -23,8 +23,8 @@ export default async function SettingsPage() {
           _count: { _all: true },
           where: { weddingId, mealChoice: { not: null }, rsvpStatus: "ACCEPTED" },
         }),
-        // WeddingMember query — global table, but we need it here for user management
-        // Use prisma directly (not tx) since WeddingMember has no RLS
+        // WeddingMember / WeddingInvite queries — global tables, no RLS
+        // Use prisma directly (not tx)
         prisma.weddingMember.findMany({
           where: { weddingId },
           include: {
@@ -42,6 +42,10 @@ export default async function SettingsPage() {
           },
           orderBy: { joinedAt: "asc" },
         }),
+        prisma.weddingInvite.findMany({
+          where: { weddingId, usedAt: null, expiresAt: { gt: new Date() } },
+          orderBy: { createdAt: "desc" },
+        }),
       ])
   );
 
@@ -50,10 +54,12 @@ export default async function SettingsPage() {
   );
 
   // Flatten members into the user shape the SettingsClient expects, adding role from WeddingMember
+  // members is ordered by joinedAt asc, so members[0] is the original registrant (owner)
   const users = members.map((m) => ({
     ...m.user,
     role: m.role,
   }));
+  const ownerUserId = members[0]?.user.id ?? null;
 
   const emailVerificationRequired = !!(
     process.env.SMTP_HOST &&
@@ -78,6 +84,8 @@ export default async function SettingsPage() {
         mealOptions={mealOptions}
         mealCounts={countMap}
         users={users}
+        invites={invites}
+        ownerUserId={ownerUserId}
         currentUserEmail={ctx.userEmail}
         emailVerificationRequired={emailVerificationRequired}
         billing={billing}

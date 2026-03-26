@@ -1,10 +1,53 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, Mail, ArrowRight } from "lucide-react";
+import { Mail, ArrowRight, CheckCircle, Plus } from "lucide-react";
+import { UserRole } from "@prisma/client";
+
+const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] = [
+  { value: "ADMIN", label: "Admin", description: "Full access to everything" },
+  { value: "VIEWER", label: "Viewer", description: "Read-only access" },
+  { value: "RSVP_MANAGER", label: "RSVP Manager", description: "Manage guests & RSVPs" },
+];
+
+interface SentInvite {
+  email: string;
+  role: UserRole;
+}
 
 export default function OnboardingInvitePage() {
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<UserRole>("ADMIN");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [sentInvites, setSentInvites] = useState<SentInvite[]>([]);
+
+  async function handleSend(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/invites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Failed to send invite");
+        setLoading(false);
+        return;
+      }
+      setSentInvites((prev) => [...prev, { email, role }]);
+      setEmail("");
+      setRole("ADMIN");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    }
+    setLoading(false);
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 to-pink-100 px-4">
@@ -25,31 +68,81 @@ export default function OnboardingInvitePage() {
             </div>
             <h1 className="text-2xl font-semibold text-gray-900">Invite your partner or planner</h1>
             <p className="text-sm text-gray-500 mt-1 text-center">
-              You can invite people to help manage your wedding
+              Send an invite so they can join your wedding planning team
             </p>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <Heart className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-blue-900">Coming soon</p>
-                <p className="text-sm text-blue-700 mt-0.5">
-                  The invitation system is being built. For now, you can add team members via{" "}
-                  <strong>Settings → Users</strong> once you&apos;re in the app.
-                </p>
+          {/* Sent invites list */}
+          {sentInvites.length > 0 && (
+            <ul className="mb-6 space-y-2">
+              {sentInvites.map((inv, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                  <CheckCircle className="w-4 h-4 shrink-0" />
+                  <span>Invite sent to <strong>{inv.email}</strong> ({ROLE_OPTIONS.find(r => r.value === inv.role)?.label})</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Invite form */}
+          <form onSubmit={handleSend} className="space-y-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="partner@example.com"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {ROLE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setRole(opt.value)}
+                    className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+                      role === opt.value
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-gray-200 text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <p className="font-medium">{opt.label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{opt.description}</p>
+                  </button>
+                ))}
               </div>
             </div>
-          </div>
+            {error && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {error}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Plus className="w-4 h-4" />
+              {loading ? "Sending…" : "Send invite"}
+            </button>
+          </form>
 
           <button
             type="button"
             onClick={() => router.push("/onboarding/done")}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
           >
-            Continue
+            {sentInvites.length > 0 ? "Continue" : "Skip for now"}
             <ArrowRight className="w-4 h-4" />
           </button>
+          <p className="text-xs text-center text-gray-400 mt-3">
+            You can invite more people later from Settings → Users
+          </p>
         </div>
       </div>
     </div>

@@ -8,12 +8,14 @@ const publicPaths = [
   "/login",
   "/register",
   "/rsvp",
+  "/invite",
   "/api/auth",
   "/api/register",
   "/api/rsvp",
   "/api/health",
   "/api/webhooks",
   "/api/inngest",
+  "/api/invites/accept",
 ];
 
 // Paths that need auth but not a wedding context (wedding selection / setup)

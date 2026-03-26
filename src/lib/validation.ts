@@ -1,4 +1,4 @@
-import { RsvpStatus, SupplierStatus } from "@prisma/client";
+import { RsvpStatus, SupplierStatus, UserRole } from "@prisma/client";
 
 // RSVP status validation
 export const VALID_RSVP_STATUSES: RsvpStatus[] = [
@@ -34,6 +34,13 @@ export function isValidSupplierStatus(
     typeof status === "string" &&
     VALID_SUPPLIER_STATUSES.includes(status as SupplierStatus)
   );
+}
+
+// User role validation
+export const VALID_ROLES: UserRole[] = ["ADMIN", "VIEWER", "RSVP_MANAGER"];
+
+export function isValidRole(role: unknown): role is UserRole {
+  return typeof role === "string" && VALID_ROLES.includes(role as UserRole);
 }
 
 // Input length limits
