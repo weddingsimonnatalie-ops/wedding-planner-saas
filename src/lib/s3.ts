@@ -2,16 +2,16 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } fro
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const s3 = new S3Client({
-  endpoint: process.env.RAILWAY_BUCKET_ENDPOINT!,
-  region: "auto",
+  endpoint: process.env.AWS_ENDPOINT_URL!,
+  region: process.env.AWS_DEFAULT_REGION ?? "auto",
   credentials: {
-    accessKeyId: process.env.RAILWAY_BUCKET_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.RAILWAY_BUCKET_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
   forcePathStyle: false,
 });
 
-const BUCKET = process.env.RAILWAY_BUCKET_NAME ?? "wedding-planner-uploads";
+const BUCKET = process.env.AWS_S3_BUCKET_NAME ?? "wedding-planner-uploads";
 
 export async function uploadFile(key: string, body: Buffer, contentType: string): Promise<void> {
   await s3.send(new PutObjectCommand({
