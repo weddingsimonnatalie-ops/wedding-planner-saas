@@ -34,7 +34,15 @@ export async function GET(req: NextRequest) {
       tasksDueSoon,
       upcomingTasks,
     ] = await withTenantContext(weddingId, async (tx) => {
-      // Overdue payment marking is now handled by the Inngest mark-overdue-payments cron (Phase 4)
+      // When Inngest is not configured, mark overdue payments on dashboard load
+      // (same behaviour as the personal app). When INNGEST_EVENT_KEY is set,
+      // the mark-overdue-payments cron handles this instead.
+      if (!process.env.INNGEST_EVENT_KEY) {
+        await tx.payment.updateMany({
+          where: { weddingId, status: "PENDING", dueDate: { lt: now } },
+          data: { status: "OVERDUE" },
+        });
+      }
 
       return Promise.all([
         tx.wedding.findUnique({ where: { id: weddingId } }),
