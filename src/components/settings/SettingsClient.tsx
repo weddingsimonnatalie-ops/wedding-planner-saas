@@ -21,7 +21,7 @@ import { NotificationsForm } from "./NotificationsForm";
 import { SessionTimeoutSettings } from "./SessionTimeoutSettings";
 import { WeddingConfigForm } from "@/components/wedding-config-form";
 import Link from "next/link";
-import { CreditCard, Calendar } from "lucide-react";
+import { CreditCard, Calendar, Download } from "lucide-react";
 
 interface BillingInfo {
   subscriptionStatus: string;
@@ -254,6 +254,21 @@ export function SettingsClient({
                 Manage subscription in Stripe
               </button>
             </form>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-base font-medium text-gray-900 mb-1">Your data</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Download a full export of your wedding data including guests, suppliers, payments, appointments, and tasks.
+            </p>
+            <a
+              href="/api/export"
+              download
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Download my data
+            </a>
           </div>
         </div>
       )}
