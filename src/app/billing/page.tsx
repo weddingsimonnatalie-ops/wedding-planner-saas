@@ -2,8 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { requireServerContext } from "@/lib/server-context";
 import { prisma } from "@/lib/prisma";
-import { Heart, CreditCard, Calendar, CheckCircle } from "lucide-react";
-import Link from "next/link";
+import { Heart, CreditCard, Calendar, Download } from "lucide-react";
 
 export default async function BillingPage() {
   const ctx = await requireServerContext(["ADMIN"]);
@@ -118,6 +117,21 @@ export default async function BillingPage() {
         You&apos;ll be redirected to Stripe to manage your subscription, payment
         method, and invoices.
       </p>
+
+      <div className="mt-8 border-t border-gray-200 pt-8">
+        <h2 className="text-sm font-semibold text-gray-700 mb-1">Your data</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Download a full export of your wedding data including guests, suppliers, payments, appointments, and tasks.
+        </p>
+        <a
+          href="/api/export"
+          download
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          Download my data
+        </a>
+      </div>
     </div>
   );
 }
