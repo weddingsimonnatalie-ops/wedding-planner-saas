@@ -36,6 +36,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ received: true });
   }
 
+  const useInngest = !!process.env.INNGEST_EVENT_KEY;
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -52,7 +54,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             subscriptionStatus: "TRIALING",
           },
         });
-        await inngest.send({ name: "wedding/created", data: { weddingId } });
+        if (useInngest) await inngest.send({ name: "wedding/created", data: { weddingId } });
         console.log(`checkout.session.completed: wedding ${weddingId} trialing`);
         break;
       }
@@ -98,7 +100,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             gracePeriodEndsAt: new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000),
           },
         });
-        await inngest.send({ name: "stripe/payment.failed", data: { subscriptionId } });
+        if (useInngest) await inngest.send({ name: "stripe/payment.failed", data: { subscriptionId } });
         console.log(`invoice.payment_failed: subscription ${subscriptionId} past_due, grace period set`);
         break;
       }
@@ -121,7 +123,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           select: { id: true },
         });
         if (cancelledWedding) {
-          await inngest.send({ name: "wedding/cancelled", data: { weddingId: cancelledWedding.id } });
+          if (useInngest) await inngest.send({ name: "wedding/cancelled", data: { weddingId: cancelledWedding.id } });
         }
         console.log(`customer.subscription.deleted: subscription ${subscription.id} cancelled`);
         break;
@@ -129,7 +131,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
       case "customer.subscription.trial_will_end": {
         const subscription = event.data.object as Stripe.Subscription;
-        await inngest.send({ name: "stripe/trial.will_end", data: { subscriptionId: subscription.id } });
+        if (useInngest) await inngest.send({ name: "stripe/trial.will_end", data: { subscriptionId: subscription.id } });
         console.log(`customer.subscription.trial_will_end: subscription ${subscription.id}`);
         break;
       }
