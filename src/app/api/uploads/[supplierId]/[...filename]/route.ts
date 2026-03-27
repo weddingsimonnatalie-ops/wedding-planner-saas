@@ -36,7 +36,9 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const presignedUrl = await getDownloadUrl(attachment.storedAs, 300);
+    // Pass original filename so the presigned URL includes Content-Disposition: attachment,
+    // ensuring the browser downloads the file rather than displaying it inline.
+    const presignedUrl = await getDownloadUrl(attachment.storedAs, 300, attachment.filename);
     return NextResponse.redirect(presignedUrl, 302);
 
   } catch (error) {

@@ -149,7 +149,7 @@ export async function GET(
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
 
-    const presignedUrl = await getDownloadUrl(attachment.storedAs, 300);
+    const presignedUrl = await getDownloadUrl(attachment.storedAs, 300, attachment.filename);
     return NextResponse.redirect(presignedUrl, 302);
   } catch (error) {
     return handleDbError(error);

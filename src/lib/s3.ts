@@ -35,13 +35,28 @@ export async function uploadFile(key: string, body: Buffer, contentType: string)
   }));
 }
 
-export async function getDownloadUrl(key: string, expiresInSeconds = 3600): Promise<string> {
+export async function getDownloadUrl(
+  key: string,
+  expiresInSeconds = 300,
+  originalFilename?: string
+): Promise<string> {
   // Uses s3Public so the presigned URL is signed with the browser-accessible endpoint.
   // Signature and host must match — signing with the internal endpoint then rewriting the
   // URL breaks the signature (SignatureDoesNotMatch error).
-  return getSignedUrl(s3Public, new GetObjectCommand({ Bucket: BUCKET, Key: key }), {
-    expiresIn: expiresInSeconds,
-  });
+  //
+  // originalFilename: when provided, adds ResponseContentDisposition: attachment so the
+  // browser downloads the file rather than displaying it inline.
+  return getSignedUrl(
+    s3Public,
+    new GetObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      ...(originalFilename
+        ? { ResponseContentDisposition: `attachment; filename="${originalFilename}"` }
+        : {}),
+    }),
+    { expiresIn: expiresInSeconds }
+  );
 }
 
 export async function deleteFile(key: string): Promise<void> {
