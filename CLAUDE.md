@@ -347,7 +347,7 @@ Three roles defined in the `UserRole` Prisma enum:
   - **Edit payment**: pencil button on each row expands an inline edit form (expand-in-place, not a modal); all fields editable (label, amount, due date, status, paid date, notes); paid date shown/hidden based on status; validation on save; `router.refresh()` called after save to keep `/suppliers` list and dashboard totals fresh
   - `router.refresh()` is called after all 5 payment mutations: add, edit, mark paid, mark unpaid, delete
   - Payment notes displayed as a third line beneath the payment row when set
-- File attachments: upload/download/delete (stored at `./data/uploads/[supplierId]/`); receipts linked to payments show "Receipt" badge with payment label
+- File attachments: upload/download/delete (stored in S3 at key `{weddingId}/suppliers/{supplierId}/{uuid}.ext`); served via presigned URL redirect from `/api/uploads/[supplierId]/[...filename]`; receipts linked to payments show "Receipt" badge with payment label
 - Supplier categories: configurable with colour, sort order (Settings → Supplier Categories)
 
 ### Payments (`/payments`)
@@ -425,13 +425,27 @@ Other settings pages:
 ### Data persistence — bind mounts, not named volumes
 ```
 ./data/postgres   →  /var/lib/postgresql/data
-./data/uploads    →  /app/uploads
-./data/redis      →  /data (Redis persistence)
+./data/minio      →  /data  (MinIO object storage — local dev only)
+./data/redis      →  /data  (Redis persistence)
 ```
 This makes the data trivially portable — copy the `data/` folder to move servers. The `postgres` service runs as UID 999 to match the default postgres user inside the container.
 
-### File serving via API route, not `public/`
-Uploaded supplier attachments are stored outside the Next.js public directory and served via `/api/uploads/[supplierId]/[filename]`. This ensures NextAuth session check before serving any file — unauthenticated users cannot access attachments.
+In production (Railway) file attachments live in Railway Buckets (Tigris S3), not in `data/`. The `data/minio/` folder is local dev only.
+
+### File storage — S3 (MinIO locally, Railway Buckets in production)
+Uploaded supplier attachments and payment receipts are stored in S3-compatible object storage. The same `@aws-sdk/client-s3` code runs in both environments — only the credentials and endpoint differ.
+
+**Key structure:**
+- Supplier attachments: `{weddingId}/suppliers/{supplierId}/{uuid}.ext`
+- Payment receipts: `{weddingId}/receipts/{paymentId}/{uuid}.ext`
+
+**Two-client pattern** (`src/lib/s3.ts`):
+- `s3` — server-side ops (upload, delete, list) — uses `AWS_ENDPOINT_URL` (Docker-internal `minio:9000` in dev, Tigris in prod)
+- `s3Public` — presigned URL generation — uses `S3_PUBLIC_ENDPOINT_URL` if set, otherwise falls back to `AWS_ENDPOINT_URL`. This is critical: presigned URLs embed the endpoint host in the HMAC signature. Signing with the Docker-internal hostname then rewriting the URL breaks the signature (SignatureDoesNotMatch error). In prod `S3_PUBLIC_ENDPOINT_URL` is unset so both clients use the same Tigris endpoint.
+
+**Serving files:** `/api/uploads/[supplierId]/[...filename]` and `/api/payments/[id]/receipt` both look up the `Attachment` record, generate a presigned URL via `getDownloadUrl()`, and redirect 302. Auth is checked before the redirect — unauthenticated users cannot access files.
+
+**`forcePathStyle`:** `true` for MinIO (path-style: `http://host/bucket/key`), `false` for Railway/Tigris (virtual-hosted: `http://bucket.host/key`). Controlled by `S3_FORCE_PATH_STYLE` env var (defaults `true` in docker-compose, unset in Railway).
 
 ### List page component pattern
 All list pages (Guests, Suppliers, Payments, Appointments, Tasks) follow the same pattern:
@@ -960,6 +974,13 @@ All variables are in `.env` and passed to the `app` container via `docker-compos
 | `BULK_EMAIL_LIMIT` | No | Max emails per bulk send. Default: `100`. |
 | `REDIS_URL` | No | Redis connection URL for multi-instance rate limiting. If not set, falls back to in-memory. Example: `redis://localhost:6379`. |
 | `GRACEFUL_TIMEOUT` | No | Graceful shutdown timeout in seconds. Default: `30`. Time to wait for in-flight requests before forcing shutdown on SIGTERM. |
+| `AWS_ENDPOINT_URL` | S3 required | S3 endpoint for server-side ops (upload/delete/list). Local: `http://minio:9000` (Docker-internal). Railway: auto-injected by Railway Buckets. |
+| `AWS_ACCESS_KEY_ID` | S3 required | S3 access key. Local: `minioadmin`. Railway: auto-injected. |
+| `AWS_SECRET_ACCESS_KEY` | S3 required | S3 secret key. Local: `minioadmin`. Railway: auto-injected. |
+| `AWS_S3_BUCKET_NAME` | S3 required | S3 bucket name. Local: `wedding-planner-uploads`. Railway: auto-injected. |
+| `AWS_DEFAULT_REGION` | S3 required | S3 region. Local: `auto`. Railway: auto-injected. |
+| `S3_FORCE_PATH_STYLE` | No | Set `true` for MinIO (path-style URLs). Leave unset for Railway Buckets/Tigris (virtual-hosted URLs). Default in docker-compose: `true`. |
+| `S3_PUBLIC_ENDPOINT_URL` | No | Browser-accessible S3 endpoint for presigned URL generation. Overrides `AWS_ENDPOINT_URL` only for signing (not for upload/delete). Local: `http://192.168.6.249:9000`. Unset in Railway — presigned URLs use `AWS_ENDPOINT_URL` directly. |
 
 **SMTP notes**: If `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS` are all blank, the email library returns `ok: true` but logs to console — the app does not error on missing SMTP config. This is useful during development.
 
@@ -980,7 +1001,7 @@ The app is exposed publicly via a Cloudflare Tunnel running on the Mac mini. Thi
 ### Moving to a new server
 1. Copy the entire project directory including `data/` folder
 2. `data/postgres/` contains the full database
-3. `data/uploads/` contains all supplier file attachments
+3. `data/minio/` contains all supplier file attachments (local dev only — in production these live in Railway Buckets)
 4. Copy `.env` with the same secrets
 5. Run `docker compose up --build` on the new server
 
@@ -1025,3 +1046,27 @@ Items discussed or considered but not yet built:
 - **Attachment preview**: Attachments can be downloaded but not previewed in-browser (no PDF/image viewer).
 - **Guest groups**: `groupName` is a free-text string, not a separate model. No group-level operations (e.g. "assign all Smiths to Table 3") are implemented.
 - **Mobile layout**: Full mobile responsive layout implemented. RSVP page is mobile-first. Admin sidebar uses hamburger menu at < 768px. Guest list shows card layout on mobile. All forms have responsive grids. iOS input zoom prevented via 16px font-size rule in globals.css. Seating visual view shows a notice on mobile suggesting list view.
+
+---
+
+## 11. Admin Console
+
+A separate Next.js 16 operator console for managing SaaS accounts. It is a **different repository and app** — never modify this SaaS app as part of admin console work.
+
+| | Path |
+|--|------|
+| **Admin console app** | `/Users/simonblythe/wedding-root/wedding-planner-admin/` |
+| **Admin console plan** | `/Users/simonblythe/wedding-root/ADMIN-CONSOLE-PLAN.md` |
+| **Admin console repo** | `github.com/weddingsimonnatalie-ops/wedding-planner-admin` (private) |
+
+### Shared infrastructure
+The admin console shares this app's PostgreSQL database and S3 bucket, but connects with a different DB role (`admin_console_user`) that has `BYPASSRLS` privilege — allowing cross-tenant queries without `withTenantContext()`.
+
+### AdminAuditLog model
+`AdminAuditLog` in `prisma/schema.prisma` is used exclusively by the admin console to record operator actions (extend trial, force status, delete account, etc.). **Do not drop or modify this model** — it is not used by the SaaS app itself but is part of the shared schema.
+
+### Migration ownership
+**All migrations run from this repo only.** The admin console copies `prisma/schema.prisma` after migrations are applied here — it never runs `prisma migrate` itself. When adding a new model or field that the admin console needs, create the migration here first, then copy the updated schema across.
+
+### Admin console build state (as of 2026-03-27)
+Phases 0–4 complete locally (login, dashboard, accounts list, account detail, admin actions, S3 storage summary, audit log). Phase 5 (reporting + polish) and Railway deployment pending. See `ADMIN-CONSOLE-PLAN.md` for details.
