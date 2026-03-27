@@ -9,6 +9,8 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"   # Exposed for local admin console dev (admin_console_user role)
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U wedding -d wedding"]
       interval: 5s
@@ -118,6 +120,7 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
       AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-wedding-planner-uploads}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
       # Inngest (background jobs)
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY:-}
       INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY:-}
