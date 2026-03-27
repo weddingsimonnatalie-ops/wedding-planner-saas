@@ -552,3 +552,19 @@ model Verification {
 
   @@unique([identifier, value])
 }
+
+// --- ADMIN CONSOLE ---
+
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  weddingId  String
+  operatorId String
+  before     Json?
+  after      Json?
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([weddingId])
+  @@index([createdAt])
+}
