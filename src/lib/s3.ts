@@ -23,9 +23,20 @@ export async function uploadFile(key: string, body: Buffer, contentType: string)
 }
 
 export async function getDownloadUrl(key: string, expiresInSeconds = 3600): Promise<string> {
-  return getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET, Key: key }), {
+  const url = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET, Key: key }), {
     expiresIn: expiresInSeconds,
   });
+
+  // In local dev, the S3 client endpoint is the Docker-internal hostname (e.g. http://minio:9000)
+  // but presigned URLs must be browser-accessible. S3_PUBLIC_ENDPOINT_URL overrides the host
+  // in the generated URL so the browser can reach MinIO directly (e.g. http://192.168.6.249:9000).
+  // In production (Railway/Tigris) this var is not set and the URL is used as-is.
+  const publicEndpoint = process.env.S3_PUBLIC_ENDPOINT_URL;
+  if (publicEndpoint && process.env.AWS_ENDPOINT_URL && publicEndpoint !== process.env.AWS_ENDPOINT_URL) {
+    return url.replace(process.env.AWS_ENDPOINT_URL, publicEndpoint);
+  }
+
+  return url;
 }
 
 export async function deleteFile(key: string): Promise<void> {

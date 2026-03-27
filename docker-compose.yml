@@ -123,6 +123,10 @@ services:
       # MinIO requires path-style URLs (http://host/bucket/key). Railway Buckets (Tigris) requires
       # virtual-hosted style (http://bucket.host/key) so this must be unset or false in Railway.
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      # Presigned download URLs are generated using AWS_ENDPOINT_URL (Docker-internal hostname).
+      # Browsers can't resolve Docker hostnames, so set this to the network-accessible MinIO address.
+      # In production (Railway/Tigris) leave this unset — presigned URLs are already browser-accessible.
+      S3_PUBLIC_ENDPOINT_URL: ${S3_PUBLIC_ENDPOINT_URL:-http://192.168.6.249:9000}
       # Inngest (background jobs)
       INNGEST_EVENT_KEY: ${INNGEST_EVENT_KEY:-}
       INNGEST_SIGNING_KEY: ${INNGEST_SIGNING_KEY:-}
