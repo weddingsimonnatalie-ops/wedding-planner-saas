@@ -8,6 +8,8 @@ const s3 = new S3Client({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
+  // S3_FORCE_PATH_STYLE=true required for local MinIO (uses http://host/bucket/key).
+  // Must be false (unset) for Railway Buckets/Tigris which uses virtual-hosted style (http://bucket.host/key).
   forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
 });
 
