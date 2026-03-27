@@ -1,8 +1,7 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const s3 = new S3Client({
-  endpoint: process.env.AWS_ENDPOINT_URL!,
+const s3Config = {
   region: process.env.AWS_DEFAULT_REGION ?? "auto",
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
@@ -11,6 +10,18 @@ const s3 = new S3Client({
   // S3_FORCE_PATH_STYLE=true required for local MinIO (uses http://host/bucket/key).
   // Must be false (unset) for Railway Buckets/Tigris which uses virtual-hosted style (http://bucket.host/key).
   forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
+};
+
+// Client for server-side operations (upload, delete, list) — uses Docker-internal endpoint in dev.
+const s3 = new S3Client({ ...s3Config, endpoint: process.env.AWS_ENDPOINT_URL! });
+
+// Client for presigned URL generation — uses the browser-accessible endpoint so the signed
+// host matches what the browser will request. S3_PUBLIC_ENDPOINT_URL overrides the endpoint
+// in local dev (e.g. http://192.168.6.249:9000 instead of http://minio:9000).
+// In Railway, S3_PUBLIC_ENDPOINT_URL is not set so this falls back to AWS_ENDPOINT_URL.
+const s3Public = new S3Client({
+  ...s3Config,
+  endpoint: process.env.S3_PUBLIC_ENDPOINT_URL ?? process.env.AWS_ENDPOINT_URL!,
 });
 
 const BUCKET = process.env.AWS_S3_BUCKET_NAME ?? "wedding-planner-uploads";
@@ -25,20 +36,12 @@ export async function uploadFile(key: string, body: Buffer, contentType: string)
 }
 
 export async function getDownloadUrl(key: string, expiresInSeconds = 3600): Promise<string> {
-  const url = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET, Key: key }), {
+  // Uses s3Public so the presigned URL is signed with the browser-accessible endpoint.
+  // Signature and host must match — signing with the internal endpoint then rewriting the
+  // URL breaks the signature (SignatureDoesNotMatch error).
+  return getSignedUrl(s3Public, new GetObjectCommand({ Bucket: BUCKET, Key: key }), {
     expiresIn: expiresInSeconds,
   });
-
-  // In local dev, the S3 client endpoint is the Docker-internal hostname (e.g. http://minio:9000)
-  // but presigned URLs must be browser-accessible. S3_PUBLIC_ENDPOINT_URL overrides the host
-  // in the generated URL so the browser can reach MinIO directly (e.g. http://192.168.6.249:9000).
-  // In production (Railway/Tigris) this var is not set and the URL is used as-is.
-  const publicEndpoint = process.env.S3_PUBLIC_ENDPOINT_URL;
-  if (publicEndpoint && process.env.AWS_ENDPOINT_URL && publicEndpoint !== process.env.AWS_ENDPOINT_URL) {
-    return url.replace(process.env.AWS_ENDPOINT_URL, publicEndpoint);
-  }
-
-  return url;
 }
 
 export async function deleteFile(key: string): Promise<void> {
