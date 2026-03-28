@@ -66,6 +66,33 @@ else
   node_modules/.bin/prisma db seed
 fi
 
+# =============================================================================
+# Admin console DB grants (idempotent — safe to run on every startup)
+# Gives admin_console_user write access to the two columns it needs for
+# Phase 6 password reset: Account.password and User.sessionVersion.
+# All other columns remain read-only for that role.
+# Skips silently if the role doesn't exist (e.g. fresh install before
+# admin_console_user has been created).
+# =============================================================================
+ADMIN_CONSOLE_DB_USER="${ADMIN_CONSOLE_DB_USER:-admin_console_user}"
+echo "==> Applying admin console column grants for role: ${ADMIN_CONSOLE_DB_USER}..."
+GRANTS_TMP=$(mktemp)
+cat > "$GRANTS_TMP" << ENDSQL
+DO \$body\$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${ADMIN_CONSOLE_DB_USER}') THEN
+    GRANT UPDATE (password) ON "Account" TO "${ADMIN_CONSOLE_DB_USER}";
+    GRANT UPDATE ("sessionVersion") ON "User" TO "${ADMIN_CONSOLE_DB_USER}";
+    RAISE NOTICE 'Admin console grants applied for role %', '${ADMIN_CONSOLE_DB_USER}';
+  ELSE
+    RAISE NOTICE 'Role % does not exist — skipping admin console grants', '${ADMIN_CONSOLE_DB_USER}';
+  END IF;
+END
+\$body\$;
+ENDSQL
+node_modules/.bin/prisma db execute --file "$GRANTS_TMP" --schema prisma/schema.prisma || echo "Warning: admin console grants failed (non-fatal)"
+rm -f "$GRANTS_TMP"
+
 if [ -z "${INNGEST_EVENT_KEY}" ]; then
   echo "==> INNGEST_EVENT_KEY not set — starting reminder daemon..."
   node_modules/.bin/tsx src/scripts/reminder-daemon.ts &
