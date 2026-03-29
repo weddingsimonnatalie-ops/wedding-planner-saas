@@ -132,10 +132,10 @@ export async function POST(req: NextRequest) {
     if (requireVerification && verificationToken) {
       const config = await prisma.wedding.findUnique({
         where: { id: weddingId },
-        select: { coupleName: true },
+        select: { coupleName: true, themeHue: true },
       });
       const coupleName = config?.coupleName ?? "Wedding Planner";
-      await sendVerificationEmail(user.email, user.name, verificationToken, coupleName);
+      await sendVerificationEmail(user.email, user.name, verificationToken, coupleName, config?.themeHue ?? 330);
     }
 
     return NextResponse.json({ ...user, role: validRole }, { status: 201 });

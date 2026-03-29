@@ -2,6 +2,22 @@ import * as nodemailer from "nodemailer";
 import * as he from "he";
 
 /**
+ * Convert HSL color values to a hex string for use in email HTML.
+ * Email clients don't support CSS variables or HSL directly, so we pre-compute hex.
+ */
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100;
+  l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+/**
  * Escape HTML entities to prevent XSS in email templates.
  * Use for all user-editable values interpolated into HTML content.
  */
@@ -47,8 +63,10 @@ export async function sendRsvpEmail(
   guestFirstName: string,
   rsvpToken: string,
   coupleName: string,
-  weddingDate?: Date | null
+  weddingDate?: Date | null,
+  themeHue?: number | null
 ): Promise<{ ok: boolean; message: string }> {
+  const accentColor = hslToHex(themeHue ?? 330, 60, 55);
   const transporter = getTransporter();
   const from = process.env.SMTP_FROM ?? "noreply@localhost";
   const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
@@ -88,18 +106,18 @@ Don't want to receive reminder emails? Unsubscribe here: ${unsubscribeUrl}`;
           <p style="font-size: 16px; color: #333; margin: 0 0 32px; line-height: 1.6;">We'd love to know if you can make it to our wedding. Please click the button below to RSVP.</p>
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td align="center" style="padding-bottom: 32px;">
-              <a href="${safeUrl(rsvpUrl)}" style="display: inline-block; background: #9b7e5c; color: #ffffff; text-decoration: none; padding: 14px 48px; border-radius: 6px; font-size: 16px; font-weight: bold; letter-spacing: 0.5px;">RSVP Now</a>
+              <a href="${safeUrl(rsvpUrl)}" style="display: inline-block; background: ${accentColor}; color: #ffffff; text-decoration: none; padding: 14px 48px; border-radius: 6px; font-size: 16px; font-weight: bold; letter-spacing: 0.5px;">RSVP Now</a>
             </td></tr>
           </table>
           <p style="font-size: 13px; color: #aaa; margin: 0 0 6px;">Or copy this link:</p>
-          <p style="font-size: 13px; word-break: break-all; margin: 0 0 32px;"><a href="${safeUrl(rsvpUrl)}" style="color: #9b7e5c;">${esc(rsvpUrl)}</a></p>
+          <p style="font-size: 13px; word-break: break-all; margin: 0 0 32px;"><a href="${safeUrl(rsvpUrl)}" style="color: ${accentColor};">${esc(rsvpUrl)}</a></p>
           <p style="font-size: 15px; color: #555; margin: 0; border-top: 1px solid #e5e0d8; padding-top: 24px;">${esc(coupleName)}</p>
         </td></tr>
       </table>
       <table cellpadding="0" cellspacing="0" style="max-width: 520px; width: 100%; padding-top: 16px;">
         <tr><td style="text-align: center;">
           <p style="font-size: 12px; color: #999; margin: 0;">
-            Don't want to receive reminder emails? <a href="${safeUrl(unsubscribeUrl)}" style="color: #9b7e5c; text-decoration: underline;">Unsubscribe</a>
+            Don't want to receive reminder emails? <a href="${safeUrl(unsubscribeUrl)}" style="color: ${accentColor}; text-decoration: underline;">Unsubscribe</a>
           </p>
         </td></tr>
       </table>
@@ -215,8 +233,10 @@ export async function sendVerificationEmail(
   userEmail: string,
   userName: string | null,
   verificationToken: string,
-  coupleName: string
+  coupleName: string,
+  themeHue?: number | null
 ): Promise<{ ok: boolean; message: string }> {
+  const accentColor = hslToHex(themeHue ?? 330, 60, 55);
   const transporter = getTransporter();
   const from = process.env.SMTP_FROM ?? "noreply@localhost";
   const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
@@ -241,11 +261,11 @@ export async function sendVerificationEmail(
           <p style="font-size: 16px; color: #333; margin: 0 0 32px; line-height: 1.6;">An account has been created for you. Please verify your email address by clicking the button below.</p>
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td align="center" style="padding-bottom: 32px;">
-              <a href="${safeUrl(verifyUrl)}" style="display: inline-block; background: #9b7e5c; color: #ffffff; text-decoration: none; padding: 14px 48px; border-radius: 6px; font-size: 16px; font-weight: bold; letter-spacing: 0.5px;">Verify Email</a>
+              <a href="${safeUrl(verifyUrl)}" style="display: inline-block; background: ${accentColor}; color: #ffffff; text-decoration: none; padding: 14px 48px; border-radius: 6px; font-size: 16px; font-weight: bold; letter-spacing: 0.5px;">Verify Email</a>
             </td></tr>
           </table>
           <p style="font-size: 13px; color: #aaa; margin: 0 0 6px;">Or copy this link:</p>
-          <p style="font-size: 13px; word-break: break-all; margin: 0 0 32px;"><a href="${safeUrl(verifyUrl)}" style="color: #9b7e5c;">${esc(verifyUrl)}</a></p>
+          <p style="font-size: 13px; word-break: break-all; margin: 0 0 32px;"><a href="${safeUrl(verifyUrl)}" style="color: ${accentColor};">${esc(verifyUrl)}</a></p>
           <p style="font-size: 13px; color: #888; margin: 0; border-top: 1px solid #e5e0d8; padding-top: 24px;">This link will expire in 24 hours. If you didn't expect this email, you can safely ignore it.</p>
         </td></tr>
       </table>
@@ -277,8 +297,10 @@ export async function sendInviteEmail(
   to: string,
   coupleName: string,
   inviteUrl: string,
-  role: string
+  role: string,
+  themeHue?: number | null
 ): Promise<{ ok: boolean; message: string }> {
+  const accentColor = hslToHex(themeHue ?? 330, 60, 55);
   const transporter = getTransporter();
   const from = process.env.SMTP_FROM ?? "noreply@localhost";
 
@@ -310,11 +332,11 @@ export async function sendInviteEmail(
           </p>
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr><td align="center" style="padding-bottom: 32px;">
-              <a href="${safeUrl(inviteUrl)}" style="display: inline-block; background: #9b7e5c; color: #ffffff; text-decoration: none; padding: 14px 48px; border-radius: 6px; font-size: 16px; font-weight: bold; letter-spacing: 0.5px;">Accept invite</a>
+              <a href="${safeUrl(inviteUrl)}" style="display: inline-block; background: ${accentColor}; color: #ffffff; text-decoration: none; padding: 14px 48px; border-radius: 6px; font-size: 16px; font-weight: bold; letter-spacing: 0.5px;">Accept invite</a>
             </td></tr>
           </table>
           <p style="font-size: 13px; color: #aaa; margin: 0 0 6px;">Or copy this link:</p>
-          <p style="font-size: 13px; word-break: break-all; margin: 0 0 32px;"><a href="${safeUrl(inviteUrl)}" style="color: #9b7e5c;">${esc(inviteUrl)}</a></p>
+          <p style="font-size: 13px; word-break: break-all; margin: 0 0 32px;"><a href="${safeUrl(inviteUrl)}" style="color: ${accentColor};">${esc(inviteUrl)}</a></p>
           <p style="font-size: 13px; color: #888; margin: 0; border-top: 1px solid #e5e0d8; padding-top: 24px;">This link expires in 7 days. If you weren&rsquo;t expecting this invitation, you can safely ignore it.</p>
         </td></tr>
       </table>

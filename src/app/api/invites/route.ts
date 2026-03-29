@@ -43,7 +43,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const wedding = await prisma.wedding.findUnique({
       where: { id: auth.weddingId },
-      select: { coupleName: true },
+      select: { coupleName: true, themeHue: true },
     });
 
     const invite = await prisma.weddingInvite.create({
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const baseUrl = (process.env.NEXTAUTH_URL ?? "http://localhost:3001").replace(/\/$/, "");
     const inviteUrl = `${baseUrl}/invite/${invite.token}`;
 
-    await sendInviteEmail(normalizedEmail, wedding?.coupleName ?? "Our Wedding", inviteUrl, role);
+    await sendInviteEmail(normalizedEmail, wedding?.coupleName ?? "Our Wedding", inviteUrl, role, wedding?.themeHue ?? 330);
 
     return NextResponse.json(invite, { status: 201 });
   } catch (error) {

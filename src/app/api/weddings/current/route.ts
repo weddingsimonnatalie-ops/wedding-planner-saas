@@ -45,6 +45,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       reminderEmail,
       sessionTimeout,
       sessionWarningTime,
+      themeHue,
     } = body;
 
     const errors = validateFields([
@@ -71,6 +72,9 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
           ...(sessionTimeout !== undefined ? { sessionTimeout: Number(sessionTimeout) } : {}),
           ...(sessionWarningTime !== undefined
             ? { sessionWarningTime: Number(sessionWarningTime) }
+            : {}),
+          ...(themeHue !== undefined
+            ? { themeHue: Math.max(0, Math.min(359, Math.round(Number(themeHue)))) }
             : {}),
         },
       })

@@ -268,8 +268,8 @@ function ConfirmationScreen({
   if (status === "PARTIAL") {
     return (
       <div className="text-center">
-        <div className="w-14 h-14 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-3">
-          <Heart className="w-8 h-8 text-pink-500 fill-pink-200" />
+        <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+          <Heart className="w-8 h-8 text-primary fill-primary/40" />
         </div>
         <p className="font-semibold text-gray-900 text-lg">Thanks for letting us know, {firstName}!</p>
 

@@ -279,7 +279,7 @@ export function PrintDesigner({ weddingConfig, tables }: PrintDesignerProps) {
               onClick={() => setOrientation("horizontal")}
               className={`flex-1 px-3 py-2 rounded text-sm ${
                 orientation === "horizontal"
-                  ? "bg-pink-600 text-white"
+                  ? "bg-primary text-white"
                   : "bg-gray-100 hover:bg-gray-200"
               }`}
             >
@@ -289,7 +289,7 @@ export function PrintDesigner({ weddingConfig, tables }: PrintDesignerProps) {
               onClick={() => setOrientation("vertical")}
               className={`flex-1 px-3 py-2 rounded text-sm ${
                 orientation === "vertical"
-                  ? "bg-pink-600 text-white"
+                  ? "bg-primary text-white"
                   : "bg-gray-100 hover:bg-gray-200"
               }`}
             >
@@ -371,7 +371,7 @@ export function PrintDesigner({ weddingConfig, tables }: PrintDesignerProps) {
 
         <button
           onClick={handlePrint}
-          className="w-full bg-pink-600 text-white py-2 px-4 rounded hover:bg-pink-700 font-medium"
+          className="w-full bg-primary text-white py-2 px-4 rounded hover:bg-primary/90 font-medium"
         >
           Print
         </button>

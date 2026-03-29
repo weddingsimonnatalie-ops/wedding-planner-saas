@@ -17,7 +17,7 @@ const allNavItems = [
   { href: "/",                  label: "Dashboard",    icon: LayoutDashboard, roles: null },
   { href: "/guests",            label: "Guests",       icon: Users,           roles: null },
   { href: "/seating",           label: "Seating",      icon: LayoutGrid,      roles: null },
-  { href: "/appointments",      label: "Appointments", icon: CalendarDays,    roles: null },
+  { href: "/appointments",      label: "Appointments", icon: CalendarDays,    roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/tasks",             label: "Tasks",        icon: CheckSquare,     roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/suppliers",         label: "Suppliers",    icon: Briefcase,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/payments",          label: "Payments",     icon: CreditCard,      roles: ["ADMIN", "VIEWER"] as UserRole[] },
@@ -37,6 +37,8 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
   const [open, setOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(true); // start hidden; corrected by effect
   const [taskBadge, setTaskBadge] = useState(0);
+  const [appointmentBadge, setAppointmentBadge] = useState(0);
+  const [paymentBadge, setPaymentBadge] = useState(0);
   const pathname = usePathname();
   const { refreshToken } = useRefresh();
 
@@ -61,6 +63,22 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
     fetchApi("/api/tasks/count")
       .then(r => r.ok ? r.json() : { count: 0 })
       .then((data: { count: number }) => setTaskBadge(data.count))
+      .catch(() => {});
+  }, [pathname, refreshToken]);
+
+  // Appointment badge: count appointments in the next 7 days
+  useEffect(() => {
+    fetchApi("/api/appointments/count")
+      .then(r => r.ok ? r.json() : { count: 0 })
+      .then((data: { count: number }) => setAppointmentBadge(data.count))
+      .catch(() => {});
+  }, [pathname, refreshToken]);
+
+  // Payment badge: count overdue + due this month (ADMIN/VIEWER only)
+  useEffect(() => {
+    fetchApi("/api/payments/count")
+      .then(r => r.ok ? r.json() : { count: 0 })
+      .then((data: { count: number }) => setPaymentBadge(data.count))
       .catch(() => {});
   }, [pathname, refreshToken]);
 
@@ -104,7 +122,14 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
                 : href === "/settings"
                 ? pathname === "/settings" || (pathname.startsWith("/settings") && !pathname.startsWith("/settings/profile"))
                 : pathname.startsWith(href);
-            const showBadge = href === "/tasks" && taskBadge > 0;
+            const showBadge =
+              (href === "/tasks" && taskBadge > 0) ||
+              (href === "/appointments" && appointmentBadge > 0) ||
+              (href === "/payments" && paymentBadge > 0);
+            const badgeCount =
+              href === "/tasks" ? taskBadge :
+              href === "/appointments" ? appointmentBadge :
+              paymentBadge;
             return (
               <Link
                 key={href}
@@ -119,8 +144,8 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
                 <Icon className="w-4 h-4 shrink-0" />
                 <span className="flex-1">{label}</span>
                 {showBadge && (
-                  <span className="ml-auto text-xs bg-red-100 text-red-700 rounded-full px-1.5 py-0.5 font-medium min-w-[20px] text-center leading-tight">
-                    {taskBadge}
+                  <span className="ml-auto text-xs bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium min-w-[20px] text-center leading-tight">
+                    {badgeCount}
                   </span>
                 )}
               </Link>

@@ -67,12 +67,12 @@ export async function POST(
     // Get couple name for email from the current wedding
     const wedding = await prisma.wedding.findUnique({
       where: { id: weddingId },
-      select: { coupleName: true },
+      select: { coupleName: true, themeHue: true },
     });
     const coupleName = wedding?.coupleName ?? "Wedding Planner";
 
     // Send verification email
-    const result = await sendVerificationEmail(user.email, user.name, verificationToken, coupleName);
+    const result = await sendVerificationEmail(user.email, user.name, verificationToken, coupleName, wedding?.themeHue ?? 330);
 
     if (!result.ok) {
       return NextResponse.json({ error: result.message }, { status: 500 });

@@ -4,14 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/api-auth";
 import { withTenantContext } from "@/lib/tenant";
 import { apiJson } from "@/lib/api-response";
-
 import { handleDbError } from "@/lib/db-error";
 
-/**
- * Lightweight endpoint for task badge count.
- * Returns count of tasks that are overdue OR due within the next 7 days.
- * Restricted to ADMIN + VIEWER to match the Tasks nav item visibility.
- */
+// Returns count of upcoming appointments in the next 7 days — used by the sidebar badge.
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const auth = await requireRole(["ADMIN", "VIEWER"], req);
@@ -19,26 +14,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const { weddingId } = auth;
 
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const weekFromNow = new Date(now);
-    weekFromNow.setDate(weekFromNow.getDate() + 7);
+    const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    // Count: incomplete tasks with due date within the next 7 days (or overdue)
     const count = await withTenantContext(weddingId, (tx) =>
-      tx.task.count({
+      tx.appointment.count({
         where: {
           weddingId,
-          isCompleted: false,
-          dueDate: {
-            not: null,
-            lte: weekFromNow,
-          },
+          date: { gte: now, lte: in7Days },
         },
       })
     );
 
     return apiJson({ count });
-
   } catch (error) {
     return handleDbError(error);
   }

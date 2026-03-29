@@ -52,7 +52,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       guest.firstName,
       guest.rsvpToken,
       coupleName,
-      wedding?.weddingDate ?? null
+      wedding?.weddingDate ?? null,
+      wedding?.themeHue ?? 330
     );
 
     return NextResponse.json(result, { status: result.ok ? 200 : 500 });

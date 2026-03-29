@@ -13,12 +13,14 @@ interface WeddingConfig {
   reminderEmail: string | null;
   sessionTimeout: number;
   sessionWarningTime: number;
+  themeHue: number;
 }
 import { UsersManager } from "./UsersManager";
 import { MealOptionsList } from "./MealOptionsList";
 import { CategoriesManager } from "./CategoriesManager";
 import { NotificationsForm } from "./NotificationsForm";
 import { SessionTimeoutSettings } from "./SessionTimeoutSettings";
+import { ThemeColorPicker } from "./ThemeColorPicker";
 import { WeddingConfigForm } from "@/components/wedding-config-form";
 import Link from "next/link";
 import { CreditCard } from "lucide-react";
@@ -124,6 +126,14 @@ export function SettingsClient({
               initialTimeoutMinutes={config?.sessionTimeout ?? 60}
               initialWarningMinutes={config?.sessionWarningTime ?? 5}
             />
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-base font-medium text-gray-900 mb-1">Wedding Colour Theme</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Choose a colour that matches your wedding palette. It will be used throughout the planner.
+            </p>
+            <ThemeColorPicker initialHue={config?.themeHue ?? 330} />
           </div>
         </div>
       )}

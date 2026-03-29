@@ -29,7 +29,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     const { config, guests } = await withTenantContext(weddingId, async (tx) => {
-      const config = await tx.wedding.findUnique({ where: { id: weddingId }, select: { coupleName: true, weddingDate: true } });
+      const config = await tx.wedding.findUnique({ where: { id: weddingId }, select: { coupleName: true, weddingDate: true, themeHue: true } });
 
       // Batch fetch all guests in a single query, scoped to this wedding (fixes N+1 and prevents cross-tenant access)
       const guests = await tx.guest.findMany({
@@ -68,7 +68,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           guest.firstName,
           guest.rsvpToken,
           coupleName,
-          config?.weddingDate ?? null
+          config?.weddingDate ?? null,
+          config?.themeHue ?? 330
         );
 
         if (result.ok) {

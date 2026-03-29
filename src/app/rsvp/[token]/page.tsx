@@ -26,7 +26,7 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
       }),
       tx.wedding.findUnique({
         where: { id: weddingId },
-        select: { coupleName: true, weddingDate: true, venueName: true },
+        select: { coupleName: true, weddingDate: true, venueName: true, themeHue: true },
       }),
     ])
   );
@@ -40,7 +40,11 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
       })
     : null;
 
+  const themeHue = wedding?.themeHue ?? 330;
+
   return (
+    <>
+    <style dangerouslySetInnerHTML={{ __html: `:root { --primary: ${themeHue} 60% 55%; --ring: ${themeHue} 60% 55%; }` }} />
     <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-lg w-full max-w-lg">
         <div className="flex flex-col items-center pt-6 pb-4 px-4 sm:px-8">
@@ -87,5 +91,6 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
         </div>
       </div>
     </div>
+    </>
   );
 }

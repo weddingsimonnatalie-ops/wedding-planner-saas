@@ -102,13 +102,15 @@ Three roles defined in the `UserRole` Prisma enum:
 - Used in: GuestList, GuestForm (guest detail), AppointmentsList, SupplierList, SupplierDetail, PaymentsList, SeatingListView
 
 **Navigation filtering** — `src/components/LayoutShell.tsx`:
-- Suppliers/Payments hidden from RSVP_MANAGER nav
+- Appointments/Suppliers/Payments/Tasks hidden from RSVP_MANAGER nav
 - Settings hidden from VIEWER and RSVP_MANAGER nav
+- Sidebar badges: Tasks (overdue + due this week), Appointments (next 7 days), Payments (overdue + due this month) — ADMIN + VIEWER only
 
 **Page-level redirects** — server components check `getServerSession` and `redirect("/")` for unauthorised roles:
 - `/settings`, `/settings/users`, `/settings/security` — ADMIN only
 - `/suppliers`, `/suppliers/[id]` — `can.accessSuppliers`
 - `/payments` — `can.accessPayments`
+- `/appointments` — ADMIN + VIEWER only
 
 **Dashboard widgets**:
 - Budget, Payments, Supplier Status widgets hidden for RSVP_MANAGER (only ADMIN + VIEWER see finance)
@@ -409,7 +411,7 @@ Three roles defined in the `UserRole` Prisma enum:
 
 ### Settings
 Organized into 4 tabs accessible to ADMIN only:
-- **General tab**: Wedding Details (couple name, date, venue), Notifications (reminder email), Session Timeout (inactivity timeout + warning time)
+- **General tab**: Wedding Details (couple name, date, venue), Notifications (reminder email), Session Timeout (inactivity timeout + warning time), Wedding Colour Theme (palette picker)
 - **Meals tab**: Meal Options — add/edit/deactivate meal choices
 - **Categories tab**: Supplier Categories, Appointment Categories, Task Categories — each with add/edit/delete/reorder
 - **Users tab**: User Management (inline) + link to Security page
@@ -637,7 +639,7 @@ Stores authentication credentials. Key fields:
 **Important**: When changing a user's password, you MUST update both `User.password` AND `Account.password` (where `providerId = 'credential'`). The `Account` table is what Better Auth reads for credential authentication.
 
 ### WeddingConfig
-Singleton (`id = 1`). Couple name, date, venue name/address.
+Singleton (`id = 1`). Couple name, date, venue name/address. `themeHue Int @default(330)` — HSL hue (0–359) for the app colour theme; default 330 = blush pink. The hue is injected as `--primary` and `--ring` CSS variables in the dashboard layout and public RSVP page. All Tailwind `bg-primary`, `text-primary`, `border-primary` classes respond to this variable automatically. Emails use `hslToHex(themeHue, 60, 55)` since email clients don't support CSS variables.
 
 ### Guest
 Core guest record. Key fields:
@@ -716,6 +718,7 @@ Tasks track wedding to-do items. Key fields:
 | 19 | `add_payment_receipt` | Adds `paymentId` column to `Attachment` model with index. Allows attachments to be linked to payments as receipts. Receipts appear in both supplier attachments list (with "Receipt" badge) and payment detail view. |
 | 20 | `add_guest_group_name_index` | Adds index on `Guest.groupName` for faster group filtering and grouping queries in the guest list. |
 | 21 | `add_unsubscribed_at` | Adds `unsubscribedAt DateTime?` to `Guest`. Set when guest clicks unsubscribe link in RSVP email; guest is skipped from future email sends. GDPR compliance feature. |
+| 22 | `add_theme_hue` | Adds `themeHue Int NOT NULL DEFAULT 330` to `Wedding`. Stores the HSL hue for the per-wedding colour theme. |
 
 **Important**: Migration 4 (`PARTIAL`) was applied directly via `docker compose exec db psql` and manually inserted into `_prisma_migrations`. If restoring to a fresh DB from the schema, all migrations will run in order automatically — no special handling needed. If the DB already exists from before migration 4, run:
 ```sql
@@ -893,6 +896,7 @@ GET/POST   /api/rsvp/[token]             — Public RSVP: GET returns guest + me
 GET        /api/unsubscribe/[token]      — Public unsubscribe: sets `unsubscribedAt` on guest, returns HTML confirmation page
 POST       /api/email/rsvp              — Resend RSVP email (admin-triggered); rate limited: 50/hour per user; returns 400 if guest unsubscribed
 GET        /api/payments                 — All payments across all suppliers with supplier info + receipt data + auto-detected OVERDUE status; optional pagination: ?skip=0&take=50
+GET        /api/payments/count           — Overdue + due-this-month payment count for sidebar badge (ADMIN + VIEWER); returns `{ count: number }`
 GET/POST/DELETE /api/payments/[id]/receipt — Get/upload/delete receipt for a payment (PDF/JPG/PNG, max 20 MB)
 GET/POST   /api/suppliers               — Supplier list + create; optional pagination: ?skip=0&take=50
 GET/PUT/DELETE /api/suppliers/[id]      — Supplier detail
@@ -901,8 +905,9 @@ PUT/DELETE /api/suppliers/[id]/payments/[paymentId]
 POST       /api/suppliers/[id]/attachments
 DELETE     /api/suppliers/[id]/attachments/[attachmentId]
 GET        /api/uploads/[supplierId]/[filename] — Protected file serving
-GET/POST   /api/appointments            — Appointments
-GET/PUT/DELETE /api/appointments/[id]
+GET/POST   /api/appointments            — Appointments (ADMIN + VIEWER only)
+GET/PUT/DELETE /api/appointments/[id]   — (ADMIN + VIEWER only)
+GET        /api/appointments/count      — Upcoming appointments in next 7 days for sidebar badge (ADMIN + VIEWER)
 GET        /api/appointments/check-reminders — Manual trigger (used by daemon)
 GET/POST   /api/supplier-categories     — CRUD + reorder
 GET/POST   /api/appointment-categories  — CRUD + reorder
@@ -928,7 +933,7 @@ POST       /api/2fa/disable
 POST       /api/2fa/backup-codes/regenerate
 POST       /api/email/payment-reminder  — Send payment reminder email; rate limited: 50/hour per user
 GET/POST   /api/tasks                   — Task list (filters: completed, priority, assignedToId, categoryId, supplierId, overdue) + create (ADMIN); optional pagination: ?skip=0&take=100 (max 500)
-GET        /api/tasks/count             — Lightweight task count for sidebar badge (overdue + due this week); returns `{ count: number }`; avoids full task fetch
+GET        /api/tasks/count             — Lightweight task count for sidebar badge (overdue + due this week); returns `{ count: number }`; ADMIN + VIEWER only; avoids full task fetch
 GET/PUT/DELETE /api/tasks/[id]          — Task detail; PUT requires ADMIN
 PATCH      /api/tasks/[id]/complete     — Toggle complete (ADMIN + RSVP_MANAGER); creates next recurrence for recurring tasks
 GET/POST   /api/task-categories         — Task category list + create (ADMIN)

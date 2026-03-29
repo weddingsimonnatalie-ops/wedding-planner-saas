@@ -1141,7 +1141,7 @@ export function PlanDesignerView({
             onClick={() => setSnapToGrid(!snapToGrid)}
             className={`px-2 py-1 text-sm rounded ${
               snapToGrid
-                ? "bg-pink-100 text-pink-700 border border-pink-300"
+                ? "bg-primary/10 text-primary border border-primary/40"
                 : darkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-100 hover:bg-gray-200"
             }`}
           >
@@ -1519,7 +1519,7 @@ export function PlanDesignerView({
         <div className={`p-4 border-b space-y-2 ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="w-full px-3 py-2 text-sm font-medium text-white bg-pink-600 rounded hover:bg-pink-700"
+            className="w-full px-3 py-2 text-sm font-medium text-white bg-primary rounded hover:bg-primary/90"
           >
             + Add Table
           </button>
@@ -1701,7 +1701,7 @@ export function PlanDesignerView({
                     onClick={() => setNewTableOrientation("HORIZONTAL")}
                     className={`flex-1 px-3 py-2 text-sm rounded border ${
                       newTableOrientation === "HORIZONTAL"
-                        ? "bg-pink-50 border-pink-500 text-pink-700"
+                        ? "bg-primary/10 border-primary text-primary"
                         : darkMode ? "border-gray-600 text-gray-300 hover:bg-gray-700" : "border-gray-300 text-gray-600 hover:bg-gray-50"
                     }`}
                   >
@@ -1711,7 +1711,7 @@ export function PlanDesignerView({
                     onClick={() => setNewTableOrientation("VERTICAL")}
                     className={`flex-1 px-3 py-2 text-sm rounded border ${
                       newTableOrientation === "VERTICAL"
-                        ? "bg-pink-50 border-pink-500 text-pink-700"
+                        ? "bg-primary/10 border-primary text-primary"
                         : darkMode ? "border-gray-600 text-gray-300 hover:bg-gray-700" : "border-gray-300 text-gray-600 hover:bg-gray-50"
                     }`}
                   >
@@ -1731,7 +1731,7 @@ export function PlanDesignerView({
               <button
                 onClick={handleCreateTable}
                 disabled={!newTableName.trim()}
-                className="px-4 py-2 text-sm font-medium text-white bg-pink-600 rounded hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium text-white bg-primary rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Create Table
               </button>
@@ -1802,7 +1802,7 @@ export function PlanDesignerView({
               <button
                 onClick={handleSaveEdit}
                 disabled={!editName.trim() || editCapacity < selectedTable.guests.length}
-                className="px-4 py-2 text-sm font-medium text-white bg-pink-600 rounded hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium text-white bg-primary rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save Changes
               </button>
@@ -1867,7 +1867,7 @@ export function PlanDesignerView({
                 onClick={() => setAssignModalTab("unassigned")}
                 className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
                   assignModalTab === "unassigned"
-                    ? "text-pink-600 border-pink-600"
+                    ? "text-primary border-primary"
                     : darkMode ? "text-gray-400 border-transparent hover:text-gray-200" : "text-gray-500 border-transparent hover:text-gray-700"
                 }`}
               >
@@ -1877,7 +1877,7 @@ export function PlanDesignerView({
                 onClick={() => setAssignModalTab("otherTables")}
                 className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
                   assignModalTab === "otherTables"
-                    ? "text-pink-600 border-pink-600"
+                    ? "text-primary border-primary"
                     : darkMode ? "text-gray-400 border-transparent hover:text-gray-200" : "text-gray-500 border-transparent hover:text-gray-700"
                 }`}
               >
@@ -2008,7 +2008,7 @@ export function PlanDesignerView({
             <div className="space-y-2">
               <button
                 onClick={handleConflictReplace}
-                className="w-full px-4 py-2 text-sm font-medium text-white bg-pink-600 rounded hover:bg-pink-700"
+                className="w-full px-4 py-2 text-sm font-medium text-white bg-primary rounded hover:bg-primary/90"
               >
                 Replace (move to unassigned)
               </button>

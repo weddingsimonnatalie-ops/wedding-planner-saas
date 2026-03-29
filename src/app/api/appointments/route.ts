@@ -1,24 +1,18 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireAdmin, requireRole } from "@/lib/api-auth";
 import { withTenantContext } from "@/lib/tenant";
 import { apiJson } from "@/lib/api-response";
 import { validateFields } from "@/lib/validation";
-import { verifyWeddingCookieId, COOKIE_NAME } from "@/lib/wedding-cookie";
 
 import { handleDbError } from "@/lib/db-error";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const cookieValue = req.cookies.get(COOKIE_NAME)?.value;
-    if (!cookieValue) return NextResponse.json({ error: "No wedding context" }, { status: 401 });
-    const weddingId = await verifyWeddingCookieId(cookieValue);
-    if (!weddingId) return NextResponse.json({ error: "Invalid wedding context" }, { status: 401 });
+    const auth = await requireRole(["ADMIN", "VIEWER"], req);
+    if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const appointments = await withTenantContext(weddingId, (tx) =>
       tx.appointment.findMany({

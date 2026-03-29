@@ -84,7 +84,7 @@ export default function SelectWeddingPage() {
                 key={w.weddingId}
                 onClick={() => select(w.weddingId)}
                 disabled={selecting !== null}
-                className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-primary hover:bg-rose-50 transition-colors disabled:opacity-60"
+                className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-primary hover:bg-primary/5 transition-colors disabled:opacity-60"
               >
                 <div className="font-semibold text-gray-900">{w.coupleName}</div>
                 {w.weddingDate && (

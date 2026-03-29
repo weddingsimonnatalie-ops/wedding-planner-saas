@@ -86,6 +86,7 @@ model Wedding {
   reminderEmail        String?
   sessionTimeout       Int             @default(30)
   sessionWarningTime   Int             @default(5)
+  themeHue             Int             @default(330)
 
   // Stripe
   stripeCustomerId     String?         @unique

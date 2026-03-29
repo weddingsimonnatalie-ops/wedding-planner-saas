@@ -4,14 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/api-auth";
 import { withTenantContext } from "@/lib/tenant";
 import { apiJson } from "@/lib/api-response";
-
 import { handleDbError } from "@/lib/db-error";
 
-/**
- * Lightweight endpoint for task badge count.
- * Returns count of tasks that are overdue OR due within the next 7 days.
- * Restricted to ADMIN + VIEWER to match the Tasks nav item visibility.
- */
+// Returns count of overdue + due-this-month payments — used by the sidebar badge.
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const auth = await requireRole(["ADMIN", "VIEWER"], req);
@@ -19,26 +14,21 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const { weddingId } = auth;
 
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const weekFromNow = new Date(now);
-    weekFromNow.setDate(weekFromNow.getDate() + 7);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    // Count: incomplete tasks with due date within the next 7 days (or overdue)
     const count = await withTenantContext(weddingId, (tx) =>
-      tx.task.count({
+      tx.payment.count({
         where: {
           weddingId,
-          isCompleted: false,
-          dueDate: {
-            not: null,
-            lte: weekFromNow,
-          },
+          OR: [
+            { status: "OVERDUE" },
+            { status: "PENDING", dueDate: { lte: endOfMonth } },
+          ],
         },
       })
     );
 
     return apiJson({ count });
-
   } catch (error) {
     return handleDbError(error);
   }
