@@ -49,7 +49,7 @@ interface SettingsClientProps {
   emailVerificationRequired: boolean;
 }
 
-type Tab = "general" | "meals" | "categories" | "users";
+type Tab = "general" | "meals" | "categories" | "users" | "billing";
 
 export function SettingsClient({
   config,
@@ -68,6 +68,7 @@ export function SettingsClient({
     if (tabParam === "meals") return "meals";
     if (tabParam === "categories") return "categories";
     if (tabParam === "users") return "users";
+    if (tabParam === "billing") return "billing";
     return "general";
   });
 
@@ -76,6 +77,7 @@ export function SettingsClient({
     { id: "meals", label: "Meals" },
     { id: "categories", label: "Categories" },
     { id: "users", label: "Users" },
+    { id: "billing", label: "Billing" },
   ];
 
   return (
@@ -122,24 +124,6 @@ export function SettingsClient({
               initialTimeoutMinutes={config?.sessionTimeout ?? 60}
               initialWarningMinutes={config?.sessionWarningTime ?? 5}
             />
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-medium text-gray-900">Billing & Subscription</h2>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  Manage your subscription, payment method, and view invoices.
-                </p>
-              </div>
-              <Link
-                href="/billing"
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-              >
-                <CreditCard className="w-4 h-4" />
-                Manage billing
-              </Link>
-            </div>
           </div>
         </div>
       )}
@@ -216,6 +200,27 @@ export function SettingsClient({
                 Manage security
               </Link>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Billing tab */}
+      {tab === "billing" && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-medium text-gray-900">Billing & Subscription</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Manage your subscription, payment method, and view invoices.
+              </p>
+            </div>
+            <Link
+              href="/billing"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              <CreditCard className="w-4 h-4" />
+              Manage billing
+            </Link>
           </div>
         </div>
       )}
