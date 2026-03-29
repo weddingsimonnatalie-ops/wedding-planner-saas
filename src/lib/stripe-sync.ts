@@ -20,6 +20,19 @@ export type SyncResult = {
 };
 
 /**
+ * Stripe SDK v20 type assertion for subscription fields.
+ * The TypeScript types changed but the API response structure remains the same.
+ */
+type StripeSubscriptionData = {
+  id: string;
+  status: Stripe.Subscription.Status;
+  current_period_end: number;
+  trial_end: number | null;
+  canceled_at: number | null;
+  created: number;
+};
+
+/**
  * Maps a Stripe subscription status to our SubStatus enum.
  * Returns null for statuses that should not overwrite the current DB value
  * (e.g. "incomplete" — checkout still in progress).
@@ -133,6 +146,9 @@ export async function syncWeddingFromStripe(weddingId: string): Promise<SyncResu
 
   // ── Map Stripe state → DB fields ───────────────────────────────────────────
 
+  // Type assertion for Stripe SDK v20 compatibility
+  const sub = subscription as unknown as StripeSubscriptionData;
+
   const newStatus = stripeStatusToSubStatus(subscription.status);
   if (newStatus === null) {
     return {
@@ -144,14 +160,14 @@ export async function syncWeddingFromStripe(weddingId: string): Promise<SyncResu
   const graceDays = parseInt(process.env.GRACE_PERIOD_DAYS ?? "7", 10);
   const retentionDays = parseInt(process.env.DATA_RETENTION_DAYS ?? "90", 10);
 
-  const newCurrentPeriodEnd = subscription.current_period_end
-    ? new Date(subscription.current_period_end * 1000)
+  const newCurrentPeriodEnd = sub.current_period_end
+    ? new Date(sub.current_period_end * 1000)
     : null;
 
   // Prefer Stripe's trial_end; fall back to keeping the existing DB value
   const newTrialEndsAt =
-    subscription.trial_end != null
-      ? new Date(subscription.trial_end * 1000)
+    sub.trial_end != null
+      ? new Date(sub.trial_end * 1000)
       : wedding.trialEndsAt;
 
   // gracePeriodEndsAt: only set if newly PAST_DUE and not already set;
@@ -168,8 +184,8 @@ export async function syncWeddingFromStripe(weddingId: string): Promise<SyncResu
   // cancelledAt: use Stripe's canceled_at if available, else now; preserve existing
   const newCancelledAt =
     newStatus === "CANCELLED"
-      ? (subscription.canceled_at
-          ? new Date(subscription.canceled_at * 1000)
+      ? (sub.canceled_at
+          ? new Date(sub.canceled_at * 1000)
           : wedding.cancelledAt ?? new Date())
       : wedding.cancelledAt;
 
