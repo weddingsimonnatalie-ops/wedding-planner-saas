@@ -458,6 +458,42 @@ All list pages (Guests, Suppliers, Payments, Appointments, Tasks) follow the sam
 ### Reminder daemon — tsx subprocess
 `entrypoint.sh` starts `src/scripts/reminder-daemon.ts` via `tsx` as a background process alongside `next start`. It runs `checkAppointmentReminders()` immediately on startup, then every 60 minutes. Sends reminders to `SMTP_FROM`. The daemon is intentionally not a Next.js API cron to avoid cold-start gaps.
 
+### Inngest — scheduled jobs and event-driven workflows
+Inngest handles scheduled tasks (cron) and event-triggered functions. When `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` are set, the app registers functions with Inngest Cloud which calls `/api/inngest` to execute them.
+
+**Environment variables:**
+- `INNGEST_EVENT_KEY` — Event key from Inngest dashboard
+- `INNGEST_SIGNING_KEY` — Signing key from Inngest dashboard
+- Leave empty to disable Inngest (functions won't run)
+
+**Setup:**
+1. Create account at [app.inngest.com](https://app.inngest.com)
+2. Create a project, copy Event Key and Signing Key
+3. Add to Railway environment variables
+4. Redeploy — Inngest auto-discovers functions at `/api/inngest`
+
+**Cron functions (scheduled):**
+| Function | Schedule | Purpose |
+|----------|----------|---------|
+| `appointment-reminders` | Hourly (`0 * * * *`) | Send appointment reminder emails |
+| `stripe-reconcile` | Daily 2 AM UTC | Sync all Stripe subscriptions with DB |
+| `grace-period-expiry` | Daily 5 AM UTC | Move expired grace periods to CANCELLED |
+| `mark-overdue-payments` | Daily 6 AM UTC | Mark overdue payments on dashboard |
+| `pre-deletion-warning` | Daily 2 AM UTC | Send warning before account deletion |
+| `purge-expired-weddings` | Daily 4 AM UTC | Delete expired cancelled accounts |
+
+**Event-triggered functions:**
+| Event | Trigger | Function |
+|-------|---------|----------|
+| `wedding/created` | New signup | Send welcome email |
+| `stripe/trial.will_end` | Stripe webhook | Send trial ending reminder |
+| `stripe/payment.failed` | Stripe webhook | Send payment failure email |
+| `stripe/sync.delayed` | Null subscription | Recover subscription ID after 30s |
+| `wedding/cancelled` | Cancellation | Schedule data export |
+
+**Redundancy with reminder daemon:**
+Appointment reminders have two mechanisms: the tsx daemon (always runs locally) and Inngest (runs when configured). If Inngest is not configured, the daemon ensures reminders still work. If both run, the daemon and Inngest may both send reminders — this is acceptable (idempotent, duplicates are harmless).
+
 ### Cloudflare Tunnel / non-standard host
 When accessed via a Cloudflare Tunnel the `Host` header differs from `NEXTAUTH_URL`. Set `NEXTAUTH_URL` in `.env` to the **public** Cloudflare Tunnel domain (e.g. `https://wedding.yourdomain.com`) — this is what Better Auth uses to validate redirect URLs and build RSVP email links. Without this, auth redirects break.
 
@@ -770,6 +806,7 @@ wedding-planner/
 │   │   ├── email.ts           — nodemailer: sendRsvpEmail, sendAppointmentReminderEmail, sendPaymentReminderEmail; esc() and safeUrl() helpers for XSS prevention
 │   │   ├── env.ts             — validateEnv(): startup validation of required environment variables
 │   │   ├── rsvpStatus.ts      — calculateRsvpStatus() — ACCEPTED/PARTIAL/DECLINED/PENDING logic
+│   │   ├── stripe-sync.ts     — syncWeddingFromStripe() — recover from missed webhooks, sync subscription status
 │   │   ├── seating-types.ts   — GuestSummary, TableWithGuests, Room, isReceptionEligible()
 │   │   ├── totp.ts            — TOTP generate/verify + backup code helpers
 │   │   ├── csv.ts             — Guest CSV import/export
@@ -783,6 +820,21 @@ wedding-planner/
 │   │   └── appointmentReminders.ts — checkAppointmentReminders() called by daemon
 │   ├── scripts/
 │   │   └── reminder-daemon.ts — Long-running process; calls startReminderJob()
+│   ├── lib/inngest/
+│   │   ├── client.ts             — Inngest client initialization
+│   │   ├── index.ts              — Export all Inngest functions
+│   │   └── functions/            — Scheduled and event-triggered functions
+│   │       ├── appointment-reminders.ts   — Cron: hourly, send appointment reminders
+│   │       ├── stripe-reconcile.ts        — Cron: daily 2 AM, sync all Stripe subscriptions
+│   │       ├── stripe-sync-delayed.ts     — Event: stripe/sync.delayed, recover null subscription
+│   │       ├── grace-period-expiry.ts     — Cron: daily 5 AM, move expired grace to CANCELLED
+│   │       ├── mark-overdue-payments.ts   — Cron: daily 6 AM, mark overdue payments
+│   │       ├── pre-deletion-warning.ts    — Cron: daily 2 AM, send deletion warning
+│   │       ├── purge-expired-weddings.ts  — Cron: daily 4 AM, delete expired accounts
+│   │       ├── welcome-email.ts           — Event: wedding/created, send welcome email
+│   │       ├── trial-ending-reminder.ts   — Event: stripe/trial.will_end, send reminder
+│   │       ├── payment-failure-email.ts   — Event: stripe/payment.failed, send failure email
+│   │       └── cancellation-data-export.ts — Event: wedding/cancelled, export data
 │   ├── app/
 │   │   ├── (dashboard)/       — All authenticated pages (layout wraps with sidebar nav)
 │   │   │   ├── page.tsx       — Dashboard
@@ -821,6 +873,9 @@ wedding-planner/
 │           ├── SeatingVisualView.tsx      — react-konva canvas visual view (dynamically imported, ssr:false)
 │           ├── PrintDesigner.tsx          — Print designer page: settings + preview
 │           └── PrintTableBlock.tsx        — Table block component for print layout (horizontal/vertical)
+│       └── billing/
+│           ├── ActivateTrialButton.tsx   — "Activate subscription" button; ends trial, starts billing
+│           └── SyncFromStripeButton.tsx   — "Refresh from Stripe" button; manual sync for billing page
 ```
 
 ### API routes
@@ -875,6 +930,9 @@ PATCH      /api/tasks/[id]/complete     — Toggle complete (ADMIN + RSVP_MANAGE
 GET/POST   /api/task-categories         — Task category list + create (ADMIN)
 PUT/DELETE /api/task-categories/[id]    — Update/delete category; DELETE returns 409 if tasks use it (force=true to nullify and delete)
 GET        /api/health                  — Health check endpoint: database connectivity, Redis connectivity (if configured), returns status JSON
+POST       /api/billing/sync            — Manually sync Stripe subscription data; ADMIN only; returns { changed, before, after }
+POST       /api/billing/checkout        — Create Stripe checkout session for users without subscription; ADMIN only; returns { checkoutUrl }
+GET        /api/billing/portal          — Stripe billing portal redirect; ADMIN only
 GET/POST   /api/guests                   — Guest list + create; optional pagination: ?skip=0&take=100 (max 500)
 ```
 

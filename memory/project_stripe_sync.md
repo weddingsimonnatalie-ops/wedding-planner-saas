@@ -4,7 +4,7 @@ description: Auto-recovery from missed webhooks; syncWeddingFromStripe() utility
 type: project
 ---
 
-Started 2026-03-29. Branch: `feature/stripe-sync`.
+Started 2026-03-29. Merged to `main` 2026-03-29.
 
 **Why:** Stripe webhooks can be missed (no CLI in local dev, delivery failures in production). Without recovery the DB drifts — status stays TRIALING when ACTIVE, stripeSubscriptionId stays null after checkout, etc. The billing page showed "Complete billing setup →" for Steve and Jane despite having a valid Stripe subscription because the checkout webhook never fired locally.
 
@@ -29,7 +29,7 @@ Started 2026-03-29. Branch: `feature/stripe-sync`.
 | 4 | Nightly reconciliation cron (Inngest) | ✅ complete |
 | 5 | Webhook hardening (`checkout.session.completed` null subscription guard) | ✅ complete |
 
-All phases deployed to `feature/stripe-sync` branch, ready for merge.
+All phases merged to `main`.
 
 ---
 
