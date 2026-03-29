@@ -67,10 +67,37 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ preview: rowsWithStatus });
     }
 
-    // Import with per-row duplicate handling
+    // Batch import: collect all operations and execute in minimal transactions
     const actions: Record<string, DupAction> = duplicateActions ?? {};
-    let created = 0;
-    let updated = 0;
+
+    // Separate rows by action type
+    const toCreate: Array<{
+      firstName: string;
+      lastName: string;
+      email: string | null;
+      phone: string | null;
+      groupName: string | null;
+      isChild: boolean;
+      invitedToCeremony: boolean;
+      invitedToReception: boolean;
+      invitedToAfterparty: boolean;
+      notes: string | null;
+    }> = [];
+
+    const toUpdate: Array<{
+      id: string;
+      data: {
+        email?: string;
+        phone?: string;
+        groupName?: string;
+        isChild: boolean;
+        invitedToCeremony: boolean;
+        invitedToReception: boolean;
+        invitedToAfterparty: boolean;
+        notes?: string;
+      };
+    }> = [];
+
     let skipped = 0;
     let importErrors = 0;
 
@@ -103,38 +130,64 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         };
 
         if (action === "create") {
-          await withTenantContext(weddingId, (tx) =>
-            tx.guest.create({ data: { ...guestData, weddingId } })
-          );
-          created++;
+          toCreate.push(guestData);
         } else if (action === "update") {
           const key = `${row.firstName.toLowerCase()}|${row.lastName.toLowerCase()}`;
           const existing = existingMap.get(key);
           if (existing) {
-            // Only overwrite fields that are non-empty in the CSV
-            await withTenantContext(weddingId, (tx) =>
-              tx.guest.update({
-                where: { id: existing.id, weddingId },
-                data: {
-                  ...(row.email ? { email: row.email } : {}),
-                  ...(row.phone ? { phone: row.phone } : {}),
-                  ...(row.groupName ? { groupName: row.groupName } : {}),
-                  isChild: row.isChild,
-                  invitedToCeremony: row.invitedToCeremony,
-                  invitedToReception: row.invitedToReception,
-                  invitedToAfterparty: row.invitedToAfterparty,
-                  ...(row.notes ? { notes: row.notes } : {}),
-                },
-              })
-            );
-            updated++;
+            toUpdate.push({
+              id: existing.id,
+              data: {
+                ...(row.email ? { email: row.email } : {}),
+                ...(row.phone ? { phone: row.phone } : {}),
+                ...(row.groupName ? { groupName: row.groupName } : {}),
+                isChild: row.isChild,
+                invitedToCeremony: row.invitedToCeremony,
+                invitedToReception: row.invitedToReception,
+                invitedToAfterparty: row.invitedToAfterparty,
+                ...(row.notes ? { notes: row.notes } : {}),
+              },
+            });
           } else {
             skipped++;
           }
         }
     }
 
-    return NextResponse.json({ created, updated, skipped, errors: importErrors });
+    // Execute batched operations in a single transaction
+    const result = await withTenantContext(weddingId, async (tx) => {
+      // Batch create all new guests
+      let created = 0;
+      if (toCreate.length > 0) {
+        const createResult = await tx.guest.createMany({
+          data: toCreate.map((g) => ({ ...g, weddingId })),
+        });
+        created = createResult.count;
+      }
+
+      // Batch update all existing guests
+      let updated = 0;
+      if (toUpdate.length > 0) {
+        const updateResults = await Promise.all(
+          toUpdate.map((u) =>
+            tx.guest.update({
+              where: { id: u.id, weddingId },
+              data: u.data,
+            })
+          )
+        );
+        updated = updateResults.length;
+      }
+
+      return { created, updated };
+    });
+
+    return NextResponse.json({
+      created: result.created,
+      updated: result.updated,
+      skipped,
+      errors: importErrors,
+    });
 
   } catch (error) {
     return handleDbError(error);

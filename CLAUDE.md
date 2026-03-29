@@ -719,6 +719,7 @@ Tasks track wedding to-do items. Key fields:
 | 20 | `add_guest_group_name_index` | Adds index on `Guest.groupName` for faster group filtering and grouping queries in the guest list. |
 | 21 | `add_unsubscribed_at` | Adds `unsubscribedAt DateTime?` to `Guest`. Set when guest clicks unsubscribe link in RSVP email; guest is skipped from future email sends. GDPR compliance feature. |
 | 22 | `add_theme_hue` | Adds `themeHue Int NOT NULL DEFAULT 330` to `Wedding`. Stores the HSL hue for the per-wedding colour theme. |
+| 23 | `add_composite_indexes` | Adds composite indexes: `Guest(weddingId, email)` for duplicate email checks, `Appointment(weddingId, date)` for dashboard stats and appointment count queries. |
 
 **Important**: Migration 4 (`PARTIAL`) was applied directly via `docker compose exec db psql` and manually inserted into `_prisma_migrations`. If restoring to a fresh DB from the schema, all migrations will run in order automatically — no special handling needed. If the DB already exists from before migration 4, run:
 ```sql

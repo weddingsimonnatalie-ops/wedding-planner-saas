@@ -205,6 +205,7 @@ model Guest {
   @@index([email])
   @@index([weddingId, groupName])
   @@index([weddingId, rsvpStatus])
+  @@index([weddingId, email])
 }
 
 enum RsvpStatus {
@@ -380,6 +381,7 @@ model Appointment {
 
   @@index([weddingId])
   @@index([date])
+  @@index([weddingId, date])
 }
 
 enum SupplierStatus {
