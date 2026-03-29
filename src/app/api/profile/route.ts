@@ -1,23 +1,46 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
+import { requireRole } from "@/lib/api-auth";
+import { apiJson } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { invalidateUserSessions } from "@/lib/session";
 
 import { handleDbError } from "@/lib/db-error";
 
-export async function PATCH(req: NextRequest): Promise<NextResponse> {
-  try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const auth = await requireRole(["ADMIN", "VIEWER", "RSVP_MANAGER"], req);
+  if (!auth.authorized) return auth.response;
 
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: auth.user.id },
+      select: { id: true, name: true, email: true },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return apiJson({ ...user, role: auth.role });
+  } catch (error) {
+    return handleDbError(error);
+  }
+}
+
+export async function PATCH(req: NextRequest): Promise<NextResponse> {
+  const auth = await requireRole(["ADMIN", "VIEWER", "RSVP_MANAGER"], req);
+  if (!auth.authorized) return auth.response;
+
+  try {
     const { name, email, password } = await req.json();
 
     // Track if email is being changed (requires session invalidation)
     let emailChanged = false;
 
     // Email change requires password confirmation
-    if (email && email !== session.user.email) {
+    if (email && email !== auth.user.email) {
       if (!password) {
         return NextResponse.json(
           { error: "Password required to change email" },
@@ -26,7 +49,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       }
 
       const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
+        where: { id: auth.user.id },
         include: { accounts: { where: { providerId: "credential" } } },
       });
 
@@ -44,7 +67,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     }
 
     const updated = await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: auth.user.id },
       data: {
         ...(name !== undefined && { name: name || null }),
         ...(email && { email }),
@@ -54,7 +77,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
 
     // Invalidate all sessions if email was changed
     if (emailChanged) {
-      await invalidateUserSessions(session.user.id);
+      await invalidateUserSessions(auth.user.id);
     }
 
     return NextResponse.json(updated);
@@ -62,5 +85,4 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   } catch (error) {
     return handleDbError(error);
   }
-
 }

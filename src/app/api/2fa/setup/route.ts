@@ -1,5 +1,7 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
+import { requireRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { generateSecret, generateOtpauthUrl, encryptSecret } from "@/lib/totp";
 import QRCode from "qrcode";
@@ -13,18 +15,18 @@ import { handleDbError } from "@/lib/db-error";
  * and returns a QR code data URL.
  */
 export async function POST(req: NextRequest) {
-  try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireRole(["ADMIN", "VIEWER", "RSVP_MANAGER"], req);
+  if (!auth.authorized) return auth.response;
 
+  try {
     const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { email: true, twoFactorEnabled: true },
+      where: { id: auth.user.id },
+      select: { email: true, twoFactorEnabled: true },
     });
 
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
     if (user.twoFactorEnabled) {
-        return NextResponse.json({ error: "2FA is already enabled" }, { status: 400 });
+      return NextResponse.json({ error: "2FA is already enabled" }, { status: 400 });
     }
 
     const secret = generateSecret();
@@ -34,8 +36,8 @@ export async function POST(req: NextRequest) {
 
     // Persist the pending secret (twoFactorEnabled stays false until verified)
     await prisma.user.update({
-        where: { id: session.user.id },
-        data: { twoFactorSecret: encryptedSecret },
+      where: { id: auth.user.id },
+      data: { twoFactorSecret: encryptedSecret },
     });
 
     return NextResponse.json({ qrDataUrl, secret });
@@ -43,5 +45,4 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     return handleDbError(error);
   }
-
 }

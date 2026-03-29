@@ -1,15 +1,15 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireRole } from "@/lib/api-auth";
 import { withTenantContext } from "@/lib/tenant";
 import { TableShape, Orientation } from "@prisma/client";
 import { apiJson } from "@/lib/api-response";
 import { validateFields } from "@/lib/validation";
-import { verifyWeddingCookieId, COOKIE_NAME } from "@/lib/wedding-cookie";
 
-import { handleDbError } from "@/lib/db-error";const GUEST_SELECT = {
+import { handleDbError } from "@/lib/db-error";
+
+const GUEST_SELECT = {
   id: true,
   firstName: true,
   lastName: true,
@@ -24,15 +24,11 @@ import { handleDbError } from "@/lib/db-error";const GUEST_SELECT = {
 } as const;
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
+  const auth = await requireRole(["ADMIN", "VIEWER", "RSVP_MANAGER"], req);
+  if (!auth.authorized) return auth.response;
+  const { weddingId } = auth;
+
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const cookieValue = req.cookies.get(COOKIE_NAME)?.value;
-    if (!cookieValue) return NextResponse.json({ error: "No wedding context" }, { status: 401 });
-    const weddingId = await verifyWeddingCookieId(cookieValue);
-    if (!weddingId) return NextResponse.json({ error: "Invalid wedding context" }, { status: 401 });
-
     const tables = await withTenantContext(weddingId, (tx) =>
       tx.table.findMany({
         where: { weddingId },
@@ -50,11 +46,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  try {
-    const auth = await requireAdmin(req);
-    if (!auth.authorized) return auth.response;
-    const { weddingId } = auth;
+  const auth = await requireRole(["ADMIN"], req);
+  if (!auth.authorized) return auth.response;
+  const { weddingId } = auth;
 
+  try {
     const { roomId, name, shape, capacity, positionX, positionY, orientation } = await req.json();
 
     if (!name?.trim()) {

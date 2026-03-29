@@ -1,31 +1,27 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { withTenantContext } from "@/lib/tenant";
 import { apiJson } from "@/lib/api-response";
 import { TaskPriority } from "@prisma/client";
 import { validateFields } from "@/lib/validation";
-import { verifyWeddingCookieId, COOKIE_NAME } from "@/lib/wedding-cookie";
 
-import { handleDbError } from "@/lib/db-error";const INCLUDE = {
+import { handleDbError } from "@/lib/db-error";
+
+const INCLUDE = {
   category: { select: { id: true, name: true, colour: true } },
   assignedTo: { select: { id: true, name: true, email: true } },
   supplier: { select: { id: true, name: true } },
 } as const;
 
 export async function GET(req: NextRequest) {
+  const auth = await requireRole(["ADMIN", "VIEWER"], req);
+  if (!auth.authorized) return auth.response;
+  const { weddingId } = auth;
+
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const cookieValue = req.cookies.get(COOKIE_NAME)?.value;
-    if (!cookieValue) return NextResponse.json({ error: "No wedding context" }, { status: 401 });
-    const weddingId = await verifyWeddingCookieId(cookieValue);
-    if (!weddingId) return NextResponse.json({ error: "Invalid wedding context" }, { status: 401 });
-
     const { searchParams } = new URL(req.url);
     const completed = searchParams.get("completed");
     const priority = searchParams.get("priority") as TaskPriority | null;
@@ -95,11 +91,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const auth = await requireAdmin(req);
-    if (!auth.authorized) return auth.response;
-    const { weddingId } = auth;
+  const auth = await requireRole(["ADMIN"], req);
+  if (!auth.authorized) return auth.response;
+  const { weddingId } = auth;
 
+  try {
     const body = await req.json();
     const {
         title, notes, priority, dueDate, categoryId,
