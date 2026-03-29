@@ -8,10 +8,10 @@ export async function checkAppointmentReminders(): Promise<{ checked: number; se
   const todayEnd = new Date();
   todayEnd.setHours(23, 59, 59, 999);
 
-  // Get all active weddings (TRIALING or ACTIVE subscription)
+  // Only send reminders for paid subscriptions (ACTIVE or PAST_DUE within grace period)
   const activeWeddings = await prisma.wedding.findMany({
     where: {
-      subscriptionStatus: { in: ["TRIALING", "ACTIVE", "PAST_DUE"] },
+      subscriptionStatus: { in: ["ACTIVE", "PAST_DUE"] },
     },
     select: { id: true, reminderEmail: true },
   });

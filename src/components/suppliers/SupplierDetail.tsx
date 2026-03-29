@@ -8,7 +8,9 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { SupplierAppointmentsSection } from "@/components/suppliers/SupplierAppointmentsSection";
 import { SupplierTasksSection } from "@/components/suppliers/SupplierTasksSection";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useWedding, getEmailBlockReason } from "@/context/WeddingContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
+import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import { useFormDirtyRegistration } from "@/hooks/useFormDirtyRegistration";
 
 interface SupplierCategory { id: string; name: string; colour: string }
@@ -70,6 +72,9 @@ function fmtSize(bytes: number) {
 
 export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierData }) {
   const { can: perms } = usePermissions();
+  const { subscriptionStatus } = useWedding();
+  const canSendEmail = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
+  const emailBlockReason = getEmailBlockReason(subscriptionStatus);
   const router = useRouter();
   const [supplier, setSupplier] = useState(initialSupplier);
   const [payments, setPayments] = useState<Payment[]>(initialSupplier.payments);
@@ -721,13 +726,16 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
                             <RotateCcw className="w-3.5 h-3.5" />
                           </button>
                         )}
-                        <button
-                          onClick={() => handleSendReminder(p.id)}
-                          title="Send reminder email"
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
-                        >
-                          <Mail className="w-3.5 h-3.5" />
-                        </button>
+                        <UpgradePrompt active={!canSendEmail} reason={emailBlockReason ?? ""}>
+                          <button
+                            onClick={canSendEmail ? () => handleSendReminder(p.id) : undefined}
+                            disabled={!canSendEmail}
+                            title={canSendEmail ? "Send reminder email" : undefined}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                          </button>
+                        </UpgradePrompt>
                         <button
                           onClick={() => openEditPayment(p)}
                           title="Edit payment"

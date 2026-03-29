@@ -2,7 +2,8 @@ export const dynamic = "force-dynamic";
 
 import { requireServerContext } from "@/lib/server-context";
 import { prisma } from "@/lib/prisma";
-import { Heart, CreditCard, Calendar, Download } from "lucide-react";
+import { Heart, CreditCard, Calendar, Download, Zap } from "lucide-react";
+import { ActivateTrialButton } from "@/components/billing/ActivateTrialButton";
 
 export default async function BillingPage() {
   const ctx = await requireServerContext(["ADMIN"]);
@@ -12,6 +13,7 @@ export default async function BillingPage() {
     select: {
       coupleName: true,
       subscriptionStatus: true,
+      stripeSubscriptionId: true,
       currentPeriodEnd: true,
       trialEndsAt: true,
       gracePeriodEndsAt: true,
@@ -102,6 +104,26 @@ export default async function BillingPage() {
           </div>
         )}
       </div>
+
+      {status === "TRIALING" && (
+        <div className="bg-white rounded-xl border border-primary/20 p-6 mb-4">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+              <Zap className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-gray-900 mb-1">
+                Start your subscription now
+              </h2>
+              <p className="text-sm text-gray-500">
+                Unlock email sending and all features immediately — don&apos;t
+                wait for your trial to end.
+              </p>
+            </div>
+          </div>
+          <ActivateTrialButton hasSubscription={!!wedding?.stripeSubscriptionId} />
+        </div>
+      )}
 
       <form action="/api/billing/portal" method="POST">
         <button

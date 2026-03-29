@@ -10,7 +10,9 @@ import {
 import { fetchApi } from "@/lib/fetch";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useWedding, getEmailBlockReason } from "@/context/WeddingContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
+import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import { PaymentModal } from "./PaymentModal";
 import { ReceiptUploadModal } from "./ReceiptUploadModal";
 import { ReceiptViewModal } from "./ReceiptViewModal";
@@ -340,6 +342,10 @@ function PaymentCard({
     );
   }
 
+  const { subscriptionStatus } = useWedding();
+  const canSendEmail = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
+  const emailBlockReason = getEmailBlockReason(subscriptionStatus);
+
   const { supplier } = payment;
   const pct =
     supplier.contractValue && supplier.contractValue > 0
@@ -470,14 +476,17 @@ function PaymentCard({
           </button>
         )}
         {actionable && (
-          <button
-            type="button"
-            onClick={onSendReminder}
-            className="flex items-center gap-1 px-2.5 py-1 text-gray-500 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors"
-            title="Send reminder email"
-          >
-            <Mail className="w-3 h-3" /> Reminder
-          </button>
+          <UpgradePrompt active={!canSendEmail} reason={emailBlockReason ?? ""}>
+            <button
+              type="button"
+              onClick={canSendEmail ? onSendReminder : undefined}
+              disabled={!canSendEmail}
+              title={canSendEmail ? "Send reminder email" : undefined}
+              className="flex items-center gap-1 px-2.5 py-1 text-gray-500 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Mail className="w-3 h-3" /> Reminder
+            </button>
+          </UpgradePrompt>
         )}
         <div className="ml-auto flex items-center gap-1">
           <button

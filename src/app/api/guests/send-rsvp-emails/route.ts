@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdminOrRsvpManager } from "@/lib/api-auth";
+import { requireAdminOrRsvpManager, requireEmailFeature } from "@/lib/api-auth";
 import { withTenantContext } from "@/lib/tenant";
 import { sendRsvpEmail } from "@/lib/email";
 import { getBulkLimits } from "@/lib/rate-limit";
@@ -11,6 +11,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const auth = await requireAdminOrRsvpManager(req);
     if (!auth.authorized) return auth.response;
     const { weddingId } = auth;
+
+    const emailGate = requireEmailFeature(auth.wedding.subscriptionStatus);
+    if (emailGate) return emailGate;
 
     const { guestIds } = await req.json();
     if (!Array.isArray(guestIds) || guestIds.length === 0) {

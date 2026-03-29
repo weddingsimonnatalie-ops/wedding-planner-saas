@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireAdmin, requireEmailFeature } from "@/lib/api-auth";
 import { sendPaymentReminderEmail } from "@/lib/email";
 import { checkRateLimit, getEmailRateLimit } from "@/lib/rate-limit";
 import { withTenantContext } from "@/lib/tenant";
@@ -11,6 +11,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
     const { weddingId } = auth;
+
+    const emailGate = requireEmailFeature(auth.wedding.subscriptionStatus);
+    if (emailGate) return emailGate;
 
     // Rate limit per user to prevent email abuse
     const rateKey = `email:payment:${auth.user.id}`;

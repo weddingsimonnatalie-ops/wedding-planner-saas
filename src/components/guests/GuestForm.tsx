@@ -6,6 +6,8 @@ import { RsvpStatusBadge } from "./RsvpStatusBadge";
 import { ChevronDown, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { useFormDirtyRegistration } from "@/hooks/useFormDirtyRegistration";
+import { useWedding, getEmailBlockReason } from "@/context/WeddingContext";
+import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 
 interface Guest {
   id: string;
@@ -59,6 +61,9 @@ const ALL_STATUSES = ["PENDING", "ACCEPTED", "PARTIAL", "DECLINED", "MAYBE"] as 
 
 export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnly = false }: Props) {
   const roCls = readOnly ? "bg-gray-50 cursor-not-allowed opacity-75" : "";
+  const { subscriptionStatus } = useWedding();
+  const canSendEmail = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
+  const emailBlockReason = getEmailBlockReason(subscriptionStatus);
   const router = useRouter();
   const isEdit = !!guest;
 
@@ -430,14 +435,16 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
               <h3 className="text-sm font-semibold text-gray-800">RSVP &amp; Meal</h3>
               {!readOnly && (
                 guest.email ? (
-                  <button
-                    type="button"
-                    onClick={handleResendEmail}
-                    disabled={sendingEmail}
-                    className="text-xs px-2.5 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
-                  >
-                    {sendingEmail ? "Sending…" : "Resend RSVP email"}
-                  </button>
+                  <UpgradePrompt active={!canSendEmail} reason={emailBlockReason ?? ""}>
+                    <button
+                      type="button"
+                      onClick={handleResendEmail}
+                      disabled={sendingEmail || !canSendEmail}
+                      className="text-xs px-2.5 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {sendingEmail ? "Sending…" : "Resend RSVP email"}
+                    </button>
+                  </UpgradePrompt>
                 ) : (
                   <span className="text-xs text-gray-400">No email on file</span>
                 )

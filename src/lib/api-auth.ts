@@ -157,3 +157,31 @@ export async function requireRole(
 export const requireAdmin = (req: NextRequest) => requireRole(["ADMIN"], req);
 export const requireAdminOrRsvpManager = (req: NextRequest) =>
   requireRole(["ADMIN", "RSVP_MANAGER"], req);
+
+/**
+ * Check whether the current subscription allows product email sending.
+ * Only ACTIVE and PAST_DUE (within grace period) subscriptions may send emails.
+ * TRIALING, CANCELLED, PAUSED, and lapsed PAST_DUE accounts are blocked.
+ *
+ * Call this after requireRole() has already confirmed the subscription is not
+ * fully lapsed — this adds the extra check that blocks TRIALING accounts.
+ */
+export function requireEmailFeature(subStatus: SubStatus): NextResponse | null {
+  if (subStatus === "ACTIVE" || subStatus === "PAST_DUE") return null;
+  const message =
+    subStatus === "TRIALING"
+      ? "Email sending requires a paid subscription. Upgrade your trial to send emails."
+      : "Email sending requires an active subscription. Please reactivate your plan.";
+  return NextResponse.json({ error: message }, { status: 402 });
+}
+
+/**
+ * Returns a user-facing explanation of why email sending is blocked for the
+ * given subscription status. Returns null when email is allowed.
+ * Used by UI components to show status-appropriate tooltip text.
+ */
+export function getEmailBlockReason(subStatus: SubStatus): string | null {
+  if (subStatus === "ACTIVE" || subStatus === "PAST_DUE") return null;
+  if (subStatus === "TRIALING") return "Upgrade to a paid plan to send emails";
+  return "Email sending requires an active subscription";
+}

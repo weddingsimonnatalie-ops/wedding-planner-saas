@@ -51,7 +51,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   };
 
   return (
-    <WeddingProvider weddingId={ctx.weddingId} role={ctx.role}>
+    <WeddingProvider weddingId={ctx.weddingId} role={ctx.role} subscriptionStatus={weddingBilling?.subscriptionStatus ?? "TRIALING"}>
       <RefreshProvider>
         <FormDirtyProvider>
           {weddingBilling && (

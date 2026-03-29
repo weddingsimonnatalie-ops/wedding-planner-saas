@@ -10,7 +10,9 @@ import { PrintGuestListButton } from "./PrintGuestListButton";
 import { GuestModal } from "./GuestModal";
 import { CSV_TEMPLATE_HEADERS } from "@/lib/csv";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useWedding, getEmailBlockReason } from "@/context/WeddingContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
+import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 
 interface Guest {
   id: string;
@@ -88,6 +90,9 @@ interface EmailDialogState {
 export function GuestList({ guests, groups, mealOptions, tables, totalGuests, stats, hasFilters, currentFilters }: Props) {
   const router = useRouter();
   const perms = usePermissions();
+  const { subscriptionStatus } = useWedding();
+  const canSendEmail = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
+  const emailBlockReason = getEmailBlockReason(subscriptionStatus);
   const [isPending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
@@ -874,14 +879,17 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
       {selectedIds.size > 0 && perms.can.editGuests && (
         <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 mb-3 shadow-sm">
           {perms.can.manageRsvp && (
-            <button
-              type="button"
-              onClick={openEmailDialog}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-            >
-              <Mail className="w-3.5 h-3.5" />
-              Send RSVP emails ({selectedIds.size})
-            </button>
+            <UpgradePrompt active={!canSendEmail} reason={emailBlockReason ?? ""}>
+              <button
+                type="button"
+                onClick={canSendEmail ? openEmailDialog : undefined}
+                disabled={!canSendEmail}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                Send RSVP emails ({selectedIds.size})
+              </button>
+            </UpgradePrompt>
           )}
           {/* Set Status dropdown */}
           <div className="relative" ref={setStatusRef}>
@@ -1072,14 +1080,16 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                     <Copy className="w-4 h-4" />
                   </button>
                   {perms.can.manageRsvp && (
-                    <button
-                      title="Send RSVP email"
-                      onClick={() => handleSendEmail(g)}
-                      disabled={sendingId === g.id}
-                      className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-40 transition-colors text-xs min-h-[44px]"
-                    >
-                      <Mail className="w-4 h-4" />
-                    </button>
+                    <UpgradePrompt active={!canSendEmail} reason={emailBlockReason ?? ""} className="flex-1">
+                      <button
+                        title={canSendEmail ? "Send RSVP email" : undefined}
+                        onClick={() => canSendEmail && handleSendEmail(g)}
+                        disabled={sendingId === g.id || !canSendEmail}
+                        className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs min-h-[44px]"
+                      >
+                        <Mail className="w-4 h-4" />
+                      </button>
+                    </UpgradePrompt>
                   )}
                   {perms.can.editGuests && (
                     <>
@@ -1210,14 +1220,16 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                           <Copy className="w-3.5 h-3.5" />
                         </button>
                         {perms.can.manageRsvp && (
-                          <button
-                            title="Send RSVP email"
-                            onClick={() => handleSendEmail(g)}
-                            disabled={sendingId === g.id}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-40 transition-colors"
-                          >
-                            <Mail className="w-3.5 h-3.5" />
-                          </button>
+                          <UpgradePrompt active={!canSendEmail} reason={emailBlockReason ?? ""}>
+                            <button
+                              title={canSendEmail ? "Send RSVP email" : undefined}
+                              onClick={() => canSendEmail && handleSendEmail(g)}
+                              disabled={sendingId === g.id || !canSendEmail}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                            </button>
+                          </UpgradePrompt>
                         )}
                         {perms.can.editGuests && (
                           <>
