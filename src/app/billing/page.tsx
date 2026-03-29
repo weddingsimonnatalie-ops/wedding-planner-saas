@@ -4,6 +4,7 @@ import { requireServerContext } from "@/lib/server-context";
 import { prisma } from "@/lib/prisma";
 import { Heart, CreditCard, Calendar, Download, Zap } from "lucide-react";
 import { ActivateTrialButton } from "@/components/billing/ActivateTrialButton";
+import { SyncFromStripeButton } from "@/components/billing/SyncFromStripeButton";
 import { syncWeddingFromStripe } from "@/lib/stripe-sync";
 
 export default async function BillingPage() {
@@ -72,6 +73,8 @@ export default async function BillingPage() {
         </div>
         <h1 className="text-2xl font-semibold text-gray-900">Billing</h1>
       </div>
+
+      <SyncFromStripeButton />
 
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
         <div className="flex items-center justify-between mb-4">
