@@ -46,6 +46,7 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
   const [catFilter, setCatFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [error, setError] = useState("");
 
   // Sync server-rendered data into state whenever the parent server component re-renders
   useEffect(() => {
@@ -56,7 +57,9 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
     fetchApi("/api/supplier-categories")
       .then(r => r.json())
       .then((data: SupplierCategory[]) => setCategories(data))
-      .catch(() => {});
+      .catch(() => {
+        setError("Failed to load categories. Please refresh the page.");
+      });
   }, []);
 
   // Summary totals
@@ -86,6 +89,12 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
     <div>
       {!perms.editSuppliers && (
         <ReadOnlyBanner message="You have view-only access to suppliers." />
+      )}
+
+      {error && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+          {error}
+        </div>
       )}
 
       {/* Header */}

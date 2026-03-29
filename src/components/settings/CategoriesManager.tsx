@@ -27,6 +27,7 @@ interface Props {
 export function CategoriesManager({ entityType, apiBase }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   // Per-row edit state
@@ -53,12 +54,17 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
 
   useEffect(() => {
     fetchApi(apiBase)
-      .then(r => r.json())
-      .then((data: Category[]) => {
+      .then(async r => {
+        if (!r.ok) {
+          setError("Failed to load categories. Please refresh the page.");
+          setLoading(false);
+          return;
+        }
+        const data = await r.json();
         setCategories(data);
         const names: Record<string, string> = {};
         const colours: Record<string, string> = {};
-        data.forEach(c => {
+        data.forEach((c: Category) => {
           names[c.id] = c.name;
           colours[c.id] = c.colour;
         });
@@ -66,7 +72,10 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
         setEditColour(colours);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setError("Failed to load categories. Please refresh the page.");
+        setLoading(false);
+      });
   }, [apiBase]);
 
   async function handleSaveRow(id: string) {
@@ -112,11 +121,16 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
     [newCats[idx], newCats[swapIdx]] = [newCats[swapIdx], newCats[idx]];
     setCategories(newCats);
 
-    await fetch(`${apiBase}/reorder`, {
+    const res = await fetch(`${apiBase}/reorder`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: newCats.map(c => c.id) }),
     });
+    if (!res.ok) {
+      // Revert optimistic update on failure
+      setCategories(categories);
+      showToast("Failed to reorder", false);
+    }
   }
 
   async function handleDeleteClick(cat: Category) {
@@ -184,6 +198,12 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
 
   return (
     <div>
+      {error && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+          {error}
+        </div>
+      )}
+
       <div className="space-y-2">
         {categories.map((cat, idx) => {
           const isDirty =

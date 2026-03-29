@@ -118,6 +118,7 @@ export function AppointmentsList() {
   const [appointments, setAppointments] = useState<AppointmentData[]>([]);
   const [apptCategories, setApptCategories] = useState<ApptCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<AppointmentData | null>(null);
   const [pastOpen, setPastOpen] = useState(false);
@@ -127,10 +128,24 @@ export function AppointmentsList() {
 
   const load = useCallback(() => {
     setLoading(true);
+    setError("");
     fetchApi("/api/appointments")
-      .then(r => r.json())
-      .then(data => { setAppointments(data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(r => {
+        if (!r.ok) {
+          setError("Failed to load appointments. Please refresh the page.");
+          setLoading(false);
+          return;
+        }
+        return r.json();
+      })
+      .then(data => {
+        if (data) setAppointments(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Failed to load appointments. Please refresh the page.");
+        setLoading(false);
+      });
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -224,6 +239,12 @@ export function AppointmentsList() {
 
       {!perms.editAppointments && (
         <ReadOnlyBanner message="You have view-only access to appointments." />
+      )}
+
+      {error && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+          {error}
+        </div>
       )}
 
       {/* Filters */}

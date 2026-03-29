@@ -328,6 +328,7 @@ export function TasksPageClient() {
   const [categories, setCategories] = useState<FilterCategory[]>([]);
   const [suppliers, setSuppliers] = useState<FilterSupplier[]>([]);
   const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState("");
 
   const [modalOpen, setModalOpen]   = useState(false);
   const [editing, setEditing]       = useState<TaskData | null>(null);
@@ -348,10 +349,24 @@ export function TasksPageClient() {
 
   const load = useCallback(() => {
     setLoading(true);
+    setError("");
     fetchApi("/api/tasks")
-      .then(r => r.json())
-      .then((data: TaskData[]) => { setTasks(data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(r => {
+        if (!r.ok) {
+          setError("Failed to load tasks. Please refresh the page.");
+          setLoading(false);
+          return;
+        }
+        return r.json();
+      })
+      .then((data: TaskData[] | undefined) => {
+        if (data) setTasks(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Failed to load tasks. Please refresh the page.");
+        setLoading(false);
+      });
   }, [refreshToken]);
 
   useEffect(() => { load(); }, [load]);
@@ -603,6 +618,12 @@ export function TasksPageClient() {
       )}
       {isRsvpManager && (
         <ReadOnlyBanner message="You can view and complete tasks but cannot add or edit them." />
+      )}
+
+      {error && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+          {error}
+        </div>
       )}
 
       {/* Page header */}

@@ -612,6 +612,7 @@ export function PaymentsList() {
   const router = useRouter();
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<PaymentItem | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -636,10 +637,15 @@ export function PaymentsList() {
     if (!silent) setLoading(true);
     try {
       const res = await fetchApi("/api/payments");
+      if (!res.ok) {
+        if (!silent) setError("Failed to load payments. Please refresh the page.");
+        return;
+      }
       const data = await res.json();
       setPayments(data);
+      setError("");
     } catch {
-      if (!silent) showToast("Failed to load payments", false);
+      if (!silent) setError("Failed to load payments. Please refresh the page.");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -915,6 +921,12 @@ export function PaymentsList() {
     <div className="space-y-5">
       {!perms.editPayments && (
         <ReadOnlyBanner message="You have view-only access to payments." />
+      )}
+
+      {error && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+          {error}
+        </div>
       )}
 
       {/* Header */}
