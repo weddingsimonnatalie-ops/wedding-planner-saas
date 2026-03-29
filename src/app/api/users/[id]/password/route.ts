@@ -7,9 +7,15 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { invalidateUserSessions } from "@/lib/session";
 import { LENGTH_LIMITS } from "@/lib/validation";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 import { handleDbError } from "@/lib/db-error";
 
+/**
+ * PUT /api/users/[id]/password
+ * Change a user's password (own or another user's if admin).
+ * Rate limit: 10 attempts per user per hour.
+ */
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -18,6 +24,16 @@ export async function PUT(
     const { id } = await params;
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Rate limit per target user (10 per hour)
+    const rateKey = `password:${id}`;
+    const rateCheck = await checkRateLimit(rateKey, 10, 60 * 60 * 1000);
+    if (rateCheck.limited) {
+      return NextResponse.json(
+        { error: "Too many password attempts. Please try again later." },
+        { status: 429 }
+      );
+    }
 
     const { currentPassword, newPassword } = await req.json();
 

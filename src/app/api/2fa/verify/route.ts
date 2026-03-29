@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { verifyTotpCode, generateBackupCodes, hashBackupCode } from "@/lib/totp";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 import { handleDbError } from "@/lib/db-error";
 
@@ -11,10 +12,21 @@ import { handleDbError } from "@/lib/db-error";
  * POST /api/2fa/verify
  * Verifies the user's first TOTP code, enables 2FA, issues backup codes.
  * Body: { code: string }
+ * Rate limit: 10 attempts per user per 15 minutes.
  */
 export async function POST(req: NextRequest) {
   const auth = await requireRole(["ADMIN", "VIEWER", "RSVP_MANAGER"], req);
   if (!auth.authorized) return auth.response;
+
+  // Rate limit: 10 attempts per user per 15 minutes
+  const rateKey = `2fa-verify:${auth.user.id}`;
+  const rateCheck = await checkRateLimit(rateKey, 10, 15 * 60 * 1000);
+  if (rateCheck.limited) {
+    return NextResponse.json(
+      { error: "Too many attempts. Please try again later." },
+      { status: 429 }
+    );
+  }
 
   try {
     const { code } = await req.json();

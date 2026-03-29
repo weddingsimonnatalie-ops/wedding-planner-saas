@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrRsvpManager, requireEmailFeature } from "@/lib/api-auth";
 import { withTenantContext } from "@/lib/tenant";
 import { sendRsvpEmail } from "@/lib/email";
-import { getBulkLimits } from "@/lib/rate-limit";
+import { getBulkLimits, checkRateLimit, getEmailRateLimit } from "@/lib/rate-limit";
 
 import { handleDbError } from "@/lib/db-error";
 
@@ -14,6 +14,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const emailGate = requireEmailFeature(auth.wedding.subscriptionStatus);
     if (emailGate) return emailGate;
+
+    // Rate limit per user (same as single email send: 50/hour)
+    const rateKey = `email:rsvp:${auth.user.id}`;
+    const { max, windowMs } = getEmailRateLimit();
+    const rateCheck = await checkRateLimit(rateKey, max, windowMs);
+    if (rateCheck.limited) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please try again later." },
+        { status: 429 }
+      );
+    }
 
     const { guestIds } = await req.json();
     if (!Array.isArray(guestIds) || guestIds.length === 0) {
