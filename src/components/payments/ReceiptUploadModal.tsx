@@ -2,6 +2,8 @@
 
 import { useState, useRef } from "react";
 import { X, Upload, Camera, FileText, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useWedding, getUploadBlockReason } from "@/context/WeddingContext";
 
 interface PaymentInfo {
   id: string;
@@ -16,6 +18,10 @@ interface Props {
 }
 
 export function ReceiptUploadModal({ payment, onClose, onUploaded }: Props) {
+  const { subscriptionStatus, role } = useWedding();
+  const canUpload = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
+  const uploadBlockReason = getUploadBlockReason(subscriptionStatus);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -121,92 +127,115 @@ export function ReceiptUploadModal({ payment, onClose, onUploaded }: Props) {
 
         {/* Content */}
         <div className="p-5 space-y-4">
-          {!selectedFile ? (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Upload className="w-4 h-4" />
-                Choose file
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (fileInputRef.current) {
-                    fileInputRef.current.setAttribute("capture", "environment");
-                    fileInputRef.current.click();
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                title="Take photo with camera"
-              >
-                <Camera className="w-4 h-4" />
-                Take photo
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,.pdf"
-                className="hidden"
-                onChange={handleFileSelect}
-              />
-            </div>
+          {!canUpload ? (
+            <>
+              <p className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+                {uploadBlockReason}.{" "}
+                {role === "ADMIN" && (
+                  <Link href="/billing" className="text-primary hover:underline">
+                    Upgrade now →
+                  </Link>
+                )}
+              </p>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </>
           ) : (
-            <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
-              {previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt="Receipt preview"
-                  className="w-16 h-16 object-cover rounded"
-                />
+            <>
+              {!selectedFile ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Choose file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (fileInputRef.current) {
+                        fileInputRef.current.setAttribute("capture", "environment");
+                        fileInputRef.current.click();
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    title="Take photo with camera"
+                  >
+                    <Camera className="w-4 h-4" />
+                    Take photo
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                </div>
               ) : (
-                <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-gray-400" />
+                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  {previewUrl ? (
+                    <img
+                      src={previewUrl}
+                      alt="Receipt preview"
+                      className="w-16 h-16 object-cover rounded"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{selectedFile.name}</p>
+                    <p className="text-xs text-gray-500">{formatSize(selectedFile.size)}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearFile}
+                    className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50"
+                    title="Remove"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">{selectedFile.name}</p>
-                <p className="text-xs text-gray-500">{formatSize(selectedFile.size)}</p>
+
+              <p className="text-xs text-gray-400">PDF, JPG, or PNG (max 20 MB)</p>
+
+              {error && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {error}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpload}
+                  disabled={!selectedFile || uploading}
+                  className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
+                >
+                  {uploading ? "Uploading…" : "Upload"}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={clearFile}
-                className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50"
-                title="Remove"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
+            </>
           )}
-
-          <p className="text-xs text-gray-400">PDF, JPG, or PNG (max 20 MB)</p>
-
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
-
-          {/* Footer */}
-          <div className="flex justify-end gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleUpload}
-              disabled={!selectedFile || uploading}
-              className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
-            >
-              {uploading ? "Uploading…" : "Upload"}
-            </button>
-          </div>
         </div>
       </div>
     </div>
