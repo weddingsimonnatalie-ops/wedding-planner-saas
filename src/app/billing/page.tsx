@@ -4,15 +4,18 @@ import { requireServerContext } from "@/lib/server-context";
 import { prisma } from "@/lib/prisma";
 import { Heart, CreditCard, Calendar, Download, Zap } from "lucide-react";
 import { ActivateTrialButton } from "@/components/billing/ActivateTrialButton";
+import { syncWeddingFromStripe } from "@/lib/stripe-sync";
 
 export default async function BillingPage() {
   const ctx = await requireServerContext(["ADMIN"]);
 
-  const wedding = await prisma.wedding.findUnique({
+  // Fetch wedding with stripeCustomerId to check if sync is needed
+  let wedding = await prisma.wedding.findUnique({
     where: { id: ctx.weddingId },
     select: {
       coupleName: true,
       subscriptionStatus: true,
+      stripeCustomerId: true,
       stripeSubscriptionId: true,
       currentPeriodEnd: true,
       trialEndsAt: true,
@@ -21,6 +24,27 @@ export default async function BillingPage() {
       deleteScheduledAt: true,
     },
   });
+
+  // Auto-sync from Stripe on page load if customer exists
+  // This recovers from missed webhooks (e.g. checkout.session.completed)
+  if (wedding?.stripeCustomerId) {
+    await syncWeddingFromStripe(ctx.weddingId);
+    // Re-fetch to get fresh data after sync
+    wedding = await prisma.wedding.findUnique({
+      where: { id: ctx.weddingId },
+      select: {
+        coupleName: true,
+        subscriptionStatus: true,
+        stripeCustomerId: true,
+        stripeSubscriptionId: true,
+        currentPeriodEnd: true,
+        trialEndsAt: true,
+        gracePeriodEndsAt: true,
+        cancelledAt: true,
+        deleteScheduledAt: true,
+      },
+    });
+  }
 
   const statusLabel: Record<string, string> = {
     TRIALING: "Trial",
