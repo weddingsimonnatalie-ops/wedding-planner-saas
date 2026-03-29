@@ -8,7 +8,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { SupplierAppointmentsSection } from "@/components/suppliers/SupplierAppointmentsSection";
 import { SupplierTasksSection } from "@/components/suppliers/SupplierTasksSection";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useWedding, getEmailBlockReason } from "@/context/WeddingContext";
+import { useWedding, getEmailBlockReason, getUploadBlockReason } from "@/context/WeddingContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import { useFormDirtyRegistration } from "@/hooks/useFormDirtyRegistration";
@@ -75,6 +75,8 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
   const { subscriptionStatus } = useWedding();
   const canSendEmail = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
   const emailBlockReason = getEmailBlockReason(subscriptionStatus);
+  const canUpload = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
+  const uploadBlockReason = getUploadBlockReason(subscriptionStatus);
   const router = useRouter();
   const [supplier, setSupplier] = useState(initialSupplier);
   const [payments, setPayments] = useState<Payment[]>(initialSupplier.payments);
@@ -816,14 +818,16 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
               <p className="text-sm font-medium text-gray-700">Attachments</p>
               {perms.editSuppliers && (
                 <>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 disabled:opacity-50"
-                  >
-                    <Paperclip className="w-3.5 h-3.5" />
-                    {uploading ? "Uploading…" : "Upload file"}
-                  </button>
+                  <UpgradePrompt active={!canUpload} reason={uploadBlockReason ?? ""}>
+                    <button
+                      onClick={canUpload ? () => fileInputRef.current?.click() : undefined}
+                      disabled={uploading || !canUpload}
+                      className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 disabled:opacity-50"
+                    >
+                      <Paperclip className="w-3.5 h-3.5" />
+                      {uploading ? "Uploading…" : "Upload file"}
+                    </button>
+                  </UpgradePrompt>
                   <input
                     ref={fileInputRef}
                     type="file"
