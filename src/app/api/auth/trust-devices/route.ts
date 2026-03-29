@@ -1,5 +1,8 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/api-auth";
+import { apiJson } from "@/lib/api-response";
 import { getTrustedDevices } from "@/lib/trusted-device";
 
 /**
@@ -15,7 +18,7 @@ export async function GET(req: NextRequest) {
   try {
     const devices = await getTrustedDevices(auth.user.id);
 
-    return NextResponse.json({
+    return apiJson({
       devices: devices.map((d) => ({
         id: d.id,
         deviceName: d.deviceName,

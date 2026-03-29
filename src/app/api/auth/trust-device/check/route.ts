@@ -1,5 +1,8 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/api-auth";
+import { apiJson } from "@/lib/api-response";
 import { cookies } from "next/headers";
 import { verifyTrustToken, TRUSTED_DEVICE_COOKIE } from "@/lib/trusted-device";
 
@@ -18,18 +21,18 @@ export async function GET(req: NextRequest) {
     const token = cookieStore.get(TRUSTED_DEVICE_COOKIE)?.value;
 
     if (!token) {
-      return NextResponse.json({ trusted: false });
+      return apiJson({ trusted: false });
     }
 
     const result = await verifyTrustToken(token);
 
     if (!result || result.userId !== auth.user.id) {
-      return NextResponse.json({ trusted: false });
+      return apiJson({ trusted: false });
     }
 
-    return NextResponse.json({ trusted: true });
+    return apiJson({ trusted: true });
   } catch (error) {
     console.error("Error checking trusted device:", error);
-    return NextResponse.json({ trusted: false });
+    return apiJson({ trusted: false });
   }
 }

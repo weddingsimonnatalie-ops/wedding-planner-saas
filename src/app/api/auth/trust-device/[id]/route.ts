@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/api-auth";
 import { revokeTrustedDevice, TRUSTED_DEVICE_COOKIE } from "@/lib/trusted-device";
