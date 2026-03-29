@@ -10,7 +10,7 @@ import {
 import { fetchApi } from "@/lib/fetch";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useWedding, getEmailBlockReason } from "@/context/WeddingContext";
+import { useWedding, getEmailBlockReason, getUploadBlockReason } from "@/context/WeddingContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import { PaymentModal } from "./PaymentModal";
@@ -345,6 +345,8 @@ function PaymentCard({
   const { subscriptionStatus } = useWedding();
   const canSendEmail = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
   const emailBlockReason = getEmailBlockReason(subscriptionStatus);
+  const canUpload = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
+  const uploadBlockReason = getUploadBlockReason(subscriptionStatus);
 
   const { supplier } = payment;
   const pct =
@@ -441,14 +443,17 @@ function PaymentCard({
           ) : !readOnly ? (
             <div className="mt-3">
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={onUploadReceipt}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <Paperclip className="w-3.5 h-3.5" />
-                  Upload receipt
-                </button>
+                <UpgradePrompt active={!canUpload} reason={uploadBlockReason ?? ""}>
+                  <button
+                    type="button"
+                    onClick={canUpload ? onUploadReceipt : undefined}
+                    disabled={!canUpload}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    <Paperclip className="w-3.5 h-3.5" />
+                    Upload receipt
+                  </button>
+                </UpgradePrompt>
               </div>
             </div>
           ) : null}
