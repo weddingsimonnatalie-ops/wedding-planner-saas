@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { X, Upload, Camera, FileText, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { fetchApi } from "@/lib/fetch";
 import { useFormDirtyRegistration } from "@/hooks/useFormDirtyRegistration";
+import { useWedding, getUploadBlockReason } from "@/context/WeddingContext";
 
 interface Supplier {
   id: string;
@@ -16,6 +18,10 @@ interface Props {
 }
 
 export function PaymentModal({ onClose, onCreated }: Props) {
+  const { subscriptionStatus, role } = useWedding();
+  const canUpload = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
+  const uploadBlockReason = getUploadBlockReason(subscriptionStatus);
+
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [supplierId, setSupplierId] = useState("");
   const [label, setLabel] = useState("");
@@ -297,7 +303,16 @@ export function PaymentModal({ onClose, onCreated }: Props) {
               Receipt <span className="text-gray-400 font-normal">(optional)</span>
             </label>
 
-            {!selectedFile ? (
+            {!canUpload ? (
+              <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                {uploadBlockReason}.{" "}
+                {role === "ADMIN" && (
+                  <Link href="/billing" className="text-primary hover:underline">
+                    Upgrade now →
+                  </Link>
+                )}
+              </p>
+            ) : !selectedFile ? (
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -356,7 +371,7 @@ export function PaymentModal({ onClose, onCreated }: Props) {
                 </button>
               </div>
             )}
-            <p className="text-xs text-gray-400 mt-1">PDF, JPG, or PNG (max 20 MB)</p>
+            {canUpload && <p className="text-xs text-gray-400 mt-1">PDF, JPG, or PNG (max 20 MB)</p>}
           </div>
 
           {error && (
