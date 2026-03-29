@@ -34,7 +34,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       // Batch fetch all guests in a single query, scoped to this wedding (fixes N+1 and prevents cross-tenant access)
       const guests = await tx.guest.findMany({
           where: { id: { in: guestIds }, weddingId },
-          select: { id: true, firstName: true, lastName: true, email: true, rsvpToken: true },
+          select: { id: true, firstName: true, lastName: true, email: true, rsvpToken: true, unsubscribedAt: true },
       });
 
       return { config, guests };
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const sent: Array<{ guestId: string; name: string; email: string }> = [];
     const failed: Array<{ guestId: string; name: string; email: string; error: string }> = [];
     const skipped: Array<{ guestId: string; name: string; reason: string }> = [];
+    let unsubscribed = 0;
 
     for (const guestId of guestIds) {
         const guest = guestMap.get(guestId);
@@ -55,6 +56,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         }
         if (!guest.email) {
           skipped.push({ guestId, name: `${guest.firstName} ${guest.lastName}`, reason: "No email address" });
+          continue;
+        }
+        if (guest.unsubscribedAt) {
+          unsubscribed++;
           continue;
         }
 
@@ -73,7 +78,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         }
     }
 
-    return NextResponse.json({ sent, failed, skipped });
+    return NextResponse.json({ sent, failed, skipped, unsubscribed });
 
   } catch (error) {
     return handleDbError(error);

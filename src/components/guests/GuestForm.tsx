@@ -34,6 +34,7 @@ interface Guest {
   rsvpToken: string;
   tableId: string | null;
   seatNumber: number | null;
+  unsubscribedAt: string | Date | null;
 }
 
 interface MealOption {
@@ -309,6 +310,15 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
       {readOnly && (
         <ReadOnlyBanner message="You have view-only access to this guest." />
       )}
+      {isEdit && guest?.unsubscribedAt && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+          <div className="text-sm text-gray-600">
+            <p className="font-medium text-gray-700">This guest has unsubscribed from emails</p>
+            <p className="mt-0.5">They will not receive RSVP reminder emails. You can still contact them directly if needed.</p>
+          </div>
+        </div>
+      )}
       {/* Name */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
@@ -435,16 +445,22 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
               <h3 className="text-sm font-semibold text-gray-800">RSVP &amp; Meal</h3>
               {!readOnly && (
                 guest.email ? (
-                  <UpgradePrompt active={!canSendEmail} reason={emailBlockReason ?? ""}>
-                    <button
-                      type="button"
-                      onClick={handleResendEmail}
-                      disabled={sendingEmail || !canSendEmail}
-                      className="text-xs px-2.5 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {sendingEmail ? "Sending…" : "Resend RSVP email"}
-                    </button>
-                  </UpgradePrompt>
+                  guest.unsubscribedAt ? (
+                    <span className="text-xs text-gray-400" title="This guest has unsubscribed from emails">
+                      Resend disabled — guest unsubscribed
+                    </span>
+                  ) : (
+                    <UpgradePrompt active={!canSendEmail} reason={emailBlockReason ?? ""}>
+                      <button
+                        type="button"
+                        onClick={handleResendEmail}
+                        disabled={sendingEmail || !canSendEmail}
+                        className="text-xs px-2.5 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {sendingEmail ? "Sending…" : "Resend RSVP email"}
+                      </button>
+                    </UpgradePrompt>
+                  )
                 ) : (
                   <span className="text-xs text-gray-400">No email on file</span>
                 )

@@ -53,6 +53,7 @@ export async function sendRsvpEmail(
   const from = process.env.SMTP_FROM ?? "noreply@localhost";
   const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const rsvpUrl = `${baseUrl}/rsvp/${rsvpToken}`;
+  const unsubscribeUrl = `${baseUrl}/unsubscribe/${rsvpToken}`;
 
   const subject = `You're invited — please RSVP for ${coupleName}`;
 
@@ -60,7 +61,16 @@ export async function sendRsvpEmail(
     ? weddingDate.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
     : null;
 
-  const text = `Hi ${guestFirstName},\n\nWe'd love to know if you can make it to our wedding.\n\nRSVP here: ${rsvpUrl}\n\n${coupleName}`;
+  const text = `Hi ${guestFirstName},
+
+We'd love to know if you can make it to our wedding.
+
+RSVP here: ${rsvpUrl}
+
+${coupleName}
+
+---
+Don't want to receive reminder emails? Unsubscribe here: ${unsubscribeUrl}`;
 
   const html = `<!DOCTYPE html>
 <html>
@@ -84,6 +94,13 @@ export async function sendRsvpEmail(
           <p style="font-size: 13px; color: #aaa; margin: 0 0 6px;">Or copy this link:</p>
           <p style="font-size: 13px; word-break: break-all; margin: 0 0 32px;"><a href="${safeUrl(rsvpUrl)}" style="color: #9b7e5c;">${esc(rsvpUrl)}</a></p>
           <p style="font-size: 15px; color: #555; margin: 0; border-top: 1px solid #e5e0d8; padding-top: 24px;">${esc(coupleName)}</p>
+        </td></tr>
+      </table>
+      <table cellpadding="0" cellspacing="0" style="max-width: 520px; width: 100%; padding-top: 16px;">
+        <tr><td style="text-align: center;">
+          <p style="font-size: 12px; color: #999; margin: 0;">
+            Don't want to receive reminder emails? <a href="${safeUrl(unsubscribeUrl)}" style="color: #9b7e5c; text-decoration: underline;">Unsubscribe</a>
+          </p>
         </td></tr>
       </table>
     </td></tr>

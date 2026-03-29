@@ -9,6 +9,7 @@ const publicPaths = [
   "/register",
   "/rsvp",
   "/invite",
+  "/unsubscribe",
   "/api/auth",
   "/api/register",
   "/api/rsvp",
@@ -92,6 +93,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!login|rsvp|api/auth|api/register|api/rsvp|api/health|api/webhooks|api/inngest|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|rsvp|unsubscribe|api/auth|api/register|api/rsvp|api/health|api/webhooks|api/inngest|_next/static|_next/image|favicon.ico).*)",
   ],
 };

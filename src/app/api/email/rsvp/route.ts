@@ -41,6 +41,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "Guest has no email address" }, { status: 400 });
     }
 
+    if (guest.unsubscribedAt) {
+      return NextResponse.json({ error: "This guest has unsubscribed from emails" }, { status: 400 });
+    }
+
     const coupleName = wedding?.coupleName ?? "Our Wedding";
 
     const result = await sendRsvpEmail(

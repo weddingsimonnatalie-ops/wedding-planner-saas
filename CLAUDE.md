@@ -158,8 +158,8 @@ Three roles defined in the `UserRole` Prisma enum:
 - **Bulk actions toolbar** (sticky, appears when ≥1 selected): Send RSVP emails (X), Set Status ▾, Set Meal ▾, Delete (X), Clear selection
 - **Bulk send RSVP emails** — 3-phase dialog:
   1. Confirm: will-send list (per-guest untick checkbox) + cannot-send list (no email)
-  2. Sending: real-time progress bar + sent/error lists (300 ms delay between sends)
-  3. Done: summary with sent/failed counts; closes and clears selection
+  2. Sending: real-time progress bar + sent/error lists (300 ms delay between sends); skips guests who have unsubscribed
+  3. Done: summary with sent/failed/skipped/unsubscribed counts; closes and clears selection
 - **Bulk set status** — "Set Status ▾" dropdown in bulk toolbar; shows all 5 statuses with coloured dots; clicking a status opens a confirmation dialog listing selected guest names; calls `POST /api/guests/bulk-status` with `{ guestIds, rsvpStatus }`; uses `prisma.guest.updateMany()` — same field as single-guest PATCH override; pencil icon appears automatically on bulk-overridden guests
 - **Bulk set meal** — "Set Meal ▾" dropdown in bulk toolbar; shows all active meal options + "— No choice —" to clear; confirmation dialog lists affected guests; note shown if any selected guests are not invited to reception (they are excluded from the update); calls `POST /api/guests/bulk-meal` with `{ guestIds, mealChoice }`; only sends reception-eligible guest IDs; toast confirms count updated
 
@@ -194,12 +194,13 @@ Three roles defined in the `UserRole` Prisma enum:
 ### Guest detail/edit (`/guests/[id]`)
 - Full edit form (name, email, phone, group, child flag, event invitations, notes)
 - **Save behaviour**: "Save changes" stays on the page — it does not navigate away. After a successful PUT, the form immediately refetches fresh data from `GET /api/guests/:id` (with `cache: "no-store"`) and updates all form state via `syncFromFresh()`. A "Changes saved" banner appears briefly. `router.refresh()` is also called to keep the RSC cache consistent.
+- **Unsubscribed banner**: if `unsubscribedAt` is set, shows grey banner above form: "This guest has unsubscribed from emails. They will not receive reminder emails. You can still contact them directly if needed." Resend button is disabled.
 - RSVP & Meal section:
   - Read-only event responses (Ceremony / Reception / Afterparty) — reads from `localGuest` state (updated after each save), not from the initial server-rendered prop
   - Auto-calculated overall RSVP status badge (green/amber/orange/red/grey)
   - "Override ▾" dropdown — saves immediately via PATCH, then refetches and syncs all state; no form submit required
   - **Admin override indicator**: if stored `rsvpStatus` differs from what `calculateRsvpStatus()` would compute, an amber "Manually set" warning with triangle icon appears next to the badge — derived from `localGuest` state so updates immediately after override or save
-  - "Resend RSVP email" ghost button (with confirm dialog)
+  - "Resend RSVP email" ghost button (with confirm dialog) — disabled if guest has unsubscribed
 - Meal & Dietary section (two-column: meal choice dropdown + dietary notes textarea)
 - Seating section (shown when guest is assigned to a table):
   - Shows table name
@@ -648,6 +649,7 @@ Core guest record. Key fields:
 - `tableId` — nullable FK to `Table`
 - `seatNumber` — nullable `Int`; seat position at the assigned table (1..capacity)
 - `isManualOverride` — `Boolean @default(false)`; set `true` by admin PATCH/bulk-status, `false` by public RSVP; drives the pencil icon in the guest list
+- `unsubscribedAt` — nullable `DateTime`; set when guest clicks unsubscribe link in RSVP email; guest will be skipped from future email sends
 
 ### MealOption
 Configurable meal choices (name, course, description, active flag, sort order).
@@ -713,6 +715,7 @@ Tasks track wedding to-do items. Key fields:
 | 18 | `remove_user_password` | Removes `password` field from User model. Password is now stored exclusively in the Account table (Better Auth architecture). |
 | 19 | `add_payment_receipt` | Adds `paymentId` column to `Attachment` model with index. Allows attachments to be linked to payments as receipts. Receipts appear in both supplier attachments list (with "Receipt" badge) and payment detail view. |
 | 20 | `add_guest_group_name_index` | Adds index on `Guest.groupName` for faster group filtering and grouping queries in the guest list. |
+| 21 | `add_unsubscribed_at` | Adds `unsubscribedAt DateTime?` to `Guest`. Set when guest clicks unsubscribe link in RSVP email; guest is skipped from future email sends. GDPR compliance feature. |
 
 **Important**: Migration 4 (`PARTIAL`) was applied directly via `docker compose exec db psql` and manually inserted into `_prisma_migrations`. If restoring to a fresh DB from the schema, all migrations will run in order automatically — no special handling needed. If the DB already exists from before migration 4, run:
 ```sql
@@ -887,7 +890,8 @@ POST       /api/guests/send-rsvp-emails  — Bulk RSVP email send ({ guestIds })
 POST       /api/guests/bulk-status       — Bulk RSVP status override ({ guestIds, rsvpStatus }) → { updated }
 POST       /api/guests/bulk-meal         — Bulk meal choice update ({ guestIds, mealChoice }) → { updated }
 GET/POST   /api/rsvp/[token]             — Public RSVP: GET returns guest + meal options, POST submits response
-POST       /api/email/rsvp              — Resend RSVP email (admin-triggered); rate limited: 50/hour per user
+GET        /api/unsubscribe/[token]      — Public unsubscribe: sets `unsubscribedAt` on guest, returns HTML confirmation page
+POST       /api/email/rsvp              — Resend RSVP email (admin-triggered); rate limited: 50/hour per user; returns 400 if guest unsubscribed
 GET        /api/payments                 — All payments across all suppliers with supplier info + receipt data + auto-detected OVERDUE status; optional pagination: ?skip=0&take=50
 GET/POST/DELETE /api/payments/[id]/receipt — Get/upload/delete receipt for a payment (PDF/JPG/PNG, max 20 MB)
 GET/POST   /api/suppliers               — Supplier list + create; optional pagination: ?skip=0&take=50

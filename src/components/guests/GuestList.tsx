@@ -34,6 +34,7 @@ interface Guest {
   attendingAfterpartyMaybe: boolean;
   mealChoice: string | null;
   table: { id: string; name: string } | null;
+  unsubscribedAt: string | Date | null;
 }
 
 interface MealOption {
@@ -1041,6 +1042,12 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                         {g.isManualOverride && (
                           <span title="Status manually set by admin"><Pencil className="w-3 h-3 text-amber-500 shrink-0" /></span>
                         )}
+                        {g.unsubscribedAt && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]" title="Guest has unsubscribed from emails">
+                            <XCircle className="w-3 h-3" />
+                            Unsubscribed
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1165,7 +1172,17 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                       <Link href={`/guests/${g.id}`} className="font-medium text-gray-900 hover:text-primary">
                         {g.firstName} {g.lastName}
                       </Link>
-                      {g.email && <p className="text-xs text-gray-400">{g.email}</p>}
+                      {g.email && (
+                        <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                          {g.unsubscribedAt && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]" title="Guest has unsubscribed from emails">
+                              <XCircle className="w-3 h-3" />
+                              Unsubscribed
+                            </span>
+                          )}
+                          {g.email}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{g.groupName ?? <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3">
