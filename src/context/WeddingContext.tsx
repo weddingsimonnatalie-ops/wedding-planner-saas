@@ -48,3 +48,14 @@ export function getEmailBlockReason(status: SubStatus): string | null {
   if (status === "TRIALING") return "Upgrade to a paid plan to send emails";
   return "Email sending requires an active subscription";
 }
+
+/**
+ * Returns a user-facing tooltip message explaining why file uploads are blocked,
+ * or null when the subscription allows uploads. Use in UI components alongside
+ * the canUpload boolean to show actionable tooltips on disabled upload buttons.
+ */
+export function getUploadBlockReason(status: SubStatus): string | null {
+  if (status === "ACTIVE" || status === "PAST_DUE") return null;
+  if (status === "TRIALING") return "Upgrade to a paid plan to upload files";
+  return "File uploads require an active subscription";
+}
