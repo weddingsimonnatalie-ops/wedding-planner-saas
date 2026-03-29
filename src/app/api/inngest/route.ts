@@ -10,6 +10,7 @@ import {
   cancellationDataExport,
   purgeExpiredWeddings,
   preDeletionWarning,
+  stripeReconcile,
 } from "@/lib/inngest";
 
 export const { GET, POST, PUT } = serve({
@@ -24,5 +25,6 @@ export const { GET, POST, PUT } = serve({
     cancellationDataExport,
     purgeExpiredWeddings,
     preDeletionWarning,
+    stripeReconcile,
   ],
 });
