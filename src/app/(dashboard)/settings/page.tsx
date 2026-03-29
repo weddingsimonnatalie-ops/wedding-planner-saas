@@ -67,15 +67,6 @@ export default async function SettingsPage() {
     process.env.SMTP_PASS
   );
 
-  const billing = config
-    ? {
-        subscriptionStatus: config.subscriptionStatus,
-        currentPeriodEnd: config.currentPeriodEnd,
-        trialEndsAt: config.trialEndsAt,
-        gracePeriodEndsAt: config.gracePeriodEndsAt,
-      }
-    : null;
-
   return (
     <>
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">Settings</h1>
@@ -88,7 +79,6 @@ export default async function SettingsPage() {
         ownerUserId={ownerUserId}
         currentUserEmail={ctx.userEmail}
         emailVerificationRequired={emailVerificationRequired}
-        billing={billing}
       />
     </>
   );
