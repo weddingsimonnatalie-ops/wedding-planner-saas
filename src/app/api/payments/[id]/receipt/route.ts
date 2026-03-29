@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin, requireRole } from "@/lib/api-auth";
+import { requireAdmin, requireRole, requireUploadFeature } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { fileTypeFromBuffer } from "file-type";
@@ -29,6 +29,9 @@ export async function POST(
     const { id } = await params;
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
+
+    const uploadGate = requireUploadFeature(auth.wedding.subscriptionStatus);
+    if (uploadGate) return uploadGate;
 
     const { weddingId } = auth;
 

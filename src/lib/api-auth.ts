@@ -185,3 +185,20 @@ export function getEmailBlockReason(subStatus: SubStatus): string | null {
   if (subStatus === "TRIALING") return "Upgrade to a paid plan to send emails";
   return "Email sending requires an active subscription";
 }
+
+/**
+ * Check whether the current subscription allows file uploads.
+ * Only ACTIVE and PAST_DUE (within grace period) subscriptions may upload files.
+ * TRIALING, CANCELLED, PAUSED, and lapsed PAST_DUE accounts are blocked.
+ *
+ * Call this after requireRole() has already confirmed the subscription is not
+ * fully lapsed — this adds the extra check that blocks TRIALING accounts.
+ */
+export function requireUploadFeature(subStatus: SubStatus): NextResponse | null {
+  if (subStatus === "ACTIVE" || subStatus === "PAST_DUE") return null;
+  const message =
+    subStatus === "TRIALING"
+      ? "File uploads require a paid subscription. Upgrade your trial to upload files."
+      : "File uploads require an active subscription. Please reactivate your plan.";
+  return NextResponse.json({ error: message }, { status: 402 });
+}
