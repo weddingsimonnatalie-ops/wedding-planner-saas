@@ -4,12 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Zap, Loader2, CheckCircle2, AlertCircle, CreditCard } from "lucide-react";
 
-type State = "idle" | "loading" | "success" | "error";
+type State = "idle" | "loading" | "success" | "error" | "checkout";
 
 interface Props {
   /**
    * Whether the wedding has a stripeSubscriptionId on record.
-   * False means checkout was never completed — we show a different error path.
+   * False means checkout was never completed — we need to create a checkout session.
    */
   hasSubscription: boolean;
 }
@@ -20,16 +20,73 @@ export function ActivateTrialButton({ hasSubscription }: Props) {
   const [errorMsg, setErrorMsg] = useState("");
 
   // No Stripe subscription on record — checkout was never completed.
-  // Show a prompt to complete it rather than letting the user hit a 422.
+  // Show a button to create a checkout session.
   if (!hasSubscription) {
+    async function handleCheckout() {
+      if (state === "checkout") return;
+      setState("checkout");
+      setErrorMsg("");
+
+      try {
+        const res = await fetch("/api/billing/checkout", { method: "POST" });
+        const data = await res.json();
+
+        if (!res.ok) {
+          setState("error");
+          setErrorMsg(data.error ?? "Failed to create checkout session");
+          return;
+        }
+
+        // Redirect to Stripe Checkout
+        if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+        }
+      } catch {
+        setState("error");
+        setErrorMsg("Network error. Please try again.");
+      }
+    }
+
+    if (state === "error") {
+      return (
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-800">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
+            <span>{errorMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setState("idle");
+              setErrorMsg("");
+            }}
+            className="text-sm text-gray-500 hover:text-gray-700 underline underline-offset-2"
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+
     return (
-      <a
-        href="/api/billing/portal"
-        className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+      <button
+        type="button"
+        onClick={handleCheckout}
+        disabled={state === "checkout"}
+        className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        <CreditCard className="w-4 h-4" />
-        Complete billing setup →
-      </a>
+        {state === "checkout" ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Redirecting to checkout…
+          </>
+        ) : (
+          <>
+            <CreditCard className="w-4 h-4" />
+            Complete billing setup
+          </>
+        )}
+      </button>
     );
   }
 
