@@ -11,6 +11,7 @@ import {
   purgeExpiredWeddings,
   preDeletionWarning,
   stripeReconcile,
+  stripeSyncDelayed,
 } from "@/lib/inngest";
 
 export const { GET, POST, PUT } = serve({
@@ -26,5 +27,6 @@ export const { GET, POST, PUT } = serve({
     purgeExpiredWeddings,
     preDeletionWarning,
     stripeReconcile,
+    stripeSyncDelayed,
   ],
 });

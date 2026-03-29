@@ -47,10 +47,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           console.error("checkout.session.completed: missing weddingId in metadata", session.id);
           break;
         }
+
+        // session.subscription can be null if Stripe hasn't created the subscription
+        // object yet (race condition). If null, schedule a delayed sync to pick it up.
+        const subscriptionId = session.subscription as string | null;
+        if (!subscriptionId) {
+          console.log(`checkout.session.completed: subscription not yet created for wedding ${weddingId}, scheduling delayed sync`);
+          if (useInngest) {
+            await inngest.send({
+              name: "stripe/sync.delayed",
+              data: { weddingId },
+              ts: Date.now() + 30000, // Run 30 seconds from now
+            });
+          }
+          break;
+        }
+
         await prisma.wedding.update({
           where: { id: weddingId },
           data: {
-            stripeSubscriptionId: session.subscription as string,
+            stripeSubscriptionId: subscriptionId,
             subscriptionStatus: "TRIALING",
           },
         });
