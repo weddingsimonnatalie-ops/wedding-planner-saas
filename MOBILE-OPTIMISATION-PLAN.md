@@ -74,18 +74,20 @@ Apple HIG minimum is 44×44px. Several icon buttons are currently ~28px.
 `text-[10px]` stat labels are borderline illegible on a 390px screen.
 
 ### `src/components/guests/GuestList.tsx`
-- [ ] Summary bar stat labels: `text-[10px]` → `text-[11px]`
+- [x] Summary bar stat labels: `text-[10px]` → `text-[11px]`
 
 ### `src/components/suppliers/SupplierList.tsx`
-- [ ] Summary bar stat labels: `text-[10px]` → `text-[11px]`
+- [x] Summary bar stat labels: `text-[10px]` → `text-[11px]`
 
 ### `src/components/payments/PaymentsList.tsx`
-- [ ] Summary bar stat labels: `text-[10px]` → `text-[11px]`
+- [x] Summary bar stat labels: `text-[10px]` → `text-[11px]` (all 4 labels)
 
 ### `src/components/dashboard/DashboardClient.tsx`
-- [ ] Review any `text-xs` or smaller labels in stat cards — increase where < 11px effective size
+- [x] Reviewed — uses `text-xs` (12px) throughout stat cards; no changes needed
 
-**Commit after Phase 3 complete.**
+Note: Remaining `text-[10px]` in seating planner (`SeatingListView`, `SeatingVisualView`) are intentional compact labels for table card controls and seat selectors — not body text, out of scope.
+
+**Commit after Phase 3 complete. ✅ DONE**
 
 ---
 
@@ -149,7 +151,7 @@ iOS Safari's dynamic toolbar shrinks the viewport. `max-h-[90vh]` can be too tal
 |-------|-------|--------|
 | 1 | Safe area insets (Dynamic Island + home indicator) | ✅ Complete |
 | 2 | Touch targets (44px minimum) | ✅ Complete |
-| 3 | Text readability (stat labels) | ⬜ Pending |
+| 3 | Text readability (stat labels) | ✅ Complete |
 | 4 | Modal viewport height (dvh) | ⬜ Pending |
 | 5 | Sidebar & viewport-fit meta | ⬜ Pending |
 | 6 | Breakpoint consistency & layout fixes | ⬜ Pending |

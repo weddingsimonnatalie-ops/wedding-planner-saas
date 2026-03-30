@@ -127,19 +127,19 @@ function SummaryBar({ payments }: { payments: PaymentItem[] }) {
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
       <div className="rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-2 py-1.5 sm:p-4 text-center min-w-0">
         <p className={`text-base sm:text-lg font-bold text-gray-900 truncate ${totalRemaining > 0 ? "" : ""}`}>{fmt(totalRemaining)}</p>
-        <p className="text-[10px] sm:text-xs text-gray-500 leading-tight">Remaining</p>
+        <p className="text-[11px] sm:text-xs text-gray-500 leading-tight">Remaining</p>
       </div>
       <div className="rounded-lg sm:rounded-xl border border-amber-200 bg-amber-50 px-2 py-1.5 sm:p-4 text-center min-w-0">
         <p className="text-base sm:text-lg font-bold text-amber-700 truncate">{fmt(dueThisMonth)}</p>
-        <p className="text-[10px] sm:text-xs text-amber-600 leading-tight">Due this month</p>
+        <p className="text-[11px] sm:text-xs text-amber-600 leading-tight">Due this month</p>
       </div>
       <div className="rounded-lg sm:rounded-xl border border-red-200 bg-red-50 px-2 py-1.5 sm:p-4 text-center min-w-0">
         <p className="text-base sm:text-lg font-bold text-red-700 truncate">{fmt(totalOverdue)}</p>
-        <p className="text-[10px] sm:text-xs text-red-500 leading-tight">Overdue</p>
+        <p className="text-[11px] sm:text-xs text-red-500 leading-tight">Overdue</p>
       </div>
       <div className="rounded-lg sm:rounded-xl border border-green-200 bg-green-50 px-2 py-1.5 sm:p-4 text-center min-w-0">
         <p className="text-base sm:text-lg font-bold text-green-700 truncate">{fmt(paidThisYear)}</p>
-        <p className="text-[10px] sm:text-xs text-green-600 leading-tight">Paid this year</p>
+        <p className="text-[11px] sm:text-xs text-green-600 leading-tight">Paid this year</p>
       </div>
     </div>
   );

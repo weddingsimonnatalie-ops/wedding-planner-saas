@@ -121,7 +121,7 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
         ].map(({ label, value, cls }) => (
           <div key={label} className="bg-white rounded-lg md:rounded-xl border border-gray-200 px-2 py-1.5 md:px-4 md:py-3 text-center min-w-0">
             <p className={`text-base md:text-xl font-bold ${cls} truncate`}>{value}</p>
-            <p className="text-[10px] md:text-xs text-gray-500 leading-tight">{label}</p>
+            <p className="text-[11px] md:text-xs text-gray-500 leading-tight">{label}</p>
           </div>
         ))}
       </div>
