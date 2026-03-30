@@ -124,22 +124,22 @@ function SummaryBar({ payments }: { payments: PaymentItem[] }) {
     .reduce((s, p) => s + p.amount, 0);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-      <div className="rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-2 py-1.5 sm:p-4 text-center min-w-0">
-        <p className={`text-base sm:text-lg font-bold text-gray-900 truncate ${totalRemaining > 0 ? "" : ""}`}>{fmt(totalRemaining)}</p>
-        <p className="text-[11px] sm:text-xs text-gray-500 leading-tight">Remaining</p>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+      <div className="rounded-lg md:rounded-xl border border-gray-200 bg-gray-50 px-2 py-1.5 md:p-4 text-center min-w-0">
+        <p className={`text-base md:text-lg font-bold text-gray-900 truncate ${totalRemaining > 0 ? "" : ""}`}>{fmt(totalRemaining)}</p>
+        <p className="text-[11px] md:text-xs text-gray-500 leading-tight">Remaining</p>
       </div>
-      <div className="rounded-lg sm:rounded-xl border border-amber-200 bg-amber-50 px-2 py-1.5 sm:p-4 text-center min-w-0">
-        <p className="text-base sm:text-lg font-bold text-amber-700 truncate">{fmt(dueThisMonth)}</p>
-        <p className="text-[11px] sm:text-xs text-amber-600 leading-tight">Due this month</p>
+      <div className="rounded-lg md:rounded-xl border border-amber-200 bg-amber-50 px-2 py-1.5 md:p-4 text-center min-w-0">
+        <p className="text-base md:text-lg font-bold text-amber-700 truncate">{fmt(dueThisMonth)}</p>
+        <p className="text-[11px] md:text-xs text-amber-600 leading-tight">Due this month</p>
       </div>
-      <div className="rounded-lg sm:rounded-xl border border-red-200 bg-red-50 px-2 py-1.5 sm:p-4 text-center min-w-0">
-        <p className="text-base sm:text-lg font-bold text-red-700 truncate">{fmt(totalOverdue)}</p>
-        <p className="text-[11px] sm:text-xs text-red-500 leading-tight">Overdue</p>
+      <div className="rounded-lg md:rounded-xl border border-red-200 bg-red-50 px-2 py-1.5 md:p-4 text-center min-w-0">
+        <p className="text-base md:text-lg font-bold text-red-700 truncate">{fmt(totalOverdue)}</p>
+        <p className="text-[11px] md:text-xs text-red-500 leading-tight">Overdue</p>
       </div>
-      <div className="rounded-lg sm:rounded-xl border border-green-200 bg-green-50 px-2 py-1.5 sm:p-4 text-center min-w-0">
-        <p className="text-base sm:text-lg font-bold text-green-700 truncate">{fmt(paidThisYear)}</p>
-        <p className="text-[11px] sm:text-xs text-green-600 leading-tight">Paid this year</p>
+      <div className="rounded-lg md:rounded-xl border border-green-200 bg-green-50 px-2 py-1.5 md:p-4 text-center min-w-0">
+        <p className="text-base md:text-lg font-bold text-green-700 truncate">{fmt(paidThisYear)}</p>
+        <p className="text-[11px] md:text-xs text-green-600 leading-tight">Paid this year</p>
       </div>
     </div>
   );
@@ -904,7 +904,7 @@ export function PaymentsList() {
   if (loading) {
     return (
       <div className="space-y-4 animate-pulse">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="rounded-xl border border-gray-200 bg-white h-20" />
           ))}

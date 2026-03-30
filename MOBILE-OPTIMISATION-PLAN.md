@@ -138,17 +138,20 @@ Note: `max-h-[90vh]` in `SupplierDetail.tsx` is on an `<img object-contain>` ele
 ## Phase 6 — Breakpoint Consistency & Layout Fixes
 
 ### `src/components/payments/PaymentsList.tsx`
-- [ ] Summary stats bar uses `sm:` (640px) breakpoint while guests/suppliers use `md:` (768px) — align to `md:` for the stats bar to match the design system
+- [x] Summary stats bar: all `sm:` breakpoints → `md:` (grid, gap, rounded, padding, font sizes)
+- [x] Loading skeleton summary bar: `sm:grid-cols-4` → `md:grid-cols-4` to match
 
 ### `src/components/appointments/AppointmentsList.tsx`
-- [ ] Filter selects: add `w-full sm:w-auto` so they go full-width on mobile (390px) rather than potentially overflowing
-- [ ] Review header row on mobile — ensure "Add appointment" button doesn't crowd the title on 390px
+- [x] Filter selects: `inputCls` updated with `w-full sm:w-auto`, `py-2 sm:py-1.5`, `min-h-[44px] sm:min-h-0` — full-width on mobile, auto-width on sm+
+- [x] Filter wrapper: `flex flex-wrap items-center` → `flex flex-col sm:flex-row sm:flex-wrap sm:items-center` so full-width selects stack cleanly
+- [x] Header row reviewed — "Appointments" + "Add appointment" fits comfortably on 390px ✓
 
 ### `src/components/dashboard/DashboardClient.tsx`
-- [ ] "Mark as Paid" buttons in upcoming payments: `px-2.5 py-1` is small — increase to `px-3 py-1.5` with `min-h-[44px]` on mobile
-- [ ] Review donut chart legend text wrapping at 390px — confirm no overflow
+- [x] "Mark as Paid" button: added `min-h-[44px]`
+- [x] Reminder email icon button: `p-1.5` → `min-h-[44px] min-w-[44px] flex items-center justify-center`
+- [x] Donut chart legend reviewed — stacks vertically on mobile, `w-16` labels fit fine at text-sm ✓
 
-**Commit after Phase 6 complete.**
+**Commit after Phase 6 complete. ✅ DONE**
 
 ---
 
@@ -161,4 +164,4 @@ Note: `max-h-[90vh]` in `SupplierDetail.tsx` is on an `<img object-contain>` ele
 | 3 | Text readability (stat labels) | ✅ Complete |
 | 4 | Modal viewport height (dvh) | ✅ Complete |
 | 5 | Sidebar & viewport-fit meta | ✅ Complete |
-| 6 | Breakpoint consistency & layout fixes | ⬜ Pending |
+| 6 | Breakpoint consistency & layout fixes | ✅ Complete |

@@ -210,7 +210,7 @@ export function AppointmentsList() {
     ).entries()
   );
 
-  const inputCls = "px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white";
+  const inputCls = "w-full sm:w-auto px-3 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white";
 
   if (loading) {
     return (
@@ -248,7 +248,7 @@ export function AppointmentsList() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
         <select
           value={filterCategory}
           onChange={e => setFilterCategory(e.target.value)}

@@ -292,14 +292,14 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => setMarkPaidConfirm(p)}
-                      className="flex items-center gap-1 px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
+                      className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
                     >
                       <Check className="w-3 h-3" /> Mark as Paid
                     </button>
                     <button
                       onClick={() => handleSendReminder(p.id)}
                       title="Send reminder email"
-                      className="p-1.5 text-gray-400 hover:text-primary rounded-lg hover:bg-primary/5 transition-colors"
+                      className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-primary rounded-lg hover:bg-primary/5 transition-colors"
                     >
                       <Mail className="w-3.5 h-3.5" />
                     </button>
