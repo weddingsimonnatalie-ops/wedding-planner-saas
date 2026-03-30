@@ -447,7 +447,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">Guests</h1>
+        <h1 className="text-xl md:text-2xl font-semibold text-gray-900">Guests</h1>
         {perms.can.editGuests && (
           <button
             type="button"
@@ -472,9 +472,9 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
         ].map(({ label, value, color }) => (
           <div
             key={label}
-            className="bg-white rounded-xl border border-gray-200 px-4 py-3 text-center"
+            className="bg-white rounded-xl border border-gray-200 px-3 py-2 md:px-4 md:py-3 text-center"
           >
-            <p className={`text-xl font-bold ${color}`}>{value}</p>
+            <p className={`text-lg md:text-xl font-bold ${color}`}>{value}</p>
             <p className="text-xs text-gray-500">{label}</p>
           </div>
         ))}
