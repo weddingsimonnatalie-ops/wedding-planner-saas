@@ -95,7 +95,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 flex flex-col shrink-0 transition-transform duration-200 md:relative md:translate-x-0 md:w-56",
+          "fixed inset-y-0 left-0 z-30 w-64 max-w-[85vw] bg-white border-r border-gray-200 flex flex-col shrink-0 transition-transform duration-200 md:relative md:translate-x-0 md:w-56 md:max-w-none",
           open ? "translate-x-0" : "-translate-x-full"
         )}
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
@@ -109,7 +109,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
           </div>
           <button
             onClick={() => setOpen(false)}
-            className="md:hidden p-1 rounded text-gray-400 hover:text-gray-600"
+            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-gray-400 hover:text-gray-600"
           >
             <X className="w-4 h-4" />
           </button>
@@ -161,7 +161,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
         <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-6 shrink-0">
           <button
             onClick={() => setOpen(true)}
-            className="md:hidden p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
+            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
             aria-label="Open menu"
           >
             <Menu className="w-5 h-5" />
@@ -171,7 +171,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
           <div className="flex items-center gap-3">
             <Link
               href="/settings/profile"
-              className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 transition-colors rounded-lg px-1 py-0.5 hover:bg-gray-100"
+              className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 transition-colors rounded-lg px-2 py-1 min-h-[44px] hover:bg-gray-100"
             >
               <div className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center shrink-0">
                 <User className="w-3.5 h-3.5 text-gray-500" />
@@ -180,7 +180,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
             </Link>
             <button
               onClick={async () => { await signOut(); window.location.href = "/login"; }}
-              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors px-2 py-1.5 rounded-lg hover:bg-gray-100"
+              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors px-2 py-1.5 min-h-[44px] rounded-lg hover:bg-gray-100"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:block">Sign out</span>

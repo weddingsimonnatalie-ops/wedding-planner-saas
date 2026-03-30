@@ -120,14 +120,18 @@ Note: `max-h-[90vh]` in `SupplierDetail.tsx` is on an `<img object-contain>` ele
 ## Phase 5 — Sidebar & Navigation Polish
 
 ### `src/components/LayoutShell.tsx`
-- [ ] Add `max-w-[85vw]` to sidebar element so it never exceeds ~330px on a 390px screen (currently `w-64` = 256px which is fine, but `max-w-[85vw]` prevents edge cases on very small devices)
-- [ ] Verify sidebar backdrop tap-to-close works reliably on iOS (check for `onClick` on overlay div)
-- [ ] Confirm sidebar closes on route change on mobile (so navigating doesn't leave sidebar open)
+- [x] Add `max-w-[85vw] md:max-w-none` to sidebar — protects against overflow on very small devices
+- [x] Sidebar backdrop tap-to-close — already had `onClick={() => setOpen(false)}` ✓
+- [x] Sidebar closes on route change — already had `useEffect(() => setOpen(false), [pathname])` ✓
+- [x] Sidebar X close button: `p-1` → `min-h-[44px] min-w-[44px] flex items-center justify-center`
+- [x] Hamburger button: `p-1.5` → `min-h-[44px] min-w-[44px] flex items-center justify-center`
+- [x] Header profile link: `px-1 py-0.5` → `px-2 py-1 min-h-[44px]`
+- [x] Header sign-out button: added `min-h-[44px]`
 
 ### `src/app/(dashboard)/layout.tsx`
-- [ ] Check `<meta name="viewport">` includes `viewport-fit=cover` — required for `env(safe-area-inset-*)` to work in iOS Safari
+- [x] `viewport-fit=cover` already set in Phase 1 via `Viewport` export in root `layout.tsx` ✓
 
-**Commit after Phase 5 complete.**
+**Commit after Phase 5 complete. ✅ DONE**
 
 ---
 
@@ -156,5 +160,5 @@ Note: `max-h-[90vh]` in `SupplierDetail.tsx` is on an `<img object-contain>` ele
 | 2 | Touch targets (44px minimum) | ✅ Complete |
 | 3 | Text readability (stat labels) | ✅ Complete |
 | 4 | Modal viewport height (dvh) | ✅ Complete |
-| 5 | Sidebar & viewport-fit meta | ⬜ Pending |
+| 5 | Sidebar & viewport-fit meta | ✅ Complete |
 | 6 | Breakpoint consistency & layout fixes | ⬜ Pending |
