@@ -47,9 +47,10 @@ function formatRelativeDate(dateStr: string): string {
 function Toast({ msg, ok }: { msg: string; ok: boolean }) {
   return (
     <div
-      className={`fixed bottom-4 right-4 px-4 py-2.5 rounded-lg text-sm text-white shadow-lg z-50 ${
+      className={`fixed right-4 px-4 py-2.5 rounded-lg text-sm text-white shadow-lg z-50 ${
         ok ? "bg-green-600" : "bg-red-600"
       }`}
+      style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
     >
       {msg}
     </div>

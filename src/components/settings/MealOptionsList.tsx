@@ -167,7 +167,7 @@ export function MealOptionsList({ initialOptions, mealCounts }: Props) {
       )}
 
       {toast && (
-        <div className="fixed bottom-4 right-4 px-4 py-2.5 rounded-lg text-sm text-white bg-green-600 shadow-lg">
+        <div className="fixed right-4 px-4 py-2.5 rounded-lg text-sm text-white bg-green-600 shadow-lg" style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
           {toast}
         </div>
       )}

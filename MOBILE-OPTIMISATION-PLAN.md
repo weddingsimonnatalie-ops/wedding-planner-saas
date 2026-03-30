@@ -11,22 +11,34 @@ All changes committed to branch: `mobile-view-improvements`
 The most impactful change. iPhone 15 hardware chrome (Dynamic Island + home indicator) currently overlaps fixed UI elements.
 
 ### `src/app/globals.css`
-- [ ] Add `env(safe-area-inset-bottom)` padding to `body` so page content doesn't sit behind the home indicator
-- [ ] Add `viewport-fit=cover` support comment / ensure meta tag exists in layout
+- [x] Add `env(safe-area-inset-bottom)` padding to `body` so page content doesn't sit behind the home indicator
+- [x] Add `viewport-fit=cover` support via `Viewport` export in `src/app/layout.tsx`
 
 ### `src/components/LayoutShell.tsx`
-- [ ] Fixed top header: add `padding-top: env(safe-area-inset-top)` so it clears the Dynamic Island
-- [ ] Mobile sidebar overlay: add `padding-top: env(safe-area-inset-top)` so nav items aren't hidden under Dynamic Island
-- [ ] Main content area: add `padding-bottom: env(safe-area-inset-bottom)` fallback for pages without a fixed bottom bar
+- [x] Outer wrapper: `h-screen` → `h-dvh` + `padding-top: env(safe-area-inset-top)` so header clears the Dynamic Island
+- [x] Mobile sidebar (`fixed inset-y-0`): add `padding-top: env(safe-area-inset-top)` so nav items aren't hidden under Dynamic Island
+- [x] Main content area: `padding-bottom: max(1rem, env(safe-area-inset-bottom))` fallback for pages without a fixed bottom bar
 
 ### `src/components/guests/GuestList.tsx`
-- [ ] Fixed bulk action bar (`fixed bottom-0`): add `pb-[env(safe-area-inset-bottom)]` so buttons aren't behind home indicator
+- [x] Toast notification (`fixed bottom-4 right-4`): replaced with `style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}`
 
 ### `src/components/tasks/TasksPageClient.tsx`
-- [ ] Fixed bulk action bar (`fixed bottom-0 ... md:left-56`): add `pb-[env(safe-area-inset-bottom)]`
-- [ ] Page bottom padding (`pb-20`): increase to `pb-[calc(5rem+env(safe-area-inset-bottom))]` so last task isn't obscured when bulk bar is visible
+- [x] Fixed bulk action bar: `padding-bottom: max(0.75rem, env(safe-area-inset-bottom))`
+- [x] Page bottom padding: replaced `pb-20` with `style={{ paddingBottom: 'max(5rem, calc(5rem + env(safe-area-inset-bottom)))' }}`
 
-**Commit after Phase 1 complete.**
+### All toast notifications (10 components)
+- [x] `AppointmentsList.tsx` — safe area bottom
+- [x] `SupplierTasksSection.tsx` — safe area bottom
+- [x] `PaymentsList.tsx` — safe area bottom
+- [x] `SupplierAppointmentsSection.tsx` — safe area bottom
+- [x] `MealOptionsList.tsx` — safe area bottom
+- [x] `SupplierDetail.tsx` — safe area bottom
+- [x] `ProfileClient.tsx` — safe area bottom
+- [x] `SeatingClient.tsx` — safe area bottom
+- [x] `UsersManager.tsx` — safe area bottom
+- [x] `CategoriesManager.tsx` — safe area bottom
+
+**Commit after Phase 1 complete. ✅ DONE**
 
 ---
 
@@ -130,7 +142,7 @@ iOS Safari's dynamic toolbar shrinks the viewport. `max-h-[90vh]` can be too tal
 
 | Phase | Focus | Status |
 |-------|-------|--------|
-| 1 | Safe area insets (Dynamic Island + home indicator) | ⬜ Pending |
+| 1 | Safe area insets (Dynamic Island + home indicator) | ✅ Complete |
 | 2 | Touch targets (44px minimum) | ⬜ Pending |
 | 3 | Text readability (stat labels) | ⬜ Pending |
 | 4 | Modal viewport height (dvh) | ⬜ Pending |

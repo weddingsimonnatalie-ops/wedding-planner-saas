@@ -611,7 +611,7 @@ export function TasksPageClient() {
   };
 
   return (
-    <div className="max-w-3xl pb-20">
+    <div className="max-w-3xl" style={{ paddingBottom: 'max(5rem, calc(5rem + env(safe-area-inset-bottom)))' }}>
       {/* ReadOnly banner */}
       {isViewer && (
         <ReadOnlyBanner message="You have view-only access to tasks." />
@@ -778,7 +778,7 @@ export function TasksPageClient() {
 
       {/* ── Bulk action bar ─────────────────────────────────────────────────── */}
       {selCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-center px-4 py-3 bg-white border-t border-gray-200 shadow-lg md:left-56">
+        <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-center px-4 py-3 bg-white border-t border-gray-200 shadow-lg md:left-56" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
           <div className="flex items-center gap-2 flex-wrap justify-center">
             <span className="text-sm text-gray-600 font-medium mr-1">
               {selCount} selected

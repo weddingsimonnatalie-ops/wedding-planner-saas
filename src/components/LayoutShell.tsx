@@ -83,7 +83,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
   }, [pathname, refreshToken]);
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-dvh bg-gray-50" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       {/* Mobile overlay */}
       {open && (
         <div
@@ -98,6 +98,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
           "fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 flex flex-col shrink-0 transition-transform duration-200 md:relative md:translate-x-0 md:w-56",
           open ? "translate-x-0" : "-translate-x-full"
         )}
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="h-14 flex items-center justify-between px-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
@@ -213,7 +214,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
           </div>
         )}
 
-        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-4 md:p-6" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>{children}</main>
       </div>
     </div>
   );

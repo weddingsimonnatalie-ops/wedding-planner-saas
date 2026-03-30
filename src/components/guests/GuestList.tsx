@@ -1233,9 +1233,10 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
       {/* Toast */}
       {toast && (
         <div
-          className={`fixed bottom-4 right-4 px-4 py-2.5 rounded-lg text-sm text-white shadow-lg transition-opacity ${
+          className={`fixed right-4 px-4 py-2.5 rounded-lg text-sm text-white shadow-lg transition-opacity ${
             toast.ok ? "bg-green-600" : "bg-red-600"
           }`}
+          style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
           {toast.msg}
         </div>
