@@ -47,20 +47,25 @@ The most impactful change. iPhone 15 hardware chrome (Dynamic Island + home indi
 Apple HIG minimum is 44×44px. Several icon buttons are currently ~28px.
 
 ### `src/components/appointments/AppointmentsList.tsx`
-- [ ] Edit button: `p-1.5` → `p-2.5` to reach 44px effective touch area
-- [ ] Delete button: same change
+- [x] Edit button: `p-1.5` → `min-h-[44px] min-w-[44px] flex items-center justify-center`
+- [x] Delete button: same change
 
 ### `src/components/guests/GuestList.tsx`
-- [ ] Review all icon buttons in mobile card rows — ensure `min-h-[44px] min-w-[44px]` or equivalent padding
-- [ ] Filter toggle button on mobile: confirm adequate touch target
+- [x] Mobile card checkbox: wrapped in `<label>` with `min-h-[44px] min-w-[44px]` hit area
+- [x] Filter toggle button: added `min-h-[44px]`
 
 ### `src/components/tasks/TasksPageClient.tsx`
-- [ ] Task checkbox: wrap in a larger hit area or increase padding to reach 44px tap target
+- [x] Task bulk-select checkbox: wrapped in `<label>` with `min-h-[44px] min-w-[44px]`
+- [x] Group header select-all checkbox: same label wrapping
+- [x] Complete checkbox button: `min-w-[16px] min-h-[16px]` → `min-w-[44px] min-h-[44px] flex items-center justify-center`
+- [x] Edit/Delete buttons: `min-w-[32px] min-h-[32px]` → `min-w-[44px] min-h-[44px]`
 
 ### `src/components/payments/PaymentsList.tsx`
-- [ ] Edit / delete / mark-paid icon buttons on payment cards: audit and increase padding where < 44px
+- [x] Receipt view/delete icon buttons: `p-1.5` → `min-h-[44px] min-w-[44px] flex items-center justify-center`
+- [x] Mark as paid / Mark as unpaid / Reminder buttons: added `min-h-[44px]`
+- [x] Edit/Delete icon buttons: `p-1.5` → `min-h-[44px] min-w-[44px] flex items-center justify-center`
 
-**Commit after Phase 2 complete.**
+**Commit after Phase 2 complete. ✅ DONE**
 
 ---
 
@@ -143,7 +148,7 @@ iOS Safari's dynamic toolbar shrinks the viewport. `max-h-[90vh]` can be too tal
 | Phase | Focus | Status |
 |-------|-------|--------|
 | 1 | Safe area insets (Dynamic Island + home indicator) | ✅ Complete |
-| 2 | Touch targets (44px minimum) | ⬜ Pending |
+| 2 | Touch targets (44px minimum) | ✅ Complete |
 | 3 | Text readability (stat labels) | ⬜ Pending |
 | 4 | Modal viewport height (dvh) | ⬜ Pending |
 | 5 | Sidebar & viewport-fit meta | ⬜ Pending |

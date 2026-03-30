@@ -138,13 +138,17 @@ function TaskRow({
     >
       {/* Bulk select checkbox */}
       {canBulkSelect && (
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => onToggleSelect(task.id)}
+        <label
+          className="flex items-center justify-center min-h-[44px] min-w-[44px] shrink-0 cursor-pointer -m-2 p-2"
           onClick={e => e.stopPropagation()}
-          className="mt-0.5 w-3.5 h-3.5 shrink-0 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-        />
+        >
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelect(task.id)}
+            className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+          />
+        </label>
       )}
 
       {/* Complete checkbox */}
@@ -152,7 +156,7 @@ function TaskRow({
         type="button"
         onClick={() => canComplete && onToggleComplete(task)}
         disabled={!canComplete}
-        className={`mt-0.5 shrink-0 group min-w-[16px] min-h-[16px] ${
+        className={`shrink-0 group min-w-[44px] min-h-[44px] flex items-center justify-center -m-2 p-2 ${
           canComplete ? "" : "cursor-not-allowed opacity-40"
         }`}
         title={
@@ -226,7 +230,7 @@ function TaskRow({
             <button
               type="button"
               onClick={() => onEdit(task)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors min-w-[32px] min-h-[32px] flex items-center justify-center"
+              className="rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               title="Edit"
             >
               <Edit2 className="w-3.5 h-3.5" />
@@ -236,7 +240,7 @@ function TaskRow({
             <button
               type="button"
               onClick={() => onDelete(task)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors min-w-[32px] min-h-[32px] flex items-center justify-center"
+              className="rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
               title="Delete"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -280,13 +284,15 @@ function GroupSection({
       <div className="px-4 pt-3">
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg mb-1 ${headerCls}`}>
           {canBulkSelect && (
-            <input
-              type="checkbox"
-              checked={allSelected}
-              ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
-              onChange={() => onToggleSelectAll(ids, !allSelected)}
-              className="w-3.5 h-3.5 rounded border-current text-primary focus:ring-primary cursor-pointer"
-            />
+            <label className="flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer -m-2 p-2">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                onChange={() => onToggleSelectAll(ids, !allSelected)}
+                className="w-3.5 h-3.5 rounded border-current text-primary focus:ring-primary cursor-pointer"
+              />
+            </label>
           )}
           <span className="text-xs font-semibold uppercase tracking-wide">{label}</span>
           <span className="text-xs opacity-70">({tasks.length})</span>

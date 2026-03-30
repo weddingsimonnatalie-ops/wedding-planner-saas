@@ -87,7 +87,7 @@ function AppointmentCard({
             {onEdit && (
               <button
                 onClick={() => onEdit(appt)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
                 title="Edit"
               >
                 <Edit2 className="w-3.5 h-3.5" />
@@ -96,7 +96,7 @@ function AppointmentCard({
             {onDelete && (
               <button
                 onClick={() => onDelete(appt.id)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                 title="Delete"
               >
                 <Trash2 className="w-3.5 h-3.5" />

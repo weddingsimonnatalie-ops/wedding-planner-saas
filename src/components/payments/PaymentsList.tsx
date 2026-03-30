@@ -424,7 +424,7 @@ function PaymentCard({
                   <button
                     type="button"
                     onClick={onViewReceipt}
-                    className="p-1.5 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
                     title="View receipt"
                   >
                     <Eye className="w-3.5 h-3.5" />
@@ -432,7 +432,7 @@ function PaymentCard({
                   <button
                     type="button"
                     onClick={onDeleteReceipt}
-                    className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                    className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                     title="Delete receipt"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -466,7 +466,7 @@ function PaymentCard({
           <button
             type="button"
             onClick={onMarkPaid}
-            className="flex items-center gap-1 px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
           >
             <Check className="w-3 h-3" /> Mark as paid
           </button>
@@ -475,7 +475,7 @@ function PaymentCard({
           <button
             type="button"
             onClick={onMarkUnpaid}
-            className="flex items-center gap-1 px-2.5 py-1 bg-gray-50 text-gray-600 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] bg-gray-50 text-gray-600 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-100 transition-colors"
           >
             <RotateCcw className="w-3 h-3" /> Mark as unpaid
           </button>
@@ -487,7 +487,7 @@ function PaymentCard({
               onClick={canSendEmail ? onSendReminder : undefined}
               disabled={!canSendEmail}
               title={canSendEmail ? "Send reminder email" : undefined}
-              className="flex items-center gap-1 px-2.5 py-1 text-gray-500 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] text-gray-500 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Mail className="w-3 h-3" /> Reminder
             </button>
@@ -497,7 +497,7 @@ function PaymentCard({
           <button
             type="button"
             onClick={onStartEdit}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
             title="Edit"
           >
             <Pencil className="w-3.5 h-3.5" />
@@ -505,7 +505,7 @@ function PaymentCard({
           <button
             type="button"
             onClick={onDelete}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
             title="Delete"
           >
             <Trash2 className="w-3.5 h-3.5" />

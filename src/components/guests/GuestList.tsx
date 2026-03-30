@@ -630,7 +630,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
           <button
             type="button"
             onClick={toggleFilterPanel}
-            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 text-sm border rounded-lg transition-colors whitespace-nowrap shrink-0 ${activeFilterCount > 0 ? "bg-primary/10 border-primary/30 text-primary" : "text-gray-600 border-gray-300 hover:bg-gray-50"}`}
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 min-h-[44px] text-sm border rounded-lg transition-colors whitespace-nowrap shrink-0 ${activeFilterCount > 0 ? "bg-primary/10 border-primary/30 text-primary" : "text-gray-600 border-gray-300 hover:bg-gray-50"}`}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Filters</span>
@@ -1020,13 +1020,17 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                 <div className="px-3 pt-2.5 pb-2">
                   <div className="flex items-center gap-2">
                     {perms.can.editGuests && (
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(g.id)}
-                        onChange={() => toggleSelect(g.id)}
+                      <label
+                        className="flex items-center justify-center min-h-[44px] min-w-[44px] shrink-0 cursor-pointer -m-2 p-2"
                         onClick={(e) => e.stopPropagation()}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer shrink-0"
-                      />
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(g.id)}
+                          onChange={() => toggleSelect(g.id)}
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer"
+                        />
+                      </label>
                     )}
                     <span className="font-medium text-gray-900 truncate flex-1">
                       {g.firstName} {g.lastName}
