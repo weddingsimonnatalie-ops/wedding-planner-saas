@@ -1264,8 +1264,8 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
         const label = STATUS_LABELS[bulkStatusDialog.status] ?? bulkStatusDialog.status;
         const selectedGuests = guests.filter(g => selectedIds.has(g.id));
         return (
-          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4 pb-4" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[85dvh]">
               <div className="px-6 pt-6 pb-4 border-b border-gray-100">
                 <h2 className="text-lg font-semibold text-gray-900">
                   Set status to &ldquo;{label}&rdquo; for {selectedIds.size} guest{selectedIds.size !== 1 ? "s" : ""}?
@@ -1314,8 +1314,8 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
         const nonReceptionCount = selectedGuests.length - receptionGuests.length;
         const isClear = bulkMealDialog.mealChoiceId === null;
         return (
-          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4 pb-4" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[85dvh]">
               <div className="px-6 pt-6 pb-4 border-b border-gray-100">
                 <h2 className="text-lg font-semibold text-gray-900">
                   {isClear
@@ -1370,8 +1370,8 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
 
       {/* Bulk email dialog */}
       {emailDialog && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4 pb-4" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85dvh] flex flex-col">
 
             {/* ── Confirm phase ── */}
             {emailDialog.phase === "confirm" && (

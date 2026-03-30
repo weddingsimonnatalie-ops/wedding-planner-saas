@@ -135,8 +135,8 @@ export function CsvImportModal({ onClose, onImported }: Props) {
   const actionableCount = newRows.length + dupRows.filter((r) => dupActions[r._line] !== "skip").length;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 pb-4" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[85dvh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-base font-semibold text-gray-900">Import Guests from CSV</h2>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">

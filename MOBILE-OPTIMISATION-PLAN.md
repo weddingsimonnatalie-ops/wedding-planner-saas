@@ -95,22 +95,25 @@ Note: Remaining `text-[10px]` in seating planner (`SeatingListView`, `SeatingVis
 
 iOS Safari's dynamic toolbar shrinks the viewport. `max-h-[90vh]` can be too tall when the browser chrome is visible, cutting off modal footers.
 
-### `src/components/guests/GuestModal.tsx`
-- [ ] Replace `max-h-[90vh]` with `max-h-[85dvh]` (dynamic viewport height)
+### Modals using `overflow-y-auto` scrollable backdrop (`my-8` card — no explicit max-h)
+These needed safe-area-top padding on the backdrop so the modal card clears the Dynamic Island.
+- [x] `GuestModal.tsx` — `p-4` → `px-4 pb-4` + `paddingTop: max(1rem, env(safe-area-inset-top))`
+- [x] `SupplierModal.tsx` — same
+- [x] `AppointmentModal.tsx` — same
+- [x] `PaymentModal.tsx` — same
+- [x] `TaskModal.tsx` — same
+- [x] `ReceiptUploadModal.tsx` — same
+- [x] `ReceiptViewModal.tsx` — same
 
-### `src/components/suppliers/SupplierModal.tsx`
-- [ ] Replace `max-h-[90vh]` with `max-h-[85dvh]`
+### Modals using `items-center` backdrop with explicit `max-h-[90vh]` on card
+- [x] `CsvImportModal.tsx` — backdrop safe-area-top + inner card `max-h-[90vh]` → `max-h-[85dvh]`
+- [x] `GuestList.tsx` bulk status dialog — same two fixes
+- [x] `GuestList.tsx` bulk meal dialog — same two fixes
+- [x] `GuestList.tsx` bulk email dialog — same two fixes
 
-### `src/app/(dashboard)/appointments/page.tsx` or `AppointmentModal`
-- [ ] Locate appointment add/edit modal — apply `max-h-[85dvh]`
+Note: `max-h-[90vh]` in `SupplierDetail.tsx` is on an `<img object-contain>` element, not a modal card — left unchanged.
 
-### `src/components/tasks/TaskModal.tsx` (or wherever task modal lives)
-- [ ] Apply `max-h-[85dvh]`
-
-### `src/components/guests/CsvImportModal.tsx`
-- [ ] Apply `max-h-[85dvh]` — CSV import modal is tall and likely to overflow on iPhone 15
-
-**Commit after Phase 4 complete.**
+**Commit after Phase 4 complete. ✅ DONE**
 
 ---
 
@@ -152,6 +155,6 @@ iOS Safari's dynamic toolbar shrinks the viewport. `max-h-[90vh]` can be too tal
 | 1 | Safe area insets (Dynamic Island + home indicator) | ✅ Complete |
 | 2 | Touch targets (44px minimum) | ✅ Complete |
 | 3 | Text readability (stat labels) | ✅ Complete |
-| 4 | Modal viewport height (dvh) | ⬜ Pending |
+| 4 | Modal viewport height (dvh) | ✅ Complete |
 | 5 | Sidebar & viewport-fit meta | ⬜ Pending |
 | 6 | Breakpoint consistency & layout fixes | ⬜ Pending |

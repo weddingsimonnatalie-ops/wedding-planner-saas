@@ -48,7 +48,8 @@ export function ReceiptViewModal({ payment, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 p-4 overflow-y-auto"
+      className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 px-4 pb-4 overflow-y-auto"
+      style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
       onClick={onClose}
     >
       <div
