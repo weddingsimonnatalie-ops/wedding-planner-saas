@@ -124,22 +124,22 @@ function SummaryBar({ payments }: { payments: PaymentItem[] }) {
     .reduce((s, p) => s + p.amount, 0);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-        <p className="text-xs text-gray-500">Total remaining</p>
-        <p className="text-lg font-bold text-gray-900 mt-0.5">{fmt(totalRemaining)}</p>
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+      <div className="rounded-lg sm:rounded-xl border border-gray-200 bg-gray-50 px-2 py-1.5 sm:p-4 text-center min-w-0">
+        <p className={`text-base sm:text-lg font-bold text-gray-900 truncate ${totalRemaining > 0 ? "" : ""}`}>{fmt(totalRemaining)}</p>
+        <p className="text-[10px] sm:text-xs text-gray-500 leading-tight">Remaining</p>
       </div>
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-        <p className="text-xs text-amber-600">Due this month</p>
-        <p className="text-lg font-bold text-amber-700 mt-0.5">{fmt(dueThisMonth)}</p>
+      <div className="rounded-lg sm:rounded-xl border border-amber-200 bg-amber-50 px-2 py-1.5 sm:p-4 text-center min-w-0">
+        <p className="text-base sm:text-lg font-bold text-amber-700 truncate">{fmt(dueThisMonth)}</p>
+        <p className="text-[10px] sm:text-xs text-amber-600 leading-tight">Due this month</p>
       </div>
-      <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-        <p className="text-xs text-red-500">Overdue</p>
-        <p className="text-lg font-bold text-red-700 mt-0.5">{fmt(totalOverdue)}</p>
+      <div className="rounded-lg sm:rounded-xl border border-red-200 bg-red-50 px-2 py-1.5 sm:p-4 text-center min-w-0">
+        <p className="text-base sm:text-lg font-bold text-red-700 truncate">{fmt(totalOverdue)}</p>
+        <p className="text-[10px] sm:text-xs text-red-500 leading-tight">Overdue</p>
       </div>
-      <div className="rounded-xl border border-green-200 bg-green-50 p-4">
-        <p className="text-xs text-green-600">Paid this year</p>
-        <p className="text-lg font-bold text-green-700 mt-0.5">{fmt(paidThisYear)}</p>
+      <div className="rounded-lg sm:rounded-xl border border-green-200 bg-green-50 px-2 py-1.5 sm:p-4 text-center min-w-0">
+        <p className="text-base sm:text-lg font-bold text-green-700 truncate">{fmt(paidThisYear)}</p>
+        <p className="text-[10px] sm:text-xs text-green-600 leading-tight">Paid this year</p>
       </div>
     </div>
   );

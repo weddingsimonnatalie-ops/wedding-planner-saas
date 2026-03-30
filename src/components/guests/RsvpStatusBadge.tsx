@@ -14,11 +14,23 @@ const STATUS_LABELS: Record<string, string> = {
   MAYBE:    "Maybe",
 };
 
-const STATUS_TITLES: Record<string, string> = {
-  PARTIAL: "Attending some events",
+const STATUS_SHORT: Record<string, string> = {
+  ACCEPTED: "ACC",
+  PARTIAL:  "PAR",
+  DECLINED: "DEC",
+  PENDING:  "PEN",
+  MAYBE:    "MAY",
 };
 
-export function RsvpStatusBadge({ status }: { status: string }) {
+const STATUS_TITLES: Record<string, string> = {
+  ACCEPTED: "Accepted",
+  PARTIAL:  "Attending some events",
+  DECLINED: "Declined",
+  PENDING:  "Pending",
+  MAYBE:    "Maybe",
+};
+
+export function RsvpStatusBadge({ status, short = false }: { status: string; short?: boolean }) {
   return (
     <span
       title={STATUS_TITLES[status]}
@@ -26,7 +38,9 @@ export function RsvpStatusBadge({ status }: { status: string }) {
         STATUS_STYLES[status] ?? "bg-gray-100 text-gray-600"
       }`}
     >
-      {STATUS_LABELS[status] ?? status}
+      {short
+        ? (STATUS_SHORT[status] ?? status.slice(0, 3).toUpperCase())
+        : (STATUS_LABELS[status] ?? status)}
     </span>
   );
 }

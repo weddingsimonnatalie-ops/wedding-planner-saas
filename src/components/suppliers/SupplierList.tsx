@@ -112,16 +112,16 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
       </div>
 
       {/* Summary bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4">
         {[
           { label: "Contracted", value: fmt(totals.contracted), cls: "text-gray-900" },
           { label: "Paid", value: fmt(totals.paid), cls: "text-green-700" },
           { label: "Remaining", value: fmt(totals.remaining), cls: "text-amber-700" },
-          { label: "Overdue payments", value: String(totals.overdue), cls: totals.overdue > 0 ? "text-red-600" : "text-gray-500" },
+          { label: "Overdue", value: String(totals.overdue), cls: totals.overdue > 0 ? "text-red-600" : "text-gray-500" },
         ].map(({ label, value, cls }) => (
-          <div key={label} className="bg-white rounded-xl border border-gray-200 px-4 py-3">
-            <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-            <p className={`text-xl font-semibold ${cls}`}>{value}</p>
+          <div key={label} className="bg-white rounded-lg md:rounded-xl border border-gray-200 px-2 py-1.5 md:px-4 md:py-3 text-center min-w-0">
+            <p className={`text-base md:text-xl font-bold ${cls} truncate`}>{value}</p>
+            <p className="text-[10px] md:text-xs text-gray-500 leading-tight">{label}</p>
           </div>
         ))}
       </div>

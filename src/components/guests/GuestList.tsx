@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Edit2, Trash2, Copy, Mail, Upload, X, CheckCircle2, XCircle, ChevronDown, Loader2, Pencil, Tag, Utensils, Download, Plus, MoreHorizontal, SlidersHorizontal } from "lucide-react";
+import { Edit2, Trash2, Copy, Mail, Upload, X, CheckCircle2, XCircle, ChevronDown, ChevronRight, Loader2, Pencil, Tag, Utensils, Download, Plus, MoreHorizontal, SlidersHorizontal } from "lucide-react";
 import { RsvpStatusBadge } from "./RsvpStatusBadge";
 import { CsvImportModal } from "./CsvImportModal";
 import { PrintGuestListButton } from "./PrintGuestListButton";
@@ -460,7 +460,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
       </div>
 
       {/* Stats bar */}
-      <div className="grid grid-cols-3 md:grid-cols-7 gap-3">
+      <div className="grid grid-cols-4 md:grid-cols-7 gap-2 md:gap-3">
         {[
           { label: hasFilters ? "Filtered" : "Total", value: stats.total, color: hasFilters ? "text-primary" : "text-gray-900" },
           { label: "Accepted", value: stats.accepted, color: "text-green-600" },
@@ -472,10 +472,10 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
         ].map(({ label, value, color }) => (
           <div
             key={label}
-            className="bg-white rounded-xl border border-gray-200 px-3 py-2 md:px-4 md:py-3 text-center"
+            className="bg-white rounded-lg md:rounded-xl border border-gray-200 px-2 py-1.5 md:px-4 md:py-3 text-center min-w-0"
           >
-            <p className={`text-lg md:text-xl font-bold ${color}`}>{value}</p>
-            <p className="text-xs text-gray-500">{label}</p>
+            <p className={`text-base md:text-xl font-bold ${color} truncate`}>{value}</p>
+            <p className="text-[10px] md:text-xs text-gray-500 leading-tight">{label}</p>
           </div>
         ))}
       </div>
@@ -1010,48 +1010,34 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
       ) : (
         <div className={`transition-opacity duration-150 ${isPending ? "opacity-50 pointer-events-none" : ""}`}>
           {/* ── Mobile card layout (hidden on md+) ── */}
-          <div className="md:hidden space-y-2">
+          <div className="md:hidden space-y-1.5">
             {guests.map((g) => (
-              <div
+              <Link
                 key={g.id}
-                className={`bg-white rounded-xl border transition-colors ${perms.can.editGuests && selectedIds.has(g.id) ? "border-blue-400 bg-blue-50" : "border-gray-200"} p-4`}
-                onClick={() => perms.can.editGuests && toggleSelect(g.id)}
+                href={`/guests/${g.id}`}
+                className={`block bg-white rounded-xl border transition-colors ${perms.can.editGuests && selectedIds.has(g.id) ? "border-blue-400 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}
               >
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex items-start gap-2 min-w-0">
+                <div className="px-3 pt-2.5 pb-2">
+                  <div className="flex items-center gap-2">
                     {perms.can.editGuests && (
                       <input
                         type="checkbox"
                         checked={selectedIds.has(g.id)}
                         onChange={() => toggleSelect(g.id)}
                         onClick={(e) => e.stopPropagation()}
-                        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer shrink-0"
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer shrink-0"
                       />
                     )}
-                    <div className="min-w-0">
-                      <Link
-                        href={`/guests/${g.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="font-semibold text-gray-900 hover:text-primary block"
-                      >
-                        {g.firstName} {g.lastName}
-                      </Link>
-                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                        {g.groupName && <span className="text-xs text-gray-500">{g.groupName}</span>}
-                        <RsvpStatusBadge status={g.rsvpStatus} />
-                        {g.isManualOverride && (
-                          <span title="Status manually set by admin"><Pencil className="w-3 h-3 text-amber-500 shrink-0" /></span>
-                        )}
-                        {g.unsubscribedAt && (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]" title="Guest has unsubscribed from emails">
-                            <XCircle className="w-3 h-3" />
-                            Unsubscribed
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                    <span className="font-medium text-gray-900 truncate flex-1">
+                      {g.firstName} {g.lastName}
+                    </span>
+                    {g.groupName && (
+                      <span className="text-xs text-gray-500 truncate">{g.groupName}</span>
+                    )}
+                    <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
                   </div>
-                  <div className="flex gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-500 ml-6">
+                    <RsvpStatusBadge status={g.rsvpStatus} short />
                     {[
                       { key: "C", invited: g.invitedToCeremony,   attending: g.attendingCeremony,   maybe: g.attendingCeremonyMaybe },
                       { key: "R", invited: g.invitedToReception,  attending: g.attendingReception,  maybe: g.attendingReceptionMaybe },
@@ -1059,8 +1045,8 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                     ].map(({ key, invited, attending, maybe }) => (
                       <span
                         key={key}
-                        className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold ${
-                          !invited ? "opacity-0 pointer-events-none" :
+                        className={`inline-flex items-center justify-center w-4 h-4 rounded text-[10px] font-bold ${
+                          !invited ? "opacity-0" :
                           attending === true  ? "bg-green-100 text-green-700" :
                           attending === false ? "bg-red-100 text-red-600" :
                           maybe               ? "bg-amber-100 text-amber-700" :
@@ -1070,55 +1056,18 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                         {key}
                       </span>
                     ))}
+                    {g.unsubscribedAt && (
+                      <span title="Unsubscribed from emails">
+                        <XCircle className="w-3 h-3 text-gray-400 shrink-0" />
+                      </span>
+                    )}
+                    <span className="flex-1" />
+                    {g.table && (
+                      <span className="text-gray-500">{g.table.name}</span>
+                    )}
                   </div>
                 </div>
-                {g.table && (
-                  <p className="text-xs text-gray-500 mb-2 ml-6">Table: <span className="font-medium">{g.table.name}</span></p>
-                )}
-                <div
-                  className="flex items-center gap-1 pt-1 border-t border-gray-100"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    title="Copy RSVP link"
-                    onClick={() => copyRsvpLink(g.rsvpToken)}
-                    className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors text-xs min-h-[44px]"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                  {perms.can.manageRsvp && (
-                    <UpgradePrompt active={!canSendEmail} reason={emailBlockReason ?? ""} className="flex-1">
-                      <button
-                        title={canSendEmail ? "Send RSVP email" : undefined}
-                        onClick={() => canSendEmail && handleSendEmail(g)}
-                        disabled={sendingId === g.id || !canSendEmail}
-                        className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs min-h-[44px]"
-                      >
-                        <Mail className="w-4 h-4" />
-                      </button>
-                    </UpgradePrompt>
-                  )}
-                  {perms.can.editGuests && (
-                    <>
-                      <Link
-                        href={`/guests/${g.id}`}
-                        className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors text-xs min-h-[44px]"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                        <span>Edit</span>
-                      </Link>
-                      <button
-                        title="Delete guest"
-                        onClick={() => handleDelete(g.id)}
-                        disabled={deletingId === g.id}
-                        className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-40 transition-colors text-xs min-h-[44px]"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
+              </Link>
             ))}
             <p className="text-xs text-gray-400 text-center py-2">
               {guests.length} guest{guests.length !== 1 ? "s" : ""}
