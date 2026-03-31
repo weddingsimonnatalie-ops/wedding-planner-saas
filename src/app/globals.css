@@ -46,3 +46,15 @@
     font-size: 16px !important;
   }
 }
+
+/* Main content padding for mobile bottom nav */
+.main-content {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 767px) {
+  .main-content {
+    /* 60px for bottom nav + safe area inset */
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  }
+}

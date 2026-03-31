@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { BottomNav } from "@/components/BottomNav";
 import {
   LayoutDashboard, Users, LayoutGrid, Briefcase, Settings,
   Heart, LogOut, User, Menu, X, CalendarDays, CreditCard, CheckSquare,
@@ -214,7 +215,14 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
           </div>
         )}
 
-        <main className="flex-1 overflow-auto p-4 md:p-6" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>{children}</main>
+        <main className="flex-1 overflow-auto p-4 md:p-6 main-content">{children}</main>
+
+        {/* Bottom navigation bar (mobile only) */}
+        <BottomNav
+          role={role}
+          taskBadge={taskBadge}
+          onOpenSidebar={() => setOpen(true)}
+        />
       </div>
     </div>
   );
