@@ -12,7 +12,7 @@ interface TimelineEvent {
   location: string | null;
   notes: string | null;
   eventType: string;
-  supplierId: string | null;
+  supplierId?: string | null;
   supplier: { id: string; name: string } | null;
 }
 
