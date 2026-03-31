@@ -122,17 +122,6 @@ export function SettingsClient({
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Session Timeout</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Configure how long users stay logged in before being timed out due to inactivity.
-            </p>
-            <SessionTimeoutSettings
-              initialTimeoutMinutes={config?.sessionTimeout ?? 60}
-              initialWarningMinutes={config?.sessionWarningTime ?? 5}
-            />
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-base font-medium text-gray-900 mb-1">Wedding Colour Theme</h2>
             <p className="text-sm text-gray-500 mb-4">
               Choose a colour that matches your wedding palette. It will be used throughout the planner.
@@ -211,6 +200,17 @@ export function SettingsClient({
               app each time you sign in.
             </p>
             <TwoFactorSettings />
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-base font-medium text-gray-900 mb-1">Session Timeout</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Configure how long users stay logged in before being timed out due to inactivity.
+            </p>
+            <SessionTimeoutSettings
+              initialTimeoutMinutes={config?.sessionTimeout ?? 60}
+              initialWarningMinutes={config?.sessionWarningTime ?? 5}
+            />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
