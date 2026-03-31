@@ -301,7 +301,23 @@ function LoginForm() {
   }
 
   async function handleDone(rememberDevice: boolean) {
+    // Set the signed weddingId cookie based on the user's memberships.
+    // This returns a redirect URL: "/" for one wedding, "/select-wedding" for
+    // multiple, or "/register" for none.
+    // MUST be called BEFORE trust-device because requireRole() needs the weddingId cookie.
+    let destination = callbackUrl;
+    try {
+      const res = await fetch("/api/auth/set-wedding", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.redirect) destination = data.redirect;
+      }
+    } catch (err) {
+      console.error("Failed to set wedding context:", err);
+    }
+
     // If remember device is checked, call the trust-device API
+    // This must come AFTER set-wedding because requireRole() checks the weddingId cookie.
     if (rememberDevice) {
       try {
         await fetch("/api/auth/trust-device", {
@@ -313,20 +329,6 @@ function LoginForm() {
         // Non-critical error, continue with login
         console.error("Failed to set trusted device:", err);
       }
-    }
-
-    // Set the signed weddingId cookie based on the user's memberships.
-    // This returns a redirect URL: "/" for one wedding, "/select-wedding" for
-    // multiple, or "/register" for none.
-    let destination = callbackUrl;
-    try {
-      const res = await fetch("/api/auth/set-wedding", { method: "POST" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.redirect) destination = data.redirect;
-      }
-    } catch (err) {
-      console.error("Failed to set wedding context:", err);
     }
 
     // Use window.location.href for a full page reload so the session and
