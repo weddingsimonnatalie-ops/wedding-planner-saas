@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Clock, MapPin, Briefcase, Loader2 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { TimelineEventModal } from "./TimelineEventModal";
+import { TimelinePrintView } from "./TimelinePrintView";
 
 interface TimelineEvent {
   id: string;
@@ -126,15 +127,18 @@ export function TimelineList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-gray-900">Wedding Day Timeline</h1>
-        {can.editTimeline && (
-          <button
-            onClick={handleAdd}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
-          >
-            <Plus className="w-4 h-4" />
-            Add event
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <TimelinePrintView />
+          {can.editTimeline && (
+            <button
+              onClick={handleAdd}
+              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
+            >
+              <Plus className="w-4 h-4" />
+              Add event
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Timeline */}

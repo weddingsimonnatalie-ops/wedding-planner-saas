@@ -139,14 +139,14 @@ enum TimelineEventType {
 - [x] Add Timeline nav item to sidebar
 - [x] Create TimelineList and TimelineEventModal components
 
-#### Phase 2: Timeline Page
+#### Phase 2: Timeline Page ✅ COMPLETE
 1. Create `/timeline` page component
 2. Create `TimelineList` client component
 3. Create `TimelineEventCard` component
 4. Create `TimelineEventModal` for add/edit
 5. Implement event CRUD
 
-#### Phase 3: Print View
+#### Phase 3: Print View ✅ COMPLETE
 1. Create `TimelinePrintView` component
 2. Print button opens new window
 3. Clean printable layout (time, title, location, notes)
