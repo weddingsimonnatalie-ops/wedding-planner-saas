@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Plus, Edit2, Trash2, CheckSquare, ChevronDown, RefreshCw,
@@ -9,6 +10,7 @@ import {
 import { fetchApi } from "@/lib/fetch";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useRefresh } from "@/context/RefreshContext";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { TaskModal, TaskData, TaskPriority, RecurringInterval } from "./TaskModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
@@ -326,8 +328,14 @@ interface FilterSupplier { id: string; name: string }
 // ── Main page client ──────────────────────────────────────────────────────────
 
 export function TasksPageClient() {
+  const router = useRouter();
   const { can: perms, isViewer, isRsvpManager } = usePermissions();
   const { refreshToken, triggerRefresh } = useRefresh();
+
+  // Pull-to-refresh
+  const { isPulling, pullDistance, isRefreshing, containerRef } = usePullToRefresh({
+    onRefresh: () => router.refresh(),
+  });
 
   const [tasks, setTasks]         = useState<TaskData[]>([]);
   const [users, setUsers]         = useState<FilterUser[]>([]);
@@ -617,7 +625,21 @@ export function TasksPageClient() {
   };
 
   return (
-    <div className="max-w-3xl" style={{ paddingBottom: 'max(5rem, calc(5rem + env(safe-area-inset-bottom)))' }}>
+    <div ref={containerRef} className="overflow-auto h-full relative">
+      {/* Pull-to-refresh indicator */}
+      {(isPulling || isRefreshing) && (
+        <div
+          className="absolute top-0 left-0 right-0 flex items-center justify-center py-2 z-10 bg-gray-50"
+          style={{ transform: `translateY(${Math.min(pullDistance - 24, 0)}px)` }}
+        >
+          <RefreshCw className={`w-5 h-5 text-gray-400 ${isRefreshing ? "animate-spin" : ""}`} />
+          <span className="ml-2 text-sm text-gray-500">
+            {isRefreshing ? "Refreshing…" : pullDistance >= 64 ? "Release to refresh" : "Pull to refresh"}
+          </span>
+        </div>
+      )}
+
+      <div className="max-w-3xl" style={{ paddingBottom: 'max(5rem, calc(5rem + env(safe-area-inset-bottom)))' }}>
       {/* ReadOnly banner */}
       {isViewer && (
         <ReadOnlyBanner message="You have view-only access to tasks." />
@@ -868,6 +890,7 @@ export function TasksPageClient() {
           {toast.msg}
         </div>
       )}
+      </div>
     </div>
   );
 }

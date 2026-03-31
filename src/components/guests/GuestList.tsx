@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Edit2, Trash2, Copy, Mail, Upload, X, CheckCircle2, XCircle, ChevronDown, ChevronRight, Loader2, Pencil, Tag, Utensils, Download, Plus, MoreHorizontal, SlidersHorizontal } from "lucide-react";
+import { Edit2, Trash2, Copy, Mail, Upload, X, CheckCircle2, XCircle, ChevronDown, ChevronRight, Loader2, Pencil, Tag, Utensils, Download, Plus, MoreHorizontal, SlidersHorizontal, RefreshCw } from "lucide-react";
 import { RsvpStatusBadge } from "./RsvpStatusBadge";
 import { CsvImportModal } from "./CsvImportModal";
 import { PrintGuestListButton } from "./PrintGuestListButton";
@@ -13,6 +13,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useWedding, getEmailBlockReason } from "@/context/WeddingContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 interface Guest {
   id: string;
@@ -148,6 +149,11 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
   useEffect(() => {
     return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
   }, []);
+
+  // Pull-to-refresh
+  const { isPulling, pullDistance, isRefreshing, containerRef } = usePullToRefresh({
+    onRefresh: () => router.refresh(),
+  });
 
   function showToast(msg: string, ok = true) {
     setToast({ msg, ok });
@@ -444,7 +450,21 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
   const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(CSV_TEMPLATE_HEADERS + "Jane,Smith,jane@example.com,,,n,y,y,n,")}`;
 
   return (
-    <div className="space-y-4">
+    <div ref={containerRef} className="overflow-auto h-full relative">
+      {/* Pull-to-refresh indicator */}
+      {(isPulling || isRefreshing) && (
+        <div
+          className="absolute top-0 left-0 right-0 flex items-center justify-center py-2 z-10 bg-gray-50"
+          style={{ transform: `translateY(${Math.min(pullDistance - 24, 0)}px)` }}
+        >
+          <RefreshCw className={`w-5 h-5 text-gray-400 ${isRefreshing ? "animate-spin" : ""}`} />
+          <span className="ml-2 text-sm text-gray-500">
+            {isRefreshing ? "Refreshing…" : pullDistance >= 64 ? "Release to refresh" : "Pull to refresh"}
+          </span>
+        </div>
+      )}
+
+      <div className="space-y-4 pb-16 md:pb-0">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl md:text-2xl font-semibold text-gray-900">Guests</h1>
@@ -1568,6 +1588,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
           groups={groups}
         />
       )}
+      </div>
     </div>
   );
 }

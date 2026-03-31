@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Check, RotateCcw, Mail, Pencil, Trash2, ChevronDown, CreditCard, X, Plus,
-  Paperclip, Eye, Camera, FileText,
+  Paperclip, Eye, Camera, FileText, RefreshCw,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -13,6 +13,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useWedding, getEmailBlockReason, getUploadBlockReason } from "@/context/WeddingContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { PaymentModal } from "./PaymentModal";
 import { ReceiptUploadModal } from "./ReceiptUploadModal";
 import { ReceiptViewModal } from "./ReceiptViewModal";
@@ -620,6 +621,11 @@ export function PaymentsList() {
   const [viewReceiptPayment, setViewReceiptPayment] = useState<PaymentItem | null>(null);
   const [deleteReceiptConfirm, setDeleteReceiptConfirm] = useState<PaymentItem | null>(null);
 
+  // Pull-to-refresh
+  const { isPulling, pullDistance, isRefreshing, containerRef } = usePullToRefresh({
+    onRefresh: () => router.refresh(),
+  });
+
   // Filters
   const [statusFilter, setStatusFilter] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
@@ -917,7 +923,21 @@ export function PaymentsList() {
   }
 
   return (
-    <div className="space-y-5">
+    <div ref={containerRef} className="overflow-auto h-full relative">
+      {/* Pull-to-refresh indicator */}
+      {(isPulling || isRefreshing) && (
+        <div
+          className="absolute top-0 left-0 right-0 flex items-center justify-center py-2 z-10 bg-gray-50"
+          style={{ transform: `translateY(${Math.min(pullDistance - 24, 0)}px)` }}
+        >
+          <RefreshCw className={`w-5 h-5 text-gray-400 ${isRefreshing ? "animate-spin" : ""}`} />
+          <span className="ml-2 text-sm text-gray-500">
+            {isRefreshing ? "Refreshing…" : pullDistance >= 64 ? "Release to refresh" : "Pull to refresh"}
+          </span>
+        </div>
+      )}
+
+      <div className="space-y-5 pb-16 md:pb-0">
       {!perms.editPayments && (
         <ReadOnlyBanner message="You have view-only access to payments." />
       )}
@@ -1143,6 +1163,7 @@ export function PaymentsList() {
           onCancel={() => setDeleteReceiptConfirm(null)}
         />
       )}
+      </div>
     </div>
   );
 }
