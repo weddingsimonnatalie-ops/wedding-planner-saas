@@ -480,8 +480,8 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
         )}
       </div>
 
-      {/* Stats bar - horizontal list on mobile, card grid on desktop */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 md:gap-3 md:grid md:grid-cols-7 bg-white md:bg-transparent rounded-lg md:rounded-none border md:border-0 border-gray-200 px-3 py-2 md:p-0">
+      {/* Stats bar - 2-column list on mobile, card grid on desktop */}
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-2 md:gap-3">
         {[
           { label: hasFilters ? "Filtered" : "Total", value: stats.total, color: hasFilters ? "text-primary" : "text-gray-900" },
           { label: "Accepted", value: stats.accepted, color: "text-green-600" },
@@ -492,11 +492,11 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
           { label: "Unassigned", value: stats.unassigned, color: "text-blue-600" },
         ].map(({ label, value, color }) => (
           <React.Fragment key={label}>
-            {/* Mobile: inline list */}
-            <span className="md:hidden inline-flex items-center gap-1 text-sm">
-              <span className={`font-semibold ${color}`}>{value}</span>
-              <span className="text-gray-500">{label}</span>
-            </span>
+            {/* Mobile: 2-column row */}
+            <div className="md:hidden flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2">
+              <span className={`font-semibold text-sm ${color}`}>{value}</span>
+              <span className="text-sm text-gray-500">{label}</span>
+            </div>
             {/* Desktop: card */}
             <div
               className="hidden md:block bg-white rounded-xl border border-gray-200 px-4 py-3 text-center min-w-0"
