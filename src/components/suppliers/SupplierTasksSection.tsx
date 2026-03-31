@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Edit2, Trash2, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 import { usePermissions } from "@/hooks/usePermissions";
 import { TaskModal, TaskData, TaskPriority } from "@/components/tasks/TaskModal";
@@ -54,9 +54,13 @@ const INTERVAL_LABEL: Record<string, string> = {
 export function SupplierTasksSection({
   supplierId,
   supplierName,
+  isCollapsed,
+  onToggleCollapse,
 }: {
   supplierId: string;
   supplierName: string;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }) {
   const { can: perms, isViewer } = usePermissions();
   const canComplete = !isViewer;
@@ -174,23 +178,33 @@ export function SupplierTasksSection({
   return (
     <div className="bg-white rounded-xl border border-gray-200">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+      <div
+        className={`px-4 py-3 border-b border-gray-100 flex items-center justify-between min-h-[44px] ${onToggleCollapse ? "cursor-pointer" : ""}`}
+        onClick={() => onToggleCollapse?.()}
+      >
         <p className="text-sm font-medium text-gray-700">
           Tasks {tasks.length > 0 && <span className="text-gray-400 font-normal">({incompleteCount} open)</span>}
         </p>
-        {perms.editTasks && (
-          <button
-            type="button"
-            onClick={() => { setEditing(null); setModalOpen(true); }}
-            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80"
-          >
-            <Plus className="w-3.5 h-3.5" /> Add task
-          </button>
-        )}
+        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+          {perms.editTasks && (
+            <button
+              type="button"
+              onClick={() => { setEditing(null); setModalOpen(true); }}
+              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80"
+            >
+              <Plus className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Add</span>
+            </button>
+          )}
+          {onToggleCollapse && (
+            <button type="button" className="p-1 text-gray-400">
+              {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Body */}
-      {loading ? (
+      {(!onToggleCollapse || !isCollapsed) && (loading ? (
         <div className="px-4 py-6 animate-pulse space-y-2">
           {[1, 2].map(i => <div key={i} className="h-8 bg-gray-100 rounded" />)}
         </div>
@@ -297,6 +311,7 @@ export function SupplierTasksSection({
             );
           })}
         </div>
+      )
       )}
 
       {/* Modals */}

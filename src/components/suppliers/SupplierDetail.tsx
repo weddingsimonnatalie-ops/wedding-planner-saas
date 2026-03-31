@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { fetchApi } from "@/lib/fetch";
-import { ArrowLeft, Edit2, Save, X, Trash2, Plus, Check, Mail, Paperclip, Download, Eye, RotateCcw, Pencil } from "lucide-react";
+import { ArrowLeft, Edit2, Save, X, Trash2, Plus, Check, Mail, Paperclip, Download, Eye, RotateCcw, Pencil, ChevronDown, ChevronUp } from "lucide-react";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { SupplierAppointmentsSection } from "@/components/suppliers/SupplierAppointmentsSection";
 import { SupplierTasksSection } from "@/components/suppliers/SupplierTasksSection";
@@ -116,6 +116,52 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
   const [uploading, setUploading] = useState(false);
   const [previewAtt, setPreviewAtt] = useState<Attachment | null>(null);
   const [markUnpaidId, setMarkUnpaidId] = useState<string | null>(null);
+
+  // ── Mobile progressive disclosure ───────────────────────────────────────────
+  type SectionKey = "payments" | "appointments" | "tasks" | "attachments";
+  const [openSection, setOpenSection] = useState<SectionKey>("payments");
+
+  // Helper component for collapsible section header
+  function SectionHeader({
+    section,
+    title,
+    count,
+    action,
+  }: {
+    section: SectionKey;
+    title: string;
+    count?: number;
+    action?: React.ReactNode;
+  }) {
+    const isOpen = openSection === section;
+    return (
+      <div
+        className="px-4 py-3 border-b border-gray-100 flex items-center justify-between min-h-[44px] cursor-pointer md:cursor-default"
+        onClick={() => !isOpen && setOpenSection(section)}
+      >
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-gray-700">{title}</p>
+          {count !== undefined && (
+            <span className="text-xs text-gray-400">({count})</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+          {action}
+          <button
+            type="button"
+            className="md:hidden p-1 text-gray-400"
+            onClick={() => setOpenSection(isOpen ? (null as unknown as SectionKey) : section)}
+            tabIndex={-1}
+          >
+            {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if section content should render (always on desktop, only when open on mobile)
+  const shouldRender = (section: SectionKey) => openSection === section;
 
   // ── Track dirty state for inactivity warning ───────────────────────────────
   const isDirty = useMemo(() => {
@@ -570,18 +616,20 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
         <div className="lg:col-span-3 space-y-4">
           {/* Payments */}
           <div className="bg-white rounded-xl border border-gray-200">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-700">Payments</p>
-              {perms.editPayments && (
+            <SectionHeader
+              section="payments"
+              title="Payments"
+              count={payments.length}
+              action={perms.editPayments && (
                 <button
                   onClick={() => setShowAddPayment(s => !s)}
                   className="flex items-center gap-1 text-xs text-primary hover:text-primary/80"
                 >
-                  <Plus className="w-3.5 h-3.5" /> Add payment
+                  <Plus className="w-3.5 h-3.5" /> Add
                 </button>
               )}
-            </div>
-
+            />
+            <div className={openSection === "payments" ? "" : "hidden md:block"}>
             {/* Progress */}
             {contracted > 0 && (
               <div className="px-4 py-3 border-b border-gray-100">
@@ -804,19 +852,31 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
                 </div>
               </div>
             )}
+            </div>
           </div>
 
           {/* Appointments */}
-          <SupplierAppointmentsSection supplierId={supplier.id} />
+          <SupplierAppointmentsSection
+            supplierId={supplier.id}
+            isCollapsed={openSection !== "appointments"}
+            onToggleCollapse={() => setOpenSection(openSection === "appointments" ? (null as unknown as SectionKey) : "appointments")}
+          />
 
           {/* Tasks */}
-          <SupplierTasksSection supplierId={supplier.id} supplierName={supplier.name} />
+          <SupplierTasksSection
+            supplierId={supplier.id}
+            supplierName={supplier.name}
+            isCollapsed={openSection !== "tasks"}
+            onToggleCollapse={() => setOpenSection(openSection === "tasks" ? (null as unknown as SectionKey) : "tasks")}
+          />
 
           {/* Attachments */}
           <div className="bg-white rounded-xl border border-gray-200">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-              <p className="text-sm font-medium text-gray-700">Attachments</p>
-              {perms.editSuppliers && (
+            <SectionHeader
+              section="attachments"
+              title="Attachments"
+              count={attachments.length}
+              action={perms.editSuppliers && (
                 <>
                   <UpgradePrompt active={!canUpload} reason={uploadBlockReason ?? ""}>
                     <button
@@ -824,8 +884,7 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
                       disabled={uploading || !canUpload}
                       className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 disabled:opacity-50"
                     >
-                      <Paperclip className="w-3.5 h-3.5" />
-                      {uploading ? "Uploading…" : "Upload file"}
+                      <Paperclip className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{uploading ? "Uploading…" : "Upload"}</span>
                     </button>
                   </UpgradePrompt>
                   <input
@@ -837,8 +896,8 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
                   />
                 </>
               )}
-            </div>
-
+            />
+            <div className={openSection === "attachments" ? "" : "hidden md:block"}>
             <div className="divide-y divide-gray-50">
               {attachments.length === 0 ? (
                 <p className="px-4 py-6 text-xs text-gray-400 text-center">
@@ -889,6 +948,7 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
                   );
                 })
               )}
+            </div>
             </div>
           </div>
         </div>

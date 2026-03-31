@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, MapPin } from "lucide-react";
+import { Plus, MapPin, ChevronDown, ChevronUp } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 import { AppointmentModal, AppointmentData } from "@/components/appointments/AppointmentModal";
 
@@ -28,8 +28,12 @@ function fmtDate(d: string | Date) {
 
 export function SupplierAppointmentsSection({
   supplierId,
+  isCollapsed,
+  onToggleCollapse,
 }: {
   supplierId: string;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }) {
   const [appointments, setAppointments] = useState<AppointmentData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,17 +86,30 @@ export function SupplierAppointmentsSection({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200">
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-        <p className="text-sm font-medium text-gray-700">Appointments</p>
-        <button
-          onClick={() => { setEditing(null); setModalOpen(true); }}
-          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80"
-        >
-          <Plus className="w-3.5 h-3.5" /> Add appointment
-        </button>
+      <div
+        className={`px-4 py-3 border-b border-gray-100 flex items-center justify-between min-h-[44px] ${onToggleCollapse ? "cursor-pointer" : ""}`}
+        onClick={() => onToggleCollapse?.()}
+      >
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-gray-700">Appointments</p>
+          <span className="text-xs text-gray-400">({appointments.length})</span>
+        </div>
+        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => { setEditing(null); setModalOpen(true); }}
+            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80"
+          >
+            <Plus className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Add</span>
+          </button>
+          {onToggleCollapse && (
+            <button type="button" className="p-1 text-gray-400">
+              {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            </button>
+          )}
+        </div>
       </div>
 
-      {loading ? (
+      {(!onToggleCollapse || !isCollapsed) && (loading ? (
         <div className="px-4 py-6 animate-pulse space-y-2">
           {[1, 2].map(i => <div key={i} className="h-8 bg-gray-100 rounded" />)}
         </div>
@@ -138,13 +155,15 @@ export function SupplierAppointmentsSection({
             );
           })}
         </div>
-      )}
+      ))}
 
-      <div className="px-4 py-2 border-t border-gray-100">
-        <Link href="/appointments" className="text-xs text-gray-400 hover:text-primary">
-          View all appointments →
-        </Link>
-      </div>
+      {(!onToggleCollapse || !isCollapsed) && (
+        <div className="px-4 py-2 border-t border-gray-100">
+          <Link href="/appointments" className="text-xs text-gray-400 hover:text-primary">
+            View all appointments →
+          </Link>
+        </div>
+      )}
 
       {modalOpen && (
         <AppointmentModal
