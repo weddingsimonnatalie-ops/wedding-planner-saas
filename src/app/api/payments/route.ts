@@ -33,7 +33,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       tx.payment.findMany({
         where: { weddingId },
         include: {
-          supplier: { include: { category: true } },
+          supplier: { select: { id: true, name: true, contractValue: true, category: { select: { id: true, name: true, colour: true } } } },
         },
         orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
         ...(skip !== undefined ? { skip } : {}),
