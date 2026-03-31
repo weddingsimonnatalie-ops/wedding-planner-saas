@@ -648,7 +648,7 @@ export function TasksPageClient() {
       </div>
 
       {/* Filter row */}
-      <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center mb-4">
+      <div className="grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap gap-2 sm:items-center mb-4">
         <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)} className={inputCls}>
           <option value="">All priorities</option>
           <option value="HIGH">High</option>
@@ -681,9 +681,9 @@ export function TasksPageClient() {
           <button
             type="button"
             onClick={clearFilters}
-            className="text-xs text-gray-500 hover:text-gray-700 underline self-center"
+            className="col-span-2 sm:col-span-1 text-xs text-gray-500 hover:text-gray-700 underline text-center sm:text-left self-center"
           >
-            Clear
+            Clear filters
           </button>
         )}
       </div>
