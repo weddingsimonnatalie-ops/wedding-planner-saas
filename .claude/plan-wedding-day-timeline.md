@@ -131,11 +131,13 @@ enum TimelineEventType {
 
 ### 4. Implementation Phases
 
-#### Phase 1: Database + API
-1. Create migration for `TimelineEvent` model and enums
-2. Create `/api/timeline` routes (GET, POST)
-3. Create `/api/timeline/[id]` routes (PUT, DELETE)
-4. Add permissions to `api-auth.ts`
+#### Phase 1: Database + API ✅ COMPLETE
+- [x] Create migration for `TimelineEvent` model and enums
+- [x] Create `/api/timeline` routes (GET, POST)
+- [x] Create `/api/timeline/[id]` routes (PUT, DELETE)
+- [x] Add permissions to `api-auth.ts`
+- [x] Add Timeline nav item to sidebar
+- [x] Create TimelineList and TimelineEventModal components
 
 #### Phase 2: Timeline Page
 1. Create `/timeline` page component
