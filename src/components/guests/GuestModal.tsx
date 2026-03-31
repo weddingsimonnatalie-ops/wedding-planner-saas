@@ -98,11 +98,11 @@ export function GuestModal({ onClose, groups }: Props) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl shadow-xl w-full max-w-lg my-8"
+        className="bg-white rounded-xl shadow-xl w-full max-w-lg my-8 flex flex-col max-h-[calc(100vh-4rem-env(safe-area-inset-top))]"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 shrink-0">
           <h2 className="text-base font-semibold text-gray-900">Add guest</h2>
           <button
             type="button"
@@ -114,7 +114,7 @@ export function GuestModal({ onClose, groups }: Props) {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4 pb-20 md:pb-5">
           {/* Name */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -231,8 +231,8 @@ export function GuestModal({ onClose, groups }: Props) {
             </p>
           )}
 
-          {/* Footer */}
-          <div className="flex justify-end gap-3 pt-1">
+          {/* Footer - Desktop */}
+          <div className="hidden md:flex justify-end gap-3 pt-1">
             <button
               type="button"
               onClick={onClose}
@@ -249,6 +249,27 @@ export function GuestModal({ onClose, groups }: Props) {
             </button>
           </div>
         </form>
+
+        {/* Footer - Mobile sticky bar */}
+        <div
+          className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-end gap-3 px-4 py-3 z-50"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
+          >
+            {saving ? "Adding…" : "Add guest"}
+          </button>
+        </div>
       </div>
     </div>
   );
