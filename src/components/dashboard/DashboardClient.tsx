@@ -49,7 +49,10 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
   const load = useCallback(() => {
     setLoading(true);
     fetchApi("/api/dashboard/stats")
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to load (${r.status})`);
+        return r.json();
+      })
       .then(data => { setStats(data); setLoading(false); })
       .catch(err => { setError(err.message); setLoading(false); });
   }, []);
