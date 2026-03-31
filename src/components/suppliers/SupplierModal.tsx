@@ -225,9 +225,8 @@ export function SupplierModal({ onClose }: Props) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Contract value (£)</label>
             <input
-              type="number"
-              min={0}
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               value={contractValue}
               onChange={e => setContractValue(e.target.value)}
               className={inputCls}

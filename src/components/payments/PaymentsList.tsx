@@ -222,9 +222,8 @@ function PaymentEditForm({
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Amount (£)</label>
           <input
-            type="number"
-            min="0"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
             className={`${INPUT_CLS} ${errors.amount ? "border-red-400" : ""}`}
             value={form.amount}
             onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}

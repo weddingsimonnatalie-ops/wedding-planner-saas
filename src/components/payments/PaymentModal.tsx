@@ -265,9 +265,8 @@ export function PaymentModal({ onClose, onCreated }: Props) {
                 Amount (£) <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 required
                 value={amount}
                 onChange={e => setAmount(e.target.value)}

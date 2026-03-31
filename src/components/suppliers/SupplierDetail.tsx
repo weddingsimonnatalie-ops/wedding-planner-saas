@@ -507,13 +507,13 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
                     <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputCls} />
                   </Field>
                   <Field label="Phone">
-                    <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className={inputCls} />
+                    <input type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className={inputCls} />
                   </Field>
                   <Field label="Website">
                     <input value={form.website} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://…" className={inputCls} />
                   </Field>
                   <Field label="Contract value (£)">
-                    <input type="number" min={0} step="0.01" value={form.contractValue} onChange={e => setForm(f => ({ ...f, contractValue: e.target.value }))} className={inputCls} />
+                    <input type="text" inputMode="decimal" value={form.contractValue} onChange={e => setForm(f => ({ ...f, contractValue: e.target.value }))} className={inputCls} />
                   </Field>
                   <div className="flex items-center gap-2">
                     <input
@@ -621,7 +621,7 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
                         <div>
                           <label className="text-xs text-gray-400 block mb-0.5">Amount (£)</label>
                           <input
-                            type="number" min={0} step="0.01"
+                            type="text" inputMode="decimal"
                             value={editPayForm.amount}
                             onChange={e => setEditPayForm(f => ({ ...f, amount: e.target.value }))}
                             className={inputCls}
@@ -774,7 +774,7 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
                   </div>
                   <div>
                     <input
-                      type="number" min={0} step="0.01"
+                      type="text" inputMode="decimal"
                       value={payForm.amount}
                       onChange={e => setPayForm(f => ({ ...f, amount: e.target.value }))}
                       placeholder="Amount (£)"
