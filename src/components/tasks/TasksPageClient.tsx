@@ -202,11 +202,6 @@ function TaskRow({
             <span className={`text-xs shrink-0 ${cls}`}>{label}</span>
           )}
         </div>
-          </div>
-          {label && (
-            <span className={`text-xs shrink-0 ${cls}`}>{label}</span>
-          )}
-        </div>
 
         {task.isCompleted && task.completedAt && (
           <p className="text-xs text-gray-400 mt-0.5">
