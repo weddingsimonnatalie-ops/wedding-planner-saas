@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition, useRef, useEffect } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Edit2, Trash2, Copy, Mail, Upload, X, CheckCircle2, XCircle, ChevronDown, ChevronRight, Loader2, Pencil, Tag, Utensils, Download, Plus, MoreHorizontal, SlidersHorizontal, RefreshCw } from "lucide-react";
@@ -480,32 +480,49 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
         )}
       </div>
 
-      {/* Stats bar - 2-column list on mobile, card grid on desktop */}
-      <div className="grid grid-cols-2 md:grid-cols-7 gap-2 md:gap-3">
-        {[
-          { label: hasFilters ? "Filtered" : "Total", value: stats.total, color: hasFilters ? "text-primary" : "text-gray-900" },
-          { label: "Accepted", value: stats.accepted, color: "text-green-600" },
-          { label: "Partial", value: stats.partial, color: "text-orange-500" },
-          { label: "Declined", value: stats.declined, color: "text-red-600" },
-          { label: "Pending", value: stats.pending, color: "text-amber-600" },
-          { label: "Maybe", value: stats.maybe, color: "text-gray-500" },
-          { label: "Unassigned", value: stats.unassigned, color: "text-blue-600" },
-        ].map(({ label, value, color }) => (
-          <React.Fragment key={label}>
-            {/* Mobile: 2-column row */}
-            <div className="md:hidden flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2">
+      {/* Stats bar - Total on top row, 2-column grid below on mobile; card grid on desktop */}
+      <div className="flex flex-col gap-2 md:gap-3">
+        {/* Mobile: Total row */}
+        <div className="md:hidden flex items-center justify-between bg-white rounded-lg border border-gray-200 px-4 py-2.5">
+          <span className={`text-lg font-bold ${hasFilters ? "text-primary" : "text-gray-900"}`}>{stats.total}</span>
+          <span className="text-sm font-medium text-gray-700">{hasFilters ? "Filtered" : "Total guests"}</span>
+        </div>
+        {/* Mobile: 2-column grid for remaining stats */}
+        <div className="grid grid-cols-2 gap-2 md:hidden">
+          {[
+            { label: "Accepted", value: stats.accepted, color: "text-green-600" },
+            { label: "Partial", value: stats.partial, color: "text-orange-500" },
+            { label: "Declined", value: stats.declined, color: "text-red-600" },
+            { label: "Pending", value: stats.pending, color: "text-amber-600" },
+            { label: "Maybe", value: stats.maybe, color: "text-gray-500" },
+            { label: "Unassigned", value: stats.unassigned, color: "text-blue-600" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2">
               <span className={`font-semibold text-sm ${color}`}>{value}</span>
               <span className="text-sm text-gray-500">{label}</span>
             </div>
-            {/* Desktop: card */}
+          ))}
+        </div>
+        {/* Desktop: 7-column card grid */}
+        <div className="hidden md:grid md:grid-cols-7 md:gap-3">
+          {[
+            { label: hasFilters ? "Filtered" : "Total", value: stats.total, color: hasFilters ? "text-primary" : "text-gray-900" },
+            { label: "Accepted", value: stats.accepted, color: "text-green-600" },
+            { label: "Partial", value: stats.partial, color: "text-orange-500" },
+            { label: "Declined", value: stats.declined, color: "text-red-600" },
+            { label: "Pending", value: stats.pending, color: "text-amber-600" },
+            { label: "Maybe", value: stats.maybe, color: "text-gray-500" },
+            { label: "Unassigned", value: stats.unassigned, color: "text-blue-600" },
+          ].map(({ label, value, color }) => (
             <div
-              className="hidden md:block bg-white rounded-xl border border-gray-200 px-4 py-3 text-center min-w-0"
+              key={label}
+              className="bg-white rounded-xl border border-gray-200 px-4 py-3 text-center min-w-0"
             >
               <p className={`text-xl font-bold ${color} truncate`}>{value}</p>
               <p className="text-xs text-gray-500 leading-tight">{label}</p>
             </div>
-          </React.Fragment>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* Top toolbar */}
