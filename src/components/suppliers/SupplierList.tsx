@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, ExternalLink } from "lucide-react";
+import { Plus, ExternalLink, ChevronDown } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
@@ -47,6 +47,7 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
   const [statusFilter, setStatusFilter] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState("");
+  const [showStats, setShowStats] = useState(false);
 
   // Sync server-rendered data into state whenever the parent server component re-renders
   useEffect(() => {
@@ -111,19 +112,49 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
         )}
       </div>
 
-      {/* Summary bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4">
-        {[
-          { label: "Contracted", value: fmt(totals.contracted), cls: "text-gray-900" },
-          { label: "Paid", value: fmt(totals.paid), cls: "text-green-700" },
-          { label: "Remaining", value: fmt(totals.remaining), cls: "text-amber-700" },
-          { label: "Overdue", value: String(totals.overdue), cls: totals.overdue > 0 ? "text-red-600" : "text-gray-500" },
-        ].map(({ label, value, cls }) => (
-          <div key={label} className="bg-white rounded-lg md:rounded-xl border border-gray-200 px-2 py-1.5 md:px-4 md:py-3 text-center min-w-0">
-            <p className={`text-base md:text-xl font-bold ${cls} truncate`}>{value}</p>
-            <p className="text-[11px] md:text-xs text-gray-500 leading-tight">{label}</p>
+      {/* Summary bar - collapsible on mobile */}
+      <div className="flex flex-col gap-2 md:gap-3 mb-4">
+        {/* Mobile: Collapsible header */}
+        <button
+          type="button"
+          onClick={() => setShowStats(s => !s)}
+          className="md:hidden flex items-center justify-between w-full bg-white rounded-lg border border-gray-200 px-4 py-2.5"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-lg font-bold text-gray-900">{fmt(totals.contracted)}</span>
+            <span className="text-sm font-medium text-gray-700">Contracted</span>
           </div>
-        ))}
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showStats ? "rotate-180" : ""}`} />
+        </button>
+        {/* Mobile: Collapsible 2-column grid */}
+        {showStats && (
+          <div className="grid grid-cols-2 gap-2 md:hidden">
+            {[
+              { label: "Paid", value: fmt(totals.paid), cls: "text-green-700" },
+              { label: "Remaining", value: fmt(totals.remaining), cls: "text-amber-700" },
+              { label: "Overdue", value: String(totals.overdue), cls: totals.overdue > 0 ? "text-red-600" : "text-gray-500" },
+            ].map(({ label, value, cls }) => (
+              <div key={label} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2">
+                <span className={`font-semibold text-sm ${cls}`}>{value}</span>
+                <span className="text-sm text-gray-500">{label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Desktop: 4-column card grid */}
+        <div className="hidden md:grid md:grid-cols-4 md:gap-3">
+          {[
+            { label: "Contracted", value: fmt(totals.contracted), cls: "text-gray-900" },
+            { label: "Paid", value: fmt(totals.paid), cls: "text-green-700" },
+            { label: "Remaining", value: fmt(totals.remaining), cls: "text-amber-700" },
+            { label: "Overdue", value: String(totals.overdue), cls: totals.overdue > 0 ? "text-red-600" : "text-gray-500" },
+          ].map(({ label, value, cls }) => (
+            <div key={label} className="bg-white rounded-xl border border-gray-200 px-4 py-3 text-center min-w-0">
+              <p className={`text-xl font-bold ${cls} truncate`}>{value}</p>
+              <p className="text-xs text-gray-500 leading-tight">{label}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Filters */}
