@@ -495,9 +495,9 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
           </div>
           <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showStats ? "rotate-180" : ""}`} />
         </button>
-        {/* Mobile: Collapsible single-column list */}
+        {/* Mobile: Collapsible 2-column grid */}
         {showStats && (
-          <div className="flex flex-col gap-1 md:hidden">
+          <div className="grid grid-cols-2 gap-2 md:hidden">
             {[
               { label: "Accepted", value: stats.accepted, color: "text-green-600" },
               { label: "Partial", value: stats.partial, color: "text-orange-500" },
