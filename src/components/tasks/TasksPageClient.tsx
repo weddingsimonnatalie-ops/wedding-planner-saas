@@ -180,24 +180,28 @@ function TaskRow({
       </button>
 
       {/* Priority dot */}
-      <div className="mt-1 shrink-0">{priorityDot(task.priority)}</div>
+      <div className="mt-1.5 shrink-0">{priorityDot(task.priority)}</div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <p
-              className={`text-sm font-medium leading-tight transition-all duration-200 ${
-                task.isCompleted ? "line-through text-gray-400" : "text-gray-900"
-              }`}
-            >
-              {task.title}
-            </p>
+        {/* Title line - stacks on mobile */}
+        <div className="flex items-start justify-between gap-1 md:gap-2 flex-wrap">
+          <p
+            className={`text-sm font-medium leading-tight transition-all duration-200 flex-1 min-w-0 ${
+              task.isCompleted ? "line-through text-gray-400" : "text-gray-900"
+            }`}
+          >
+            <span className="break-words">{task.title}</span>
             {task.isRecurring && task.recurringInterval && (
-              <span title={`Recurring ${INTERVAL_LABEL[task.recurringInterval]}`}>
+              <span title={`Recurring ${INTERVAL_LABEL[task.recurringInterval]}`} className="ml-1.5 inline-flex items-center">
                 <RefreshCw className="w-3 h-3 shrink-0 text-gray-400" />
               </span>
             )}
+          </p>
+          {label && (
+            <span className={`text-xs shrink-0 ${cls}`}>{label}</span>
+          )}
+        </div>
           </div>
           {label && (
             <span className={`text-xs shrink-0 ${cls}`}>{label}</span>
@@ -213,8 +217,8 @@ function TaskRow({
         {metaParts.length > 0 && (
           <div className="flex items-center gap-1.5 flex-wrap mt-1 text-xs text-gray-500">
             {metaParts.map((p, i) => (
-              <span key={i} className="flex items-center gap-1">
-                {i > 0 && <span className="text-gray-300 select-none">·</span>}
+              <span key={i} className="flex items-center gap-1 truncate">
+                {i > 0 && <span className="text-gray-300 select-none mx-0.5">·</span>}
                 {p}
               </span>
             ))}
@@ -226,9 +230,9 @@ function TaskRow({
         )}
       </div>
 
-      {/* Edit / Delete */}
+      {/* Edit / Delete - hidden on mobile (use swipe actions) */}
       {(onEdit || onDelete) && (
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="hidden md:flex items-center gap-1 shrink-0">
           {onEdit && (
             <button
               type="button"
