@@ -42,6 +42,9 @@ export async function POST(req: NextRequest) {
     where: { email },
     include: { accounts: { where: { providerId: "credential" } } },
   });
+
+  console.log("[PREFLIGHT] Email:", email, "User found:", !!user, "Accounts:", user?.accounts?.length ?? 0);
+
   if (!user) {
     await logAttempt(email, false, req);
     // Return the same shape as a real miss to avoid user enumeration
@@ -71,9 +74,13 @@ export async function POST(req: NextRequest) {
 
     // 4. Validate password
     const credentialAccount = user.accounts[0];
+    console.log("[PREFLIGHT] Account found:", !!credentialAccount, "Has password:", !!credentialAccount?.password, "Password length:", credentialAccount?.password?.length ?? 0);
+
     const valid = credentialAccount?.password
       ? await bcrypt.compare(password, credentialAccount.password)
       : false;
+
+    console.log("[PREFLIGHT] Password valid:", valid);
 
     if (!valid) {
       await logAttempt(email, false, req);
