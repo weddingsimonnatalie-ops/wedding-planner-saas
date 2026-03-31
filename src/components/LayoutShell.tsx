@@ -9,6 +9,7 @@ import { BottomNav } from "@/components/BottomNav";
 import {
   LayoutDashboard, Users, LayoutGrid, Briefcase, Settings,
   Heart, LogOut, User, Menu, X, CalendarDays, CreditCard, CheckSquare,
+  Clock,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
 import { fetchApi } from "@/lib/fetch";
@@ -18,6 +19,7 @@ const allNavItems = [
   { href: "/",                  label: "Dashboard",    icon: LayoutDashboard, roles: null },
   { href: "/guests",            label: "Guests",       icon: Users,           roles: null },
   { href: "/seating",           label: "Seating",      icon: LayoutGrid,      roles: null },
+  { href: "/timeline",          label: "Timeline",     icon: Clock,           roles: null },
   { href: "/appointments",      label: "Appointments", icon: CalendarDays,    roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/tasks",             label: "Tasks",        icon: CheckSquare,     roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/suppliers",         label: "Suppliers",    icon: Briefcase,       roles: ["ADMIN", "VIEWER"] as UserRole[] },

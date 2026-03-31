@@ -33,6 +33,10 @@ export const can = {
   editTasks: (role: UserRole) => role === "ADMIN",
   completeTasks: (role: UserRole) => role === "ADMIN" || role === "RSVP_MANAGER",
   viewTasks: (_role: UserRole) => true,
+
+  // Timeline
+  editTimeline: (role: UserRole) => role === "ADMIN",
+  viewTimeline: (_role: UserRole) => true,
 };
 
 // Role display helpers

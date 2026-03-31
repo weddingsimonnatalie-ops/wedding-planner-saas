@@ -29,6 +29,8 @@ export function usePermissions() {
       editTasks: can.editTasks(role),
       completeTasks: can.completeTasks(role),
       viewTasks: can.viewTasks(role),
+      editTimeline: can.editTimeline(role),
+      viewTimeline: can.viewTimeline(role),
     },
     isAdmin: role === "ADMIN",
     isViewer: role === "VIEWER",

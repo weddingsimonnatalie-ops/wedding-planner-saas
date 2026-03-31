@@ -119,6 +119,7 @@ model Wedding {
   appointmentCategories AppointmentCategory[]
   taskCategories        TaskCategory[]
   attachments           Attachment[]
+  timelineEvents        TimelineEvent[]
 }
 
 model WeddingMember {
@@ -338,6 +339,7 @@ model Supplier {
   attachments      Attachment[]
   appointments     Appointment[]
   tasks            Task[]
+  timelineEvents   TimelineEvent[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
@@ -495,6 +497,43 @@ model Task {
   @@index([assignedToId])
   @@index([categoryId])
   @@index([supplierId])
+}
+
+// --- TIMELINE ---
+
+enum TimelineEventType {
+  PREP
+  TRANSPORT
+  CEREMONY
+  PHOTO
+  RECEPTION
+  FOOD
+  MUSIC
+  GENERAL
+}
+
+model TimelineEvent {
+  id           String            @id @default(cuid())
+  weddingId    String
+  wedding      Wedding          @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+
+  startTime    DateTime
+  durationMins Int               @default(30)
+
+  title        String
+  location     String?
+  notes        String?
+
+  eventType    TimelineEventType @default(GENERAL)
+
+  supplierId   String?
+  supplier     Supplier?         @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([weddingId])
+  @@index([weddingId, startTime])
 }
 
 // --- SECURITY ---
