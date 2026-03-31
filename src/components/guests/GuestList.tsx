@@ -118,6 +118,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const [searchValue, setSearchValue] = useState(currentFilters.search ?? "");
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showStats, setShowStats] = useState(false);
 
   const mealMap = Object.fromEntries(mealOptions.map((m) => [m.id, m.name]));
 
@@ -480,29 +481,38 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
         )}
       </div>
 
-      {/* Stats bar - Total on top row, 2-column grid below on mobile; card grid on desktop */}
+      {/* Stats bar - collapsible on mobile, card grid on desktop */}
       <div className="flex flex-col gap-2 md:gap-3">
-        {/* Mobile: Total row */}
-        <div className="md:hidden flex items-center justify-between bg-white rounded-lg border border-gray-200 px-4 py-2.5">
-          <span className={`text-lg font-bold ${hasFilters ? "text-primary" : "text-gray-900"}`}>{stats.total}</span>
-          <span className="text-sm font-medium text-gray-700">{hasFilters ? "Filtered" : "Total guests"}</span>
-        </div>
-        {/* Mobile: 2-column grid for remaining stats */}
-        <div className="grid grid-cols-2 gap-2 md:hidden">
-          {[
-            { label: "Accepted", value: stats.accepted, color: "text-green-600" },
-            { label: "Partial", value: stats.partial, color: "text-orange-500" },
-            { label: "Declined", value: stats.declined, color: "text-red-600" },
-            { label: "Pending", value: stats.pending, color: "text-amber-600" },
-            { label: "Maybe", value: stats.maybe, color: "text-gray-500" },
-            { label: "Unassigned", value: stats.unassigned, color: "text-blue-600" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2">
-              <span className={`font-semibold text-sm ${color}`}>{value}</span>
-              <span className="text-sm text-gray-500">{label}</span>
-            </div>
-          ))}
-        </div>
+        {/* Mobile: Collapsible header */}
+        <button
+          type="button"
+          onClick={() => setShowStats(s => !s)}
+          className="md:hidden flex items-center justify-between w-full bg-white rounded-lg border border-gray-200 px-4 py-2.5 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <span className={`text-lg font-bold ${hasFilters ? "text-primary" : "text-gray-900"}`}>{stats.total}</span>
+            <span className="text-sm font-medium text-gray-700">{hasFilters ? "Filtered" : "Total guests"}</span>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showStats ? "rotate-180" : ""}`} />
+        </button>
+        {/* Mobile: Collapsible 2-column grid */}
+        {showStats && (
+          <div className="grid grid-cols-2 gap-2 md:hidden">
+            {[
+              { label: "Accepted", value: stats.accepted, color: "text-green-600" },
+              { label: "Partial", value: stats.partial, color: "text-orange-500" },
+              { label: "Declined", value: stats.declined, color: "text-red-600" },
+              { label: "Pending", value: stats.pending, color: "text-amber-600" },
+              { label: "Maybe", value: stats.maybe, color: "text-gray-500" },
+              { label: "Unassigned", value: stats.unassigned, color: "text-blue-600" },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2">
+                <span className={`font-semibold text-sm ${color}`}>{value}</span>
+                <span className="text-sm text-gray-500">{label}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {/* Desktop: 7-column card grid */}
         <div className="hidden md:grid md:grid-cols-7 md:gap-3">
           {[
