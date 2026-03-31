@@ -23,7 +23,6 @@ const allNavItems = [
   { href: "/suppliers",         label: "Suppliers",    icon: Briefcase,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/payments",          label: "Payments",     icon: CreditCard,      roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/settings",          label: "Settings",     icon: Settings,        roles: ["ADMIN"] as UserRole[] },
-  { href: "/settings/profile",  label: "My Profile",   icon: User,            roles: null },
 ];
 
 interface LayoutShellProps {
