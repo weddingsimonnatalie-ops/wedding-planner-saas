@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, CheckSquare, Menu } from "lucide-react";
+import { CalendarDays, Users, CheckSquare, CreditCard, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@prisma/client";
 
@@ -13,9 +13,10 @@ interface BottomNavProps {
 }
 
 const TABS = [
-  { href: "/", label: "Home", icon: LayoutDashboard, roles: null },
+  { href: "/appointments", label: "Appts", icon: CalendarDays, roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/guests", label: "Guests", icon: Users, roles: null },
   { href: "/tasks", label: "Tasks", icon: CheckSquare, roles: ["ADMIN", "VIEWER", "RSVP_MANAGER"] as UserRole[] },
+  { href: "/payments", label: "Payments", icon: CreditCard, roles: ["ADMIN", "VIEWER"] as UserRole[] },
 ] as const;
 
 export function BottomNav({ role, taskBadge, onOpenSidebar }: BottomNavProps) {
@@ -29,10 +30,7 @@ export function BottomNav({ role, taskBadge, onOpenSidebar }: BottomNavProps) {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {visibleTabs.map(({ href, label, icon: Icon }) => {
-        const active =
-          href === "/"
-            ? pathname === "/"
-            : pathname.startsWith(href);
+        const active = pathname.startsWith(href);
         const showBadge = href === "/tasks" && taskBadge > 0;
 
         return (
