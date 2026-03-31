@@ -783,6 +783,11 @@ ALTER TYPE "RsvpStatus" ADD VALUE 'PARTIAL';
 | Sequential queries in payments list | The payments endpoint fetched payments and then receipts in sequence. Fixed by parallelizing receipt and groupBy queries with `Promise.all()`. |
 | Supplier endpoint over-fetching | The suppliers list endpoint used `include` to fetch full category and payment data when only IDs and sums were needed. Fixed by using targeted `select` to fetch only required fields, reducing data transfer. |
 | Heavy task query for sidebar badge | The sidebar task badge triggered a full task list query with all relations just to show a count. Fixed by creating a lightweight `/api/tasks/count` endpoint that returns only `{ count: number }`. |
+| N+1 in table capacity reduction | The `PUT /api/tables/[id]` endpoint updated displaced guests one at a time in a `for...of` loop when capacity was reduced. Fixed by using `Promise.all()` over `.map()` to update all guests in parallel within the existing transaction. |
+| Multiple badge count fetches per navigation | `LayoutShell.tsx` made 3 separate `fetchApi()` calls on every navigation for task, appointment, and payment badge counts. Fixed by creating a combined `/api/dashboard/counts` endpoint that runs all three count queries in `Promise.all()` and returns `{ tasks, appointments, payments }`. |
+| Guest list query over-fetching | `GET /api/guests` used `include` which returned all guest columns including `phone`, `notes`, `createdAt`, `updatedAt`, `weddingId`. Fixed by adding explicit `select` to return only fields used by `GuestList.tsx` and `PrintGuestListButton.tsx`. |
+| Payments supplier over-fetching | `GET /api/payments` used `include: { supplier: { include: { category: true } } }` returning all supplier columns. Fixed by changing to `select: { id, name, contractValue, category: { select: { id, name, colour } } }`. |
+| Seating print-data table over-fetching | `GET /api/seating/print-data` used `include` for tables, returning all table columns including visual fields. Fixed by using `select: { id, name, capacity, guests: { select: { ... } } }` to return only fields needed for print views. |
 
 ---
 
@@ -926,6 +931,7 @@ GET/POST   /api/appointment-categories  — CRUD + reorder
 GET/POST   /api/meal-options            — Meal options
 GET/PUT/DELETE /api/meal-options/[id]
 GET        /api/dashboard/stats         — All dashboard data in one call
+GET        /api/dashboard/counts        — Combined badge counts for sidebar: `{ tasks, appointments, payments }` (ADMIN + VIEWER)
 GET/POST   /api/rooms                   — Room management
 GET/PUT    /api/rooms/[id]
 GET/POST   /api/tables
