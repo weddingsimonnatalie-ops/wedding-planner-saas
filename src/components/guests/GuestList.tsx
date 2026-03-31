@@ -14,6 +14,7 @@ import { useWedding, getEmailBlockReason } from "@/context/WeddingContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { SwipeableRow } from "@/components/ui/SwipeableRow";
 
 interface Guest {
   id: string;
@@ -1032,66 +1033,82 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
           {/* ── Mobile card layout (hidden on md+) ── */}
           <div className="md:hidden space-y-1.5">
             {guests.map((g) => (
-              <Link
+              <SwipeableRow
                 key={g.id}
-                href={`/guests/${g.id}`}
-                className={`block bg-white rounded-xl border transition-colors ${perms.can.editGuests && selectedIds.has(g.id) ? "border-blue-400 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}
+                disabled={!perms.can.editGuests}
+                actions={
+                  perms.can.editGuests
+                    ? [
+                        {
+                          icon: <Trash2 className="w-5 h-5" />,
+                          label: "Delete",
+                          colour: "bg-red-500",
+                          onClick: () => handleDelete(g.id),
+                        },
+                      ]
+                    : []
+                }
               >
-                <div className="px-3 pt-2.5 pb-2">
-                  <div className="flex items-center gap-2">
-                    {perms.can.editGuests && (
-                      <label
-                        className="flex items-center justify-center min-h-[44px] min-w-[44px] shrink-0 cursor-pointer -m-2 p-2"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(g.id)}
-                          onChange={() => toggleSelect(g.id)}
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer"
-                        />
-                      </label>
-                    )}
-                    <span className="font-medium text-gray-900 truncate flex-1">
-                      {g.firstName} {g.lastName}
-                    </span>
-                    {g.groupName && (
-                      <span className="text-xs text-gray-500 truncate">{g.groupName}</span>
-                    )}
-                    <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-500 ml-6">
-                    <RsvpStatusBadge status={g.rsvpStatus} short />
-                    {[
-                      { key: "C", invited: g.invitedToCeremony,   attending: g.attendingCeremony,   maybe: g.attendingCeremonyMaybe },
-                      { key: "R", invited: g.invitedToReception,  attending: g.attendingReception,  maybe: g.attendingReceptionMaybe },
-                      { key: "A", invited: g.invitedToAfterparty, attending: g.attendingAfterparty, maybe: g.attendingAfterpartyMaybe },
-                    ].map(({ key, invited, attending, maybe }) => (
-                      <span
-                        key={key}
-                        className={`inline-flex items-center justify-center w-4 h-4 rounded text-[10px] font-bold ${
-                          !invited ? "opacity-0" :
-                          attending === true  ? "bg-green-100 text-green-700" :
-                          attending === false ? "bg-red-100 text-red-600" :
-                          maybe               ? "bg-amber-100 text-amber-700" :
-                          "bg-gray-100 text-gray-400"
-                        }`}
-                      >
-                        {key}
+                <Link
+                  href={`/guests/${g.id}`}
+                  className={`block bg-white rounded-xl border transition-colors ${perms.can.editGuests && selectedIds.has(g.id) ? "border-blue-400 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}
+                >
+                  <div className="px-3 pt-2.5 pb-2">
+                    <div className="flex items-center gap-2">
+                      {perms.can.editGuests && (
+                        <label
+                          className="flex items-center justify-center min-h-[44px] min-w-[44px] shrink-0 cursor-pointer -m-2 p-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(g.id)}
+                            onChange={() => toggleSelect(g.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 cursor-pointer"
+                          />
+                        </label>
+                      )}
+                      <span className="font-medium text-gray-900 truncate flex-1">
+                        {g.firstName} {g.lastName}
                       </span>
-                    ))}
-                    {g.unsubscribedAt && (
-                      <span title="Unsubscribed from emails">
-                        <XCircle className="w-3 h-3 text-gray-400 shrink-0" />
-                      </span>
-                    )}
-                    <span className="flex-1" />
-                    {g.table && (
-                      <span className="text-gray-500">{g.table.name}</span>
-                    )}
+                      {g.groupName && (
+                        <span className="text-xs text-gray-500 truncate">{g.groupName}</span>
+                      )}
+                      <ChevronRight className="w-5 h-5 text-gray-300 shrink-0" />
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-500 ml-6">
+                      <RsvpStatusBadge status={g.rsvpStatus} short />
+                      {[
+                        { key: "C", invited: g.invitedToCeremony,   attending: g.attendingCeremony,   maybe: g.attendingCeremonyMaybe },
+                        { key: "R", invited: g.invitedToReception,  attending: g.attendingReception,  maybe: g.attendingReceptionMaybe },
+                        { key: "A", invited: g.invitedToAfterparty, attending: g.attendingAfterparty, maybe: g.attendingAfterpartyMaybe },
+                      ].map(({ key, invited, attending, maybe }) => (
+                        <span
+                          key={key}
+                          className={`inline-flex items-center justify-center w-4 h-4 rounded text-[10px] font-bold ${
+                            !invited ? "opacity-0" :
+                            attending === true  ? "bg-green-100 text-green-700" :
+                            attending === false ? "bg-red-100 text-red-600" :
+                            maybe               ? "bg-amber-100 text-amber-700" :
+                            "bg-gray-100 text-gray-400"
+                          }`}
+                        >
+                          {key}
+                        </span>
+                      ))}
+                      {g.unsubscribedAt && (
+                        <span title="Unsubscribed from emails">
+                          <XCircle className="w-3 h-3 text-gray-400 shrink-0" />
+                        </span>
+                      )}
+                      <span className="flex-1" />
+                      {g.table && (
+                        <span className="text-gray-500">{g.table.name}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </SwipeableRow>
             ))}
             <p className="text-xs text-gray-400 text-center py-2">
               {guests.length} guest{guests.length !== 1 ? "s" : ""}

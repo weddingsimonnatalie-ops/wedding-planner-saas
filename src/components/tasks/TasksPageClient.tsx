@@ -11,6 +11,7 @@ import { fetchApi } from "@/lib/fetch";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useRefresh } from "@/context/RefreshContext";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { SwipeableRow } from "@/components/ui/SwipeableRow";
 import { TaskModal, TaskData, TaskPriority, RecurringInterval } from "./TaskModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
@@ -302,17 +303,38 @@ function GroupSection({
       </div>
       <div className="px-4 pb-2">
         {tasks.map(t => (
-          <TaskRow
+          <SwipeableRow
             key={t.id}
-            task={t}
-            isSelected={selectedIds.has(t.id)}
-            canBulkSelect={canBulkSelect}
-            canComplete={canComplete}
-            onToggleSelect={onToggleSelect}
-            onToggleComplete={onToggleComplete}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
+            actions={[
+              ...(canComplete
+                ? [{
+                    icon: <Check className="w-5 h-5" />,
+                    label: t.isCompleted ? "Undo" : "Done",
+                    colour: "bg-green-500",
+                    onClick: () => onToggleComplete(t),
+                  }]
+                : []),
+              ...(onDelete
+                ? [{
+                    icon: <Trash2 className="w-5 h-5" />,
+                    label: "Delete",
+                    colour: "bg-red-500",
+                    onClick: () => onDelete(t),
+                  }]
+                : []),
+            ]}
+          >
+            <TaskRow
+              task={t}
+              isSelected={selectedIds.has(t.id)}
+              canBulkSelect={canBulkSelect}
+              canComplete={canComplete}
+              onToggleSelect={onToggleSelect}
+              onToggleComplete={onToggleComplete}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          </SwipeableRow>
         ))}
       </div>
     </div>
@@ -776,17 +798,38 @@ export function TasksPageClient() {
               {completedOpen && (
                 <div className="px-4 pb-3">
                   {completedVisible.map(t => (
-                    <TaskRow
+                    <SwipeableRow
                       key={t.id}
-                      task={t}
-                      isSelected={selectedIds.has(t.id)}
-                      canBulkSelect={canBulkSelect}
-                      canComplete={canComplete}
-                      onToggleSelect={handleToggleSelect}
-                      onToggleComplete={handleToggleComplete}
-                      onEdit={editHandler}
-                      onDelete={deleteHandler}
-                    />
+                      actions={[
+                        ...(canComplete
+                          ? [{
+                              icon: <Check className="w-5 h-5" />,
+                              label: "Undo",
+                              colour: "bg-green-500",
+                              onClick: () => handleToggleComplete(t),
+                            }]
+                          : []),
+                        ...(deleteHandler
+                          ? [{
+                              icon: <Trash2 className="w-5 h-5" />,
+                              label: "Delete",
+                              colour: "bg-red-500",
+                              onClick: () => deleteHandler(t),
+                            }]
+                          : []),
+                      ]}
+                    >
+                      <TaskRow
+                        task={t}
+                        isSelected={selectedIds.has(t.id)}
+                        canBulkSelect={canBulkSelect}
+                        canComplete={canComplete}
+                        onToggleSelect={handleToggleSelect}
+                        onToggleComplete={handleToggleComplete}
+                        onEdit={editHandler}
+                        onDelete={deleteHandler}
+                      />
+                    </SwipeableRow>
                   ))}
                   {!showAllCompleted && completed.length > 20 && (
                     <button
