@@ -306,7 +306,7 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
   const isManualOverride = isEdit && (localGuest?.isManualOverride ?? false);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-5 pb-20 md:pb-0">
       {readOnly && (
         <ReadOnlyBanner message="You have view-only access to this guest." />
       )}
@@ -652,12 +652,13 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
         </div>
       )}
 
-      <div className="sticky bottom-0 left-0 right-0 flex items-center gap-3 pt-3 pb-2 bg-white border-t border-gray-100 -mx-1 px-1 sm:static sm:border-0 sm:bg-transparent sm:pt-2 sm:pb-0 sm:mx-0 sm:px-0">
+      {/* Desktop buttons — inline position */}
+      <div className="hidden md:flex items-center gap-3 pt-3">
         {!readOnly && (
           <button
             type="submit"
             disabled={saving}
-            className="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors min-h-[44px]"
+            className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
           >
             {saving ? "Saving…" : isEdit ? "Save changes" : "Add guest"}
           </button>
@@ -665,11 +666,38 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
         <button
           type="button"
           onClick={() => router.push("/guests")}
-          className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
+          className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           {isEdit ? "Back to guests" : "Cancel"}
         </button>
       </div>
+
+      {/* Mobile fixed bottom bar */}
+      {!readOnly && (
+        <div
+          className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-gray-200 flex items-center gap-3 px-4"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
+          {/* Unsaved changes indicator */}
+          {isDirty && !saving && (
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Unsaved changes" />
+          )}
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex-1 px-4 py-3 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors min-h-[44px]"
+          >
+            {saving ? "Saving…" : isEdit ? "Save changes" : "Add guest"}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/guests")}
+            className="px-4 py-3 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </form>
   );
 }
