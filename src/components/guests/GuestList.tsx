@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect } from "react";
+import React, { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Edit2, Trash2, Copy, Mail, Upload, X, CheckCircle2, XCircle, ChevronDown, ChevronRight, Loader2, Pencil, Tag, Utensils, Download, Plus, MoreHorizontal, SlidersHorizontal, RefreshCw } from "lucide-react";
@@ -480,8 +480,8 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
         )}
       </div>
 
-      {/* Stats bar */}
-      <div className="grid grid-cols-4 md:grid-cols-7 gap-2 md:gap-3">
+      {/* Stats bar - horizontal list on mobile, card grid on desktop */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 md:gap-3 md:grid md:grid-cols-7 bg-white md:bg-transparent rounded-lg md:rounded-none border md:border-0 border-gray-200 px-3 py-2 md:p-0">
         {[
           { label: hasFilters ? "Filtered" : "Total", value: stats.total, color: hasFilters ? "text-primary" : "text-gray-900" },
           { label: "Accepted", value: stats.accepted, color: "text-green-600" },
@@ -491,13 +491,20 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
           { label: "Maybe", value: stats.maybe, color: "text-gray-500" },
           { label: "Unassigned", value: stats.unassigned, color: "text-blue-600" },
         ].map(({ label, value, color }) => (
-          <div
-            key={label}
-            className="bg-white rounded-lg md:rounded-xl border border-gray-200 px-2 py-1.5 md:px-4 md:py-3 text-center min-w-0"
-          >
-            <p className={`text-base md:text-xl font-bold ${color} truncate`}>{value}</p>
-            <p className="text-[11px] md:text-xs text-gray-500 leading-tight">{label}</p>
-          </div>
+          <React.Fragment key={label}>
+            {/* Mobile: inline list */}
+            <span className="md:hidden inline-flex items-center gap-1 text-sm">
+              <span className={`font-semibold ${color}`}>{value}</span>
+              <span className="text-gray-500">{label}</span>
+            </span>
+            {/* Desktop: card */}
+            <div
+              className="hidden md:block bg-white rounded-xl border border-gray-200 px-4 py-3 text-center min-w-0"
+            >
+              <p className={`text-xl font-bold ${color} truncate`}>{value}</p>
+              <p className="text-xs text-gray-500 leading-tight">{label}</p>
+            </div>
+          </React.Fragment>
         ))}
       </div>
 
