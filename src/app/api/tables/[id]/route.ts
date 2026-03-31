@@ -95,13 +95,13 @@ export async function PUT(
           }
 
           // Reassign displaced guests to available seats (or unassign if no seats available)
-          for (const guest of displacedGuests) {
+          await Promise.all(displacedGuests.map((guest) => {
             const newSeat = availableSeats.shift();
-            await tx.guest.update({
+            return tx.guest.update({
               where: { id: guest.id, weddingId },
               data: { seatNumber: newSeat ?? null }
             });
-          }
+          }));
         }
       });
     }
@@ -177,13 +177,13 @@ export async function PATCH(
           }
 
           // Reassign displaced guests to available seats (or unassign if no seats available)
-          for (const guest of displacedGuests) {
+          await Promise.all(displacedGuests.map((guest) => {
             const newSeat = availableSeats.shift();
-            await tx.guest.update({
+            return tx.guest.update({
               where: { id: guest.id, weddingId },
               data: { seatNumber: newSeat ?? null }
             });
-          }
+          }));
         }
       });
     }
