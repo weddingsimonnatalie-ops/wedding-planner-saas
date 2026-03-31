@@ -26,7 +26,10 @@ export async function GET(req: NextRequest) {
             weddingId,
             guests: { some: {} },
           },
-          include: {
+          select: {
+            id: true,
+            name: true,
+            capacity: true,
             guests: {
               select: {
                 id: true,
