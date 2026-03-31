@@ -21,6 +21,8 @@ import { CategoriesManager } from "./CategoriesManager";
 import { NotificationsForm } from "./NotificationsForm";
 import { SessionTimeoutSettings } from "./SessionTimeoutSettings";
 import { ThemeColorPicker } from "./ThemeColorPicker";
+import { TwoFactorSettings } from "./TwoFactorSettings";
+import { TrustedDevicesList } from "./TrustedDevicesList";
 import { WeddingConfigForm } from "@/components/wedding-config-form";
 import Link from "next/link";
 import { CreditCard } from "lucide-react";
@@ -51,7 +53,7 @@ interface SettingsClientProps {
   emailVerificationRequired: boolean;
 }
 
-type Tab = "general" | "meals" | "categories" | "users" | "billing";
+type Tab = "general" | "meals" | "categories" | "users" | "security" | "billing";
 
 export function SettingsClient({
   config,
@@ -70,6 +72,7 @@ export function SettingsClient({
     if (tabParam === "meals") return "meals";
     if (tabParam === "categories") return "categories";
     if (tabParam === "users") return "users";
+    if (tabParam === "security") return "security";
     if (tabParam === "billing") return "billing";
     return "general";
   });
@@ -79,6 +82,7 @@ export function SettingsClient({
     { id: "meals", label: "Meals" },
     { id: "categories", label: "Categories" },
     { id: "users", label: "Users" },
+    { id: "security", label: "Security" },
     { id: "billing", label: "Billing" },
   ];
 
@@ -180,36 +184,43 @@ export function SettingsClient({
 
       {/* Users tab */}
       {tab === "users" && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="text-base font-medium text-gray-900 mb-1">User Management</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Add or remove admin accounts, manage roles and permissions.
+          </p>
+          <UsersManager
+            initialUsers={users}
+            initialInvites={invites}
+            ownerUserId={ownerUserId}
+            currentUserEmail={currentUserEmail}
+            emailVerificationRequired={emailVerificationRequired}
+          />
+        </div>
+      )}
+
+      {/* Security tab */}
+      {tab === "security" && (
         <div className="space-y-6">
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">User Management</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Add or remove admin accounts, manage roles and permissions.
+            <h2 className="text-base font-medium text-gray-900 mb-1">
+              Two-factor authentication
+            </h2>
+            <p className="text-sm text-gray-500 mb-5">
+              Add an extra layer of security by requiring a code from your authenticator
+              app each time you sign in.
             </p>
-            <UsersManager
-              initialUsers={users}
-              initialInvites={invites}
-              ownerUserId={ownerUserId}
-              currentUserEmail={currentUserEmail}
-              emailVerificationRequired={emailVerificationRequired}
-            />
+            <TwoFactorSettings />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-medium text-gray-900">Security</h2>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  Manage two-factor authentication and trusted devices.
-                </p>
-              </div>
-              <Link
-                href="/settings/security"
-                className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Manage security
-              </Link>
-            </div>
+            <h2 className="text-base font-medium text-gray-900 mb-1">
+              Trusted devices
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Devices you&apos;ve marked as trusted. Trusted devices stay logged in longer.
+            </p>
+            <TrustedDevicesList />
           </div>
         </div>
       )}
