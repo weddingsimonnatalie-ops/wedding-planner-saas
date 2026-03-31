@@ -889,7 +889,7 @@ wedding-planner/
 │           ├── ActivateTrialButton.tsx   — "Activate subscription" button; ends trial, starts billing
 │           └── SyncFromStripeButton.tsx   — "Refresh from Stripe" button; manual sync for billing page
 │       └── ui/
-│           ├── BottomNav.tsx             — Mobile bottom navigation bar (Home, Guests, Tasks, More)
+│           ├── BottomNav.tsx             — Mobile bottom navigation bar (Appointments, Guests, Tasks, Payments, More)
 │           ├── SwipeableRow.tsx          — Swipe-to-reveal action buttons component for mobile lists
 │           ├── ReadOnlyBanner.tsx       — Blue info banner for read-only pages/sections
 │           ├── UpgradePrompt.tsx         — Gate wrapper for subscription-required features
@@ -1131,7 +1131,7 @@ Items discussed or considered but not yet built:
   - All forms have responsive grids
   - iOS input zoom prevented via 16px font-size rule in globals.css; .ios-scroll utility for momentum scrolling; .main-content for bottom nav padding
   - Seating visual view shows a notice on mobile suggesting list view
-  - **Bottom navigation bar**: Fixed tab bar on mobile (Home, Guests, Tasks, More) for one-tap navigation; hidden on desktop
+  - **Bottom navigation bar**: Fixed tab bar on mobile (Appointments, Guests, Tasks, Payments, More) for one-tap navigation; Appointments and Payments visible to ADMIN + VIEWER only; hidden on desktop
   - **Sticky save buttons**: Guest detail form has fixed bottom save bar on mobile with unsaved changes indicator
   - **Progressive disclosure**: Supplier detail sections collapse on mobile; tap to expand
   - **Pull-to-refresh**: Pull down gesture triggers data refresh on GuestList, Tasks, and Payments pages

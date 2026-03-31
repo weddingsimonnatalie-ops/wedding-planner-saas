@@ -48,14 +48,15 @@ The guest detail form (`/guests/[id]`) is long: name/contact → events → RSVP
 
 ## Phase 3 — Bottom Navigation Bar ✅ COMPLETE
 
-The hamburger → slide-out sidebar flow requires two taps to navigate. A persistent bottom tab bar gives one-tap access to the 4 most-used destinations, leaving the sidebar for secondary pages.
+The hamburger → slide-out sidebar flow requires two taps to navigate. A persistent bottom tab bar gives one-tap access to the most-used destinations, leaving the sidebar for secondary pages.
 
 ### New file: `src/components/BottomNav.tsx`
 - [x] Fixed bottom bar: `fixed bottom-0 inset-x-0 md:hidden bg-white border-t border-gray-200`
 - [x] Safe area: `style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}`
-- [x] Four tabs: **Dashboard** (Home icon) · **Guests** (Users icon) · **Tasks** (CheckSquare icon) · **More** (Menu icon)
-  - Dashboard, Guests, Tasks: direct `<Link>` navigation
+- [x] Five tabs: **Appointments** (CalendarDays icon) · **Guests** (Users icon) · **Tasks** (CheckSquare icon) · **Payments** (CreditCard icon) · **More** (Menu icon)
+  - Appointments, Guests, Tasks, Payments: direct `<Link>` navigation
   - More: opens the sidebar (calls `setOpen(true)` via a context or prop)
+  - Role-based visibility: Appointments and Payments visible to ADMIN + VIEWER only; Guests visible to all; Tasks visible to all roles
 - [x] Active tab: `text-primary` fill; inactive: `text-gray-400`
 - [x] Badge on Tasks tab: red dot when overdue/due-this-week count > 0 (reuse existing badge logic)
 - [x] Each tab: `min-h-[44px]` touch target with icon + label text at `text-[10px]`
@@ -68,7 +69,7 @@ The hamburger → slide-out sidebar flow requires two taps to navigate. A persis
 ### `src/app/(dashboard)/layout.tsx`
 - [x] Confirm `BottomNav` has access to `refreshToken` from `RefreshContext` for the task badge
 
-**Commit: `d0c3129`**
+**Commit: `d0c3129`** (initial), **`a743548`** (updated tabs to Appts/Guests/Tasks/Payments/More)
 
 ---
 
