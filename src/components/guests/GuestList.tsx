@@ -1271,7 +1271,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                   Set status to &ldquo;{label}&rdquo; for {selectedIds.size} guest{selectedIds.size !== 1 ? "s" : ""}?
                 </h2>
               </div>
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+              <div className="flex-1 overflow-y-auto overscroll-contain ios-scroll px-6 py-4 space-y-3">
                 <div className="space-y-0.5">
                   {selectedGuests.map(g => (
                     <div key={g.id} className="text-sm text-gray-700 py-0.5">
@@ -1323,7 +1323,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                     : `Set meal choice to \u201c${bulkMealDialog.mealLabel}\u201d for ${receptionGuests.length} guest${receptionGuests.length !== 1 ? "s" : ""}?`}
                 </h2>
               </div>
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+              <div className="flex-1 overflow-y-auto overscroll-contain ios-scroll px-6 py-4 space-y-3">
                 <div className="space-y-0.5">
                   {receptionGuests.map(g => (
                     <div key={g.id} className="text-sm text-gray-700 py-0.5">
@@ -1381,7 +1381,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                     Send RSVP emails to {selectedIds.size} guest{selectedIds.size !== 1 ? "s" : ""}?
                   </h2>
                 </div>
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <div className="flex-1 overflow-y-auto overscroll-contain ios-scroll px-6 py-4 space-y-4">
                   {emailDialog.guestsWithEmail.length > 0 && (
                     <div>
                       <p className="text-sm font-medium text-gray-700 mb-2">
@@ -1461,7 +1461,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                     Sending RSVP emails…
                   </h2>
                 </div>
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <div className="flex-1 overflow-y-auto overscroll-contain ios-scroll px-6 py-4 space-y-4">
                   {/* Progress bar */}
                   <div>
                     <div className="flex justify-between text-xs text-gray-500 mb-1">
@@ -1518,7 +1518,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                     {emailDialog.failed.length > 0 && ` · ${emailDialog.failed.length} failed`}
                   </p>
                 </div>
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                <div className="flex-1 overflow-y-auto overscroll-contain ios-scroll px-6 py-4 space-y-4">
                   {emailDialog.sent.length > 0 && (
                     <div>
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Sent</p>

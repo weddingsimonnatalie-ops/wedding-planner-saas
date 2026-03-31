@@ -58,3 +58,8 @@
     padding-bottom: calc(60px + env(safe-area-inset-bottom));
   }
 }
+
+/* iOS momentum scrolling for modal content */
+.ios-scroll {
+  -webkit-overflow-scrolling: touch;
+}
