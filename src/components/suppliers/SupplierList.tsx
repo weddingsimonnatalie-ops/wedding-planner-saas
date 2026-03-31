@@ -126,9 +126,9 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
           </div>
           <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showStats ? "rotate-180" : ""}`} />
         </button>
-        {/* Mobile: Collapsible single-column list */}
+        {/* Mobile: Collapsible 2-column grid */}
         {showStats && (
-          <div className="flex flex-col gap-1 md:hidden">
+          <div className="grid grid-cols-2 gap-2 md:hidden">
             {[
               { label: "Paid", value: fmt(totals.paid), cls: "text-green-700" },
               { label: "Remaining", value: fmt(totals.remaining), cls: "text-amber-700" },
