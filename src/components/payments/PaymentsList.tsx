@@ -98,6 +98,7 @@ function StatusBadge({ status }: { status: string }) {
 // ── Summary bar ────────────────────────────────────────────────────────────────
 
 function SummaryBar({ payments }: { payments: PaymentItem[] }) {
+  const [showStats, setShowStats] = useState(false);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
@@ -125,22 +126,54 @@ function SummaryBar({ payments }: { payments: PaymentItem[] }) {
     .reduce((s, p) => s + p.amount, 0);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-      <div className="rounded-lg md:rounded-xl border border-gray-200 bg-gray-50 px-2 py-1.5 md:p-4 text-center min-w-0">
-        <p className={`text-base md:text-lg font-bold text-gray-900 truncate ${totalRemaining > 0 ? "" : ""}`}>{fmt(totalRemaining)}</p>
-        <p className="text-[11px] md:text-xs text-gray-500 leading-tight">Remaining</p>
-      </div>
-      <div className="rounded-lg md:rounded-xl border border-amber-200 bg-amber-50 px-2 py-1.5 md:p-4 text-center min-w-0">
-        <p className="text-base md:text-lg font-bold text-amber-700 truncate">{fmt(dueThisMonth)}</p>
-        <p className="text-[11px] md:text-xs text-amber-600 leading-tight">Due this month</p>
-      </div>
-      <div className="rounded-lg md:rounded-xl border border-red-200 bg-red-50 px-2 py-1.5 md:p-4 text-center min-w-0">
-        <p className="text-base md:text-lg font-bold text-red-700 truncate">{fmt(totalOverdue)}</p>
-        <p className="text-[11px] md:text-xs text-red-500 leading-tight">Overdue</p>
-      </div>
-      <div className="rounded-lg md:rounded-xl border border-green-200 bg-green-50 px-2 py-1.5 md:p-4 text-center min-w-0">
-        <p className="text-base md:text-lg font-bold text-green-700 truncate">{fmt(paidThisYear)}</p>
-        <p className="text-[11px] md:text-xs text-green-600 leading-tight">Paid this year</p>
+    <div className="flex flex-col gap-2 md:gap-3 mb-4">
+      {/* Mobile: Collapsible header */}
+      <button
+        type="button"
+        onClick={() => setShowStats(s => !s)}
+        className="md:hidden flex items-center justify-between w-full bg-white rounded-lg border border-gray-200 px-4 py-2.5"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-lg font-bold text-gray-900">{fmt(totalRemaining)}</span>
+          <span className="text-sm font-medium text-gray-700">Remaining</span>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showStats ? "rotate-180" : ""}`} />
+      </button>
+      {/* Mobile: Collapsible single-column list */}
+      {showStats && (
+        <div className="flex flex-col gap-1 md:hidden">
+          <div className="flex items-center justify-between bg-amber-50 rounded-lg border border-amber-200 px-3 py-2">
+            <span className="font-semibold text-sm text-amber-700">{fmt(dueThisMonth)}</span>
+            <span className="text-sm text-amber-600">Due this month</span>
+          </div>
+          <div className="flex items-center justify-between bg-red-50 rounded-lg border border-red-200 px-3 py-2">
+            <span className="font-semibold text-sm text-red-700">{fmt(totalOverdue)}</span>
+            <span className="text-sm text-red-500">Overdue</span>
+          </div>
+          <div className="flex items-center justify-between bg-green-50 rounded-lg border border-green-200 px-3 py-2">
+            <span className="font-semibold text-sm text-green-700">{fmt(paidThisYear)}</span>
+            <span className="text-sm text-green-600">Paid this year</span>
+          </div>
+        </div>
+      )}
+      {/* Desktop: 4-column card grid */}
+      <div className="hidden md:grid md:grid-cols-4 md:gap-3">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center min-w-0">
+          <p className="text-lg font-bold text-gray-900 truncate">{fmt(totalRemaining)}</p>
+          <p className="text-xs text-gray-500 leading-tight">Remaining</p>
+        </div>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center min-w-0">
+          <p className="text-lg font-bold text-amber-700 truncate">{fmt(dueThisMonth)}</p>
+          <p className="text-xs text-amber-600 leading-tight">Due this month</p>
+        </div>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center min-w-0">
+          <p className="text-lg font-bold text-red-700 truncate">{fmt(totalOverdue)}</p>
+          <p className="text-xs text-red-500 leading-tight">Overdue</p>
+        </div>
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center min-w-0">
+          <p className="text-lg font-bold text-green-700 truncate">{fmt(paidThisYear)}</p>
+          <p className="text-xs text-green-600 leading-tight">Paid this year</p>
+        </div>
       </div>
     </div>
   );
