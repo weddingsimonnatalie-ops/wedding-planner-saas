@@ -803,6 +803,10 @@ wedding-planner/
 │   ├── middleware.ts          — Auth guard for all routes except login/rsvp/api-auth
 │   ├── context/
 │   │   └── RefreshContext.tsx — RefreshProvider + useRefresh() hook; cross-component refresh token
+│   ├── hooks/
+│   │   ├── usePermissions.ts   — Role-based permission checks (can.editGuests, etc.)
+│   │   ├── usePullToRefresh.ts — Pull-to-refresh gesture hook for mobile list refresh
+│   │   └── useFormDirtyRegistration.ts — Inactivity warning for unsaved forms
 │   ├── types/
 │   │   └── api.ts             — Typed API response interfaces for all endpoints
 │   ├── lib/
@@ -856,6 +860,7 @@ wedding-planner/
 │   │   ├── login/             — Login page
 │   │   └── api/               — All API routes (see below)
 │   └── components/
+│       ├── LayoutShell.tsx              — Main layout wrapper with sidebar nav and mobile bottom nav
 │       ├── dashboard/DashboardClient.tsx  — Full dashboard UI
 │       ├── guests/
 │       │   ├── GuestList.tsx              — Guest list table + filters; opens GuestModal for new guests
@@ -883,6 +888,12 @@ wedding-planner/
 │       └── billing/
 │           ├── ActivateTrialButton.tsx   — "Activate subscription" button; ends trial, starts billing
 │           └── SyncFromStripeButton.tsx   — "Refresh from Stripe" button; manual sync for billing page
+│       └── ui/
+│           ├── BottomNav.tsx             — Mobile bottom navigation bar (Home, Guests, Tasks, More)
+│           ├── SwipeableRow.tsx          — Swipe-to-reveal action buttons component for mobile lists
+│           ├── ReadOnlyBanner.tsx       — Blue info banner for read-only pages/sections
+│           ├── UpgradePrompt.tsx         — Gate wrapper for subscription-required features
+│           └── ConfirmModal.tsx          — Confirmation dialog component
 ```
 
 ### API routes
@@ -1113,7 +1124,20 @@ Items discussed or considered but not yet built:
 - **Payment reminder email recipient**: ✅ Built — `WeddingConfig.reminderEmail` field added (Settings → Notifications section). Used as recipient for payment reminders and appointment daemon. Falls back to `SMTP_FROM` if not set.
 - **Attachment preview**: Attachments can be downloaded but not previewed in-browser (no PDF/image viewer).
 - **Guest groups**: `groupName` is a free-text string, not a separate model. No group-level operations (e.g. "assign all Smiths to Table 3") are implemented.
-- **Mobile layout**: Full mobile responsive layout implemented. RSVP page is mobile-first. Admin sidebar uses hamburger menu at < 768px. Guest list shows card layout on mobile. All forms have responsive grids. iOS input zoom prevented via 16px font-size rule in globals.css. Seating visual view shows a notice on mobile suggesting list view.
+- **Mobile layout**: Full mobile responsive layout implemented with native iOS-style UX patterns:
+  - RSVP page is mobile-first
+  - Admin sidebar uses hamburger menu at < 768px
+  - Guest list shows card layout on mobile with swipe-to-delete gesture
+  - All forms have responsive grids
+  - iOS input zoom prevented via 16px font-size rule in globals.css; .ios-scroll utility for momentum scrolling; .main-content for bottom nav padding
+  - Seating visual view shows a notice on mobile suggesting list view
+  - **Bottom navigation bar**: Fixed tab bar on mobile (Home, Guests, Tasks, More) for one-tap navigation; hidden on desktop
+  - **Sticky save buttons**: Guest detail form has fixed bottom save bar on mobile with unsaved changes indicator
+  - **Progressive disclosure**: Supplier detail sections collapse on mobile; tap to expand
+  - **Pull-to-refresh**: Pull down gesture triggers data refresh on GuestList, Tasks, and Payments pages
+  - **Swipe-to-action**: Swipe left on mobile cards to reveal action buttons (delete, complete)
+  - **iOS scroll fixes**: Bulk dialogs use momentum scroll with overscroll containment
+  - **Input modes**: Currency fields use decimal keypad; phone fields use tel keypad
 
 ---
 
