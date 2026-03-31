@@ -59,27 +59,15 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
   // Close sidebar when route changes
   useEffect(() => { setOpen(false); }, [pathname]);
 
-  // Task badge: count overdue + due this week (refresh on each navigation)
+  // Combined badge counts: tasks, appointments, payments (refresh on each navigation)
   useEffect(() => {
-    fetchApi("/api/tasks/count")
-      .then(r => r.ok ? r.json() : { count: 0 })
-      .then((data: { count: number }) => setTaskBadge(data.count))
-      .catch(() => {});
-  }, [pathname, refreshToken]);
-
-  // Appointment badge: count appointments in the next 7 days
-  useEffect(() => {
-    fetchApi("/api/appointments/count")
-      .then(r => r.ok ? r.json() : { count: 0 })
-      .then((data: { count: number }) => setAppointmentBadge(data.count))
-      .catch(() => {});
-  }, [pathname, refreshToken]);
-
-  // Payment badge: count overdue + due this month (ADMIN/VIEWER only)
-  useEffect(() => {
-    fetchApi("/api/payments/count")
-      .then(r => r.ok ? r.json() : { count: 0 })
-      .then((data: { count: number }) => setPaymentBadge(data.count))
+    fetchApi("/api/dashboard/counts")
+      .then(r => r.ok ? r.json() : { tasks: 0, appointments: 0, payments: 0 })
+      .then((data: { tasks: number; appointments: number; payments: number }) => {
+        setTaskBadge(data.tasks);
+        setAppointmentBadge(data.appointments);
+        setPaymentBadge(data.payments);
+      })
       .catch(() => {});
   }, [pathname, refreshToken]);
 
