@@ -87,6 +87,7 @@ model Wedding {
   sessionTimeout       Int             @default(30)
   sessionWarningTime   Int             @default(5)
   themeHue             Int             @default(330)
+  totalBudget         Float?          // Overall wedding budget
 
   // Stripe
   stripeCustomerId     String?         @unique
@@ -304,15 +305,16 @@ model RoomElement {
 // --- SUPPLIER CATEGORIES ---
 
 model SupplierCategory {
-  id        String     @id @default(cuid())
-  weddingId String
-  wedding   Wedding    @relation(fields: [weddingId], references: [id], onDelete: Cascade)
-  name      String
-  colour    String     @default("#6366f1")
-  sortOrder Int        @default(0)
-  isActive  Boolean    @default(true)
-  suppliers Supplier[]
-  createdAt DateTime   @default(now())
+  id               String     @id @default(cuid())
+  weddingId        String
+  wedding          Wedding    @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  name             String
+  allocatedAmount  Float?     // Budget allocation for this category
+  colour           String     @default("#6366f1")
+  sortOrder        Int        @default(0)
+  isActive         Boolean    @default(true)
+  suppliers        Supplier[]
+  createdAt        DateTime   @default(now())
 
   @@index([weddingId])
 }

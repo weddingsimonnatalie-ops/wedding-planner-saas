@@ -17,6 +17,7 @@ interface Category {
   colour: string;
   sortOrder: number;
   isActive: boolean;
+  allocatedAmount?: number | null;
 }
 
 interface Props {
@@ -33,12 +34,14 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
   // Per-row edit state
   const [editName, setEditName] = useState<Record<string, string>>({});
   const [editColour, setEditColour] = useState<Record<string, string>>({});
+  const [editAllocated, setEditAllocated] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
 
   // Add form
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColour, setNewColour] = useState("#6366f1");
+  const [newAllocated, setNewAllocated] = useState("");
   const [adding, setAdding] = useState(false);
 
   // Delete confirm
@@ -64,12 +67,15 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
         setCategories(data);
         const names: Record<string, string> = {};
         const colours: Record<string, string> = {};
+        const allocated: Record<string, string> = {};
         data.forEach((c: Category) => {
           names[c.id] = c.name;
           colours[c.id] = c.colour;
+          allocated[c.id] = c.allocatedAmount != null ? String(c.allocatedAmount) : "";
         });
         setEditName(names);
         setEditColour(colours);
+        setEditAllocated(allocated);
         setLoading(false);
       })
       .catch(() => {
@@ -80,10 +86,14 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
 
   async function handleSaveRow(id: string) {
     setSaving(s => ({ ...s, [id]: true }));
+    const body: Record<string, unknown> = { name: editName[id], colour: editColour[id] };
+    if (entityType === "supplier") {
+      body.allocatedAmount = editAllocated[id] === "" ? null : parseFloat(editAllocated[id]) || null;
+    }
     const res = await fetch(`${apiBase}/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editName[id], colour: editColour[id] }),
+      body: JSON.stringify(body),
     });
     setSaving(s => ({ ...s, [id]: false }));
     if (res.ok) {
@@ -167,10 +177,14 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
   async function handleAdd() {
     if (!newName.trim()) return;
     setAdding(true);
+    const body: Record<string, unknown> = { name: newName.trim(), colour: newColour };
+    if (entityType === "supplier") {
+      body.allocatedAmount = newAllocated === "" ? null : parseFloat(newAllocated) || null;
+    }
     const res = await fetch(apiBase, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim(), colour: newColour }),
+      body: JSON.stringify(body),
     });
     setAdding(false);
     if (res.ok) {
@@ -178,8 +192,10 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
       setCategories(prev => [...prev, created]);
       setEditName(n => ({ ...n, [created.id]: created.name }));
       setEditColour(c => ({ ...c, [created.id]: created.colour }));
+      setEditAllocated(a => ({ ...a, [created.id]: created.allocatedAmount ?? "" }));
       setNewName("");
       setNewColour("#6366f1");
+      setNewAllocated("");
       setShowAdd(false);
       showToast("Category added");
     } else {
@@ -207,7 +223,9 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
       <div className="space-y-2">
         {categories.map((cat, idx) => {
           const isDirty =
-            editName[cat.id] !== cat.name || editColour[cat.id] !== cat.colour;
+            editName[cat.id] !== cat.name ||
+            editColour[cat.id] !== cat.colour ||
+            (entityType === "supplier" && (editAllocated[cat.id] ?? "") !== (cat.allocatedAmount != null ? String(cat.allocatedAmount) : ""));
 
           return (
             <div key={cat.id} className="flex items-center gap-2 py-1.5 border-b border-gray-100 last:border-0">
@@ -270,6 +288,21 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
                 onKeyDown={e => e.key === "Enter" && isDirty && handleSaveRow(cat.id)}
                 className="flex-1 min-w-0 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
               />
+
+              {/* Budget allocation (supplier only) */}
+              {entityType === "supplier" && (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <span className="text-xs text-gray-400">£</span>
+                  <input
+                    type="number"
+                    value={editAllocated[cat.id] ?? ""}
+                    onChange={e => setEditAllocated(a => ({ ...a, [cat.id]: e.target.value }))}
+                    onKeyDown={e => e.key === "Enter" && isDirty && handleSaveRow(cat.id)}
+                    placeholder="Budget"
+                    className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              )}
 
               {/* Active toggle */}
               <button
@@ -338,6 +371,20 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
               placeholder="Category name"
               className="flex-1 min-w-[160px] px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary"
             />
+            {/* Budget allocation (supplier only) */}
+            {entityType === "supplier" && (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-400">£</span>
+                <input
+                  type="number"
+                  value={newAllocated}
+                  onChange={e => setNewAllocated(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleAdd()}
+                  placeholder="Budget"
+                  className="w-28 px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <button
@@ -348,7 +395,7 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
               {adding ? "Adding…" : "Add category"}
             </button>
             <button
-              onClick={() => { setShowAdd(false); setNewName(""); setNewColour("#6366f1"); }}
+              onClick={() => { setShowAdd(false); setNewName(""); setNewColour("#6366f1"); setNewAllocated(""); }}
               className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-600"
             >
               Cancel

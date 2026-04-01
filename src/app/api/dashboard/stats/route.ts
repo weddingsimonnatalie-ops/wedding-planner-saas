@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
       tasksOverdue,
       tasksDueSoon,
       upcomingTasks,
+      budgetCategories,
     ] = await withTenantContext(weddingId, async (tx) => {
       // When Inngest is not configured, mark overdue payments on dashboard load
       // (same behaviour as the personal app). When INNGEST_EVENT_KEY is set,
@@ -118,6 +119,26 @@ export async function GET(req: NextRequest) {
           orderBy: { dueDate: "asc" },
           take: 5,
         }),
+        // Budget categories with allocated amounts and paid totals
+        tx.supplierCategory.findMany({
+          where: { weddingId, isActive: true },
+          orderBy: { sortOrder: "asc" },
+          select: {
+            id: true,
+            name: true,
+            colour: true,
+            allocatedAmount: true,
+            suppliers: {
+              select: {
+                contractValue: true,
+                payments: {
+                  where: { status: "PAID" },
+                  select: { amount: true },
+                },
+              },
+            },
+          },
+        }),
       ]);
     });
 
@@ -138,6 +159,21 @@ export async function GET(req: NextRequest) {
 
     const contracted = contractedAgg._sum.contractValue ?? 0;
     const paid = paidAgg._sum.amount ?? 0;
+
+    // Budget categories with per-category totals
+    const budgetCategoriesList = budgetCategories.map(cat => {
+      const catPaid = cat.suppliers.reduce(
+        (sum, s) => sum + s.payments.reduce((p, pm) => p + pm.amount, 0),
+        0
+      );
+      return {
+        id: cat.id,
+        name: cat.name,
+        colour: cat.colour,
+        allocated: cat.allocatedAmount ?? 0,
+        paid: catPaid,
+      };
+    }).filter(c => c.allocated > 0 || c.paid > 0); // Only show categories with budget or spending
 
     return apiJson({
         wedding: {
@@ -176,6 +212,7 @@ export async function GET(req: NextRequest) {
           paid,
           remaining: Math.max(0, contracted - paid),
         },
+        budgetCategories: budgetCategoriesList,
         appointments: upcomingAppointments.map(a => ({
           id: a.id,
           title: a.title,

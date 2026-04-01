@@ -22,6 +22,10 @@ export const can = {
   editSuppliers: (role: UserRole) => role === "ADMIN",
   editPayments: (role: UserRole) => role === "ADMIN",
 
+  // Budget
+  accessBudget: (role: UserRole) => role === "ADMIN" || role === "VIEWER",
+  editBudget: (role: UserRole) => role === "ADMIN",
+
   // Appointments
   editAppointments: (role: UserRole) => role === "ADMIN",
 

@@ -22,6 +22,8 @@ export function usePermissions() {
       editSeating: can.editSeating(role),
       editSuppliers: can.editSuppliers(role),
       editPayments: can.editPayments(role),
+      accessBudget: can.accessBudget(role),
+      editBudget: can.editBudget(role),
       manageSettings: can.manageSettings(role),
       manageUsers: can.manageUsers(role),
       importExportGuests: can.importExportGuests(role),

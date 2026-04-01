@@ -66,6 +66,9 @@ export async function POST(req: NextRequest) {
           name: data.name.trim(),
           colour: data.colour ?? "#6366f1",
           sortOrder: data.sortOrder ?? nextOrder,
+          ...(data.allocatedAmount !== undefined && data.allocatedAmount !== null && data.allocatedAmount !== ""
+            ? { allocatedAmount: parseFloat(data.allocatedAmount) }
+            : {}),
         },
       });
     });

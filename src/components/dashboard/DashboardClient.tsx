@@ -23,6 +23,7 @@ interface DashStats {
   }[];
   suppliers: { ENQUIRY: number; QUOTED: number; BOOKED: number; COMPLETE: number; CANCELLED: number };
   budget: { contracted: number; paid: number; remaining: number };
+  budgetCategories: { id: string; name: string; colour: string; allocated: number; paid: number }[];
   appointments: {
     id: string; title: string; categoryName: string | null; categoryColour: string | null; date: string;
     location: string | null; supplierId: string | null; supplierName: string | null;
@@ -250,6 +251,47 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
           </div>
         )}
       </div>
+
+      {/* Row 3.5 — Budget categories (admin only) */}
+      {showFinance && stats.budgetCategories.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <SectionHeader title="Budget by category" href="/budget" />
+          <div className="mt-4 space-y-3">
+            {stats.budgetCategories.slice(0, 4).map(cat => {
+              const percent = cat.allocated > 0 ? Math.min(100, (cat.paid / cat.allocated) * 100) : 0;
+              const isOver = cat.paid > cat.allocated && cat.allocated > 0;
+              const progressColour = isOver ? "bg-red-500" : percent > 90 ? "bg-amber-500" : percent > 70 ? "bg-yellow-500" : "bg-green-500";
+              return (
+                <div key={cat.id} className="flex items-center gap-3">
+                  <div
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{ backgroundColor: cat.colour }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline mb-1">
+                      <span className="text-sm font-medium text-gray-800 truncate">{cat.name}</span>
+                      <span className={`text-xs ${isOver ? "text-red-600 font-medium" : "text-gray-500"}`}>
+                        {fmt(cat.paid)} / {fmt(cat.allocated)}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${progressColour}`}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {stats.budgetCategories.length > 4 && (
+              <Link href="/budget" className="text-xs text-primary hover:underline flex items-center gap-1 mt-2">
+                View all {stats.budgetCategories.length} categories <ArrowRight className="w-3 h-3" />
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Row 4 — Upcoming payments (full width, admin only) */}
       {showFinance && <div className="bg-white rounded-xl border border-gray-200">

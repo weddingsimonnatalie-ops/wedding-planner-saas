@@ -35,6 +35,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
           ...(data.colour !== undefined ? { colour: data.colour } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
           ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
+          ...(data.allocatedAmount !== undefined
+            ? { allocatedAmount: data.allocatedAmount === null || data.allocatedAmount === "" ? null : parseFloat(data.allocatedAmount) }
+            : {}),
         },
       })
     );
