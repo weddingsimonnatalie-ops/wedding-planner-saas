@@ -6,9 +6,10 @@ import { usePathname } from "next/navigation";
 import { signOut } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "@/components/BottomNav";
+import { MobileMenu } from "@/components/MobileMenu";
 import {
   LayoutDashboard, Users, LayoutGrid, Briefcase, Settings,
-  Heart, LogOut, User, Menu, X, CalendarDays, CreditCard, CheckSquare,
+  Heart, LogOut, User, X, CalendarDays, CreditCard, CheckSquare,
   Clock,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
@@ -36,7 +37,8 @@ interface LayoutShellProps {
 export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShellProps) {
   const role = user?.role ?? "ADMIN";
   const navItems = allNavItems.filter(item => item.roles === null || item.roles.includes(role));
-  const [open, setOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(true); // start hidden; corrected by effect
   const [taskBadge, setTaskBadge] = useState(0);
   const [appointmentBadge, setAppointmentBadge] = useState(0);
@@ -57,8 +59,11 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
     setBannerDismissed(true);
   }
 
-  // Close sidebar when route changes
-  useEffect(() => { setOpen(false); }, [pathname]);
+  // Close sidebar and mobile menu when route changes
+  useEffect(() => {
+    setSidebarOpen(false);
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   // Combined badge counts: tasks, appointments, payments (refresh on each navigation)
   useEffect(() => {
@@ -74,19 +79,11 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
 
   return (
     <div className="flex h-dvh bg-gray-50" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-      {/* Mobile overlay */}
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/40 z-20 md:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
+      {/* Sidebar - Desktop only */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-30 w-64 max-w-[85vw] bg-white border-r border-gray-200 flex flex-col shrink-0 transition-transform duration-200 md:relative md:translate-x-0 md:w-56 md:max-w-none",
-          open ? "translate-x-0" : "-translate-x-full"
+          "hidden md:flex fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 flex-col shrink-0",
+          "md:w-56"
         )}
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
@@ -97,12 +94,6 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
             </div>
             <span className="font-semibold text-gray-900 text-sm">Wedding Planner</span>
           </div>
-          <button
-            onClick={() => setOpen(false)}
-            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded text-gray-400 hover:text-gray-600"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
@@ -146,17 +137,10 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
       </aside>
 
       {/* Main area */}
-      <div className="flex flex-col flex-1 min-w-0">
-        {/* Header */}
-        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-6 shrink-0">
-          <button
-            onClick={() => setOpen(true)}
-            className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
-            aria-label="Open menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <div className="hidden md:block" />
+      <div className="flex flex-col flex-1 min-w-0 md:ml-56">
+        {/* Header - Desktop only */}
+        <header className="hidden md:flex h-14 bg-white border-b border-gray-200 items-center justify-between px-6 shrink-0">
+          <div />
 
           <div className="flex items-center gap-3">
             <Link
@@ -210,9 +194,19 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
         <BottomNav
           role={role}
           taskBadge={taskBadge}
-          onOpenSidebar={() => setOpen(true)}
+          onOpenSidebar={() => setMobileMenuOpen(true)}
         />
       </div>
+
+      {/* Mobile Menu (bottom sheet) */}
+      <MobileMenu
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        user={user}
+        taskBadge={taskBadge}
+        appointmentBadge={appointmentBadge}
+        paymentBadge={paymentBadge}
+      />
     </div>
   );
 }

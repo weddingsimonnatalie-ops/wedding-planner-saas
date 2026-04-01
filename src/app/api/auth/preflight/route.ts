@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { logAttempt } from "@/lib/login-attempt";
+import { logAttempt, extractIp } from "@/lib/login-attempt";
 
 // ─── Rate limiting constants ──────────────────────────────────────────────────
 const MAX_ATTEMPTS = 5;                    // failed attempts before lockout
@@ -12,12 +12,6 @@ const LOCKOUT_MS   = 15 * 60 * 1000;      // 15-minute lockout duration
 
 // Emergency unlock via database:
 // docker compose exec db psql -U wedding -c "UPDATE \"User\" SET \"lockedUntil\" = NULL;"
-
-function extractIp(req: NextRequest): string | null {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return req.headers.get("x-real-ip");
-}
 
 function lockedResponse(lockedUntil: Date) {
   return NextResponse.json(

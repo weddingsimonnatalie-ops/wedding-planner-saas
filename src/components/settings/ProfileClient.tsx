@@ -340,9 +340,12 @@ export function ProfileClient({ user }: Props) {
                     )}
                   </div>
                 </div>
-                <p className="text-sm text-gray-500 whitespace-nowrap shrink-0">
-                  {a.browser} &middot; {a.os}
-                </p>
+                <div className="text-sm text-gray-500 text-right shrink-0">
+                  <p className="whitespace-nowrap">{a.browser} &middot; {a.os}</p>
+                  {a.ipAddress && (
+                    <p className="text-xs text-gray-400 mt-0.5">{a.ipAddress}</p>
+                  )}
+                </div>
               </div>
             ))}
           </div>

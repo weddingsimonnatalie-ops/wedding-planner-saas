@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/api-auth";
+import { extractIp } from "@/lib/login-attempt";
 import {
   createTrustedDevice,
   TRUSTED_DEVICE_COOKIE,
@@ -21,10 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     const userId = auth.user.id;
     const userAgent = req.headers.get("user-agent");
-    const ipAddress =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("x-real-ip") ||
-      null;
+    const ipAddress = extractIp(req);
 
     const body = await req.json().catch(() => ({}));
     const deviceName = body.deviceName as string | undefined;

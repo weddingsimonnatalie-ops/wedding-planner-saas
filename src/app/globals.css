@@ -63,3 +63,30 @@
 .ios-scroll {
   -webkit-overflow-scrolling: touch;
 }
+
+/* Bottom sheet animations */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.bottom-sheet-enter {
+  animation: slide-up 0.3s ease-out;
+}
+
+.backdrop-enter {
+  animation: fade-in 0.2s ease-out;
+}
