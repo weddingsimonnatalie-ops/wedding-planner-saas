@@ -17,6 +17,7 @@ const publicPaths = [
   "/api/webhooks",
   "/api/inngest",
   "/api/invites/accept",
+  "/api/auth/session-check",
 ];
 
 // Paths that need auth but not a wedding context (wedding selection / setup)

@@ -236,6 +236,42 @@ export function InactivityTimer() {
     };
   }, [resetTimer, clearAllTimers, isLoading, isTrustedDevice, postMessage]);
 
+  // Handle visibility change (iOS Safari tab freeze)
+  useEffect(() => {
+    if (isLoading || isTrustedDevice) return;
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === "visible") {
+        // Page just became visible - check if session is still valid
+        try {
+          const res = await fetch("/api/auth/session-check", {
+            method: "GET",
+            credentials: "include",
+          });
+
+          if (res.status === 401) {
+            // Session expired - redirect to login
+            clearAllTimers();
+            clearAll();
+            window.location.href = "/login?reason=timeout";
+            return;
+          }
+
+          // Session is valid - reset the timer
+          resetTimer();
+        } catch {
+          // Network error - don't redirect, just reset timer
+          resetTimer();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isLoading, isTrustedDevice, resetTimer, clearAllTimers, clearAll]);
+
   async function handleStayLoggedIn() {
     // Reset local timer
     resetTimer();
