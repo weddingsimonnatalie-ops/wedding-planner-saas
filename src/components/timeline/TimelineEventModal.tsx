@@ -11,7 +11,8 @@ interface TimelineEvent {
   title: string;
   location: string | null;
   notes: string | null;
-  eventType: string;
+  categoryId: string | null;
+  category: { id: string; name: string; colour: string } | null;
   supplierId?: string | null;
   supplier: { id: string; name: string } | null;
 }
@@ -27,16 +28,12 @@ interface Supplier {
   name: string;
 }
 
-const EVENT_TYPES = [
-  { value: "PREP", label: "Prep (hair, makeup, etc.)" },
-  { value: "TRANSPORT", label: "Transport" },
-  { value: "CEREMONY", label: "Ceremony" },
-  { value: "PHOTO", label: "Photo session" },
-  { value: "RECEPTION", label: "Reception" },
-  { value: "FOOD", label: "Food / Meal" },
-  { value: "MUSIC", label: "Music / Dance" },
-  { value: "GENERAL", label: "Other" },
-];
+interface Category {
+  id: string;
+  name: string;
+  colour: string;
+  isActive: boolean;
+}
 
 const DURATION_OPTIONS = [
   { value: 15, label: "15 min" },
@@ -56,26 +53,37 @@ export function TimelineEventModal({ event, onClose, onSave }: TimelineEventModa
   const [durationMins, setDurationMins] = useState(event?.durationMins ?? 30);
   const [location, setLocation] = useState(event?.location ?? "");
   const [notes, setNotes] = useState(event?.notes ?? "");
-  const [eventType, setEventType] = useState(event?.eventType ?? "GENERAL");
+  const [categoryId, setCategoryId] = useState(event?.categoryId ?? "");
   const [supplierId, setSupplierId] = useState(event?.supplierId ?? "");
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Load suppliers for dropdown
+  // Load suppliers and categories for dropdowns
   useEffect(() => {
-    async function loadSuppliers() {
+    async function loadData() {
       try {
-        const res = await fetchApi("/api/suppliers");
-        if (res.ok) {
-          const data = await res.json();
+        const [suppliersRes, categoriesRes] = await Promise.all([
+          fetchApi("/api/suppliers"),
+          fetchApi("/api/timeline-categories"),
+        ]);
+
+        if (suppliersRes.ok) {
+          const data = await suppliersRes.json();
           setSuppliers((data.suppliers || data || []).map((s: Supplier) => ({ id: s.id, name: s.name })));
+        }
+
+        if (categoriesRes.ok) {
+          const data = await categoriesRes.json();
+          // Filter to only active categories and sort by sortOrder
+          setCategories((data || []).filter((c: Category) => c.isActive));
         }
       } catch {
         // Ignore
       }
     }
-    loadSuppliers();
+    loadData();
   }, []);
 
   // Parse existing event time
@@ -114,7 +122,7 @@ export function TimelineEventModal({ event, onClose, onSave }: TimelineEventModa
           durationMins,
           location: location.trim() || null,
           notes: notes.trim() || null,
-          eventType,
+          categoryId: categoryId || null,
           supplierId: supplierId || null,
         }),
       });
@@ -194,15 +202,16 @@ export function TimelineEventModal({ event, onClose, onSave }: TimelineEventModa
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Event type
+              Category
             </label>
             <select
-              value={eventType}
-              onChange={(e) => setEventType(e.target.value)}
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             >
-              {EVENT_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
+              <option value="">No category</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </div>

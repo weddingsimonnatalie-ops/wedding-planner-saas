@@ -16,12 +16,16 @@ export async function PUT(
     const { id } = await params;
 
     const body = await req.json();
-    const { title, startTime, durationMins, location, notes, eventType, supplierId } = body;
+    const { title, startTime, durationMins, location, notes, categoryId, supplierId } = body;
 
-    // Validate eventType if provided
-    const validEventTypes = ["PREP", "TRANSPORT", "CEREMONY", "PHOTO", "RECEPTION", "FOOD", "MUSIC", "GENERAL"];
-    if (eventType && !validEventTypes.includes(eventType)) {
-      return NextResponse.json({ error: "Invalid event type" }, { status: 400 });
+    // Validate category if provided
+    if (categoryId !== undefined && categoryId !== null) {
+      const category = await withTenantContext(weddingId, (tx) =>
+        tx.timelineCategory.findUnique({ where: { id: categoryId, weddingId } })
+      );
+      if (!category) {
+        return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+      }
     }
 
     // Validate supplier if provided
@@ -43,11 +47,12 @@ export async function PUT(
           ...(durationMins !== undefined && { durationMins }),
           ...(location !== undefined && { location: location?.trim() || null }),
           ...(notes !== undefined && { notes: notes?.trim() || null }),
-          ...(eventType !== undefined && { eventType }),
+          ...(categoryId !== undefined && { categoryId: categoryId || null }),
           ...(supplierId !== undefined && { supplierId: supplierId || null }),
         },
         include: {
           supplier: { select: { id: true, name: true } },
+          category: { select: { id: true, name: true, colour: true } },
         },
       })
     );

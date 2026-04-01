@@ -20,7 +20,7 @@ interface Category {
 }
 
 interface Props {
-  entityType: "supplier" | "appointment" | "task";
+  entityType: "supplier" | "appointment" | "task" | "timeline";
   apiBase: string;
 }
 
@@ -45,7 +45,7 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; count: number } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const entityLabel = entityType === "supplier" ? "supplier" : entityType === "appointment" ? "appointment" : "task";
+  const entityLabel = entityType === "supplier" ? "supplier" : entityType === "appointment" ? "appointment" : entityType === "task" ? "task" : "event";
 
   function showToast(msg: string, ok = true) {
     setToast({ msg, ok });

@@ -10,20 +10,16 @@ interface TimelineEvent {
   title: string;
   location: string | null;
   notes: string | null;
-  eventType: string;
+  categoryId: string | null;
+  category: { id: string; name: string; colour: string } | null;
   supplier: { id: string; name: string } | null;
 }
 
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  PREP: "Prep",
-  TRANSPORT: "Transport",
-  CEREMONY: "Ceremony",
-  PHOTO: "Photo",
-  RECEPTION: "Reception",
-  FOOD: "Food",
-  MUSIC: "Music",
-  GENERAL: "Other",
-};
+interface Category {
+  id: string;
+  name: string;
+  colour: string;
+}
 
 function formatTime(dateStr: string): string {
   const date = new Date(dateStr);
@@ -44,17 +40,45 @@ function formatEndTime(startTime: string, durationMins: number): string {
   return end.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : { r: 243, g: 244, b: 246 }; // fallback to gray
+}
+
+function getContrastColour(hex: string): string {
+  const { r, g, b } = hexToRgb(hex);
+  // Calculate relative luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5 ? "#1f2937" : "#f9fafb";
+}
+
 export function TimelinePrintView() {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadEvents() {
+    async function loadData() {
       try {
-        const res = await fetch("/api/timeline");
-        if (res.ok) {
-          const data = await res.json();
+        const [eventsRes, categoriesRes] = await Promise.all([
+          fetch("/api/timeline"),
+          fetch("/api/timeline-categories"),
+        ]);
+
+        if (eventsRes.ok) {
+          const data = await eventsRes.json();
           setEvents(data.events || []);
+        }
+
+        if (categoriesRes.ok) {
+          const data = await categoriesRes.json();
+          setCategories(data || []);
         }
       } catch {
         // Ignore
@@ -62,8 +86,11 @@ export function TimelinePrintView() {
         setLoading(false);
       }
     }
-    loadEvents();
+    loadData();
   }, []);
+
+  // Build a lookup map for categories
+  const categoryMap = new Map(categories.map(c => [c.id, c]));
 
   function handlePrint() {
     // Create a new window with printable content
@@ -79,6 +106,12 @@ export function TimelinePrintView() {
       month: "long",
       day: "numeric",
     }) : "Wedding Day";
+
+    // Generate category style classes
+    const categoryStyles = categories.map(c => {
+      const textColor = getContrastColour(c.colour);
+      return `.cat-${c.id} { background: ${c.colour}; color: ${textColor}; }`;
+    }).join("\n    ");
 
     const html = `
 <!DOCTYPE html>
@@ -135,14 +168,8 @@ export function TimelinePrintView() {
       margin-left: 6pt;
       font-weight: 500;
     }
-    .type-PREP { background: #fce7f3; color: #9d174d; }
-    .type-TRANSPORT { background: #dbeafe; color: #1e40af; }
-    .type-CEREMONY { background: #f3e8ff; color: #7c3aed; }
-    .type-PHOTO { background: #fef3c7; color: #b45309; }
-    .type-RECEPTION { background: #dcfce7; color: #166534; }
-    .type-FOOD { background: #ffedd5; color: #c2410c; }
-    .type-MUSIC { background: #e0e7ff; color: #4338ca; }
-    .type-GENERAL { background: #f3f4f6; color: #374151; }
+    .type-none { background: #f3f4f6; color: #374151; }
+    ${categoryStyles}
     .vendor { font-size: 10pt; color: #666; margin-top: 2pt; }
     .notes { font-size: 10pt; color: #555; }
     @media print {
@@ -165,22 +192,28 @@ export function TimelinePrintView() {
       </tr>
     </thead>
     <tbody>
-      ${events.map(event => `
-        <tr>
-          <td class="time-col">
-            <div class="time">${formatTime(event.startTime)}</div>
-            <div class="duration">– ${formatEndTime(event.startTime, event.durationMins)}</div>
-          </td>
-          <td class="duration-col">${formatDuration(event.durationMins)}</td>
-          <td class="title-col">
-            ${event.title}
-            <span class="type type-${event.eventType}">${EVENT_TYPE_LABELS[event.eventType] || event.eventType}</span>
-            ${event.supplier ? `<div class="vendor">${event.supplier.name}</div>` : ''}
-          </td>
-          <td class="location-col">${event.location || '–'}</td>
-          <td class="notes-col">${event.notes || '–'}</td>
-        </tr>
-      `).join('')}
+      ${events.map(event => {
+        const category = event.categoryId ? categoryMap.get(event.categoryId) || event.category : null;
+        const categoryName = category?.name || "Other";
+        const categoryClass = category ? `cat-${category.id}` : "type-none";
+
+        return `
+          <tr>
+            <td class="time-col">
+              <div class="time">${formatTime(event.startTime)}</div>
+              <div class="duration">– ${formatEndTime(event.startTime, event.durationMins)}</div>
+            </td>
+            <td class="duration-col">${formatDuration(event.durationMins)}</td>
+            <td class="title-col">
+              ${event.title}
+              <span class="type ${categoryClass}">${categoryName}</span>
+              ${event.supplier ? `<div class="vendor">${event.supplier.name}</div>` : ''}
+            </td>
+            <td class="location-col">${event.location || '–'}</td>
+            <td class="notes-col">${event.notes || '–'}</td>
+          </tr>
+        `;
+      }).join('')}
       ${events.length === 0 ? '<tr><td colspan="5" style="text-align: center; padding: 20pt; color: #999;">No events scheduled</td></tr>' : ''}
     </tbody>
   </table>

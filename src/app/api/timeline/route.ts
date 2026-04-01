@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
         where: { weddingId },
         include: {
           supplier: { select: { id: true, name: true } },
+          category: { select: { id: true, name: true, colour: true } },
         },
         orderBy: { startTime: "asc" },
       })
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
     const { weddingId } = auth;
 
     const body = await req.json();
-    const { title, startTime, durationMins, location, notes, eventType, supplierId } = body;
+    const { title, startTime, durationMins, location, notes, categoryId, supplierId } = body;
 
     if (!title?.trim()) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -45,10 +46,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Start time is required" }, { status: 400 });
     }
 
-    // Validate eventType if provided
-    const validEventTypes = ["PREP", "TRANSPORT", "CEREMONY", "PHOTO", "RECEPTION", "FOOD", "MUSIC", "GENERAL"];
-    if (eventType && !validEventTypes.includes(eventType)) {
-      return NextResponse.json({ error: "Invalid event type" }, { status: 400 });
+    // Validate category if provided
+    if (categoryId) {
+      const category = await withTenantContext(weddingId, (tx) =>
+        tx.timelineCategory.findUnique({ where: { id: categoryId, weddingId } })
+      );
+      if (!category) {
+        return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+      }
     }
 
     // Validate supplier if provided
@@ -70,11 +75,12 @@ export async function POST(req: NextRequest) {
           durationMins: durationMins ?? 30,
           location: location?.trim() || null,
           notes: notes?.trim() || null,
-          eventType: eventType || "GENERAL",
+          categoryId: categoryId || null,
           supplierId: supplierId || null,
         },
         include: {
           supplier: { select: { id: true, name: true } },
+          category: { select: { id: true, name: true, colour: true } },
         },
       })
     );

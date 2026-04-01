@@ -120,6 +120,7 @@ model Wedding {
   taskCategories        TaskCategory[]
   attachments           Attachment[]
   timelineEvents        TimelineEvent[]
+  timelineCategories    TimelineCategory[]
 }
 
 model WeddingMember {
@@ -501,15 +502,18 @@ model Task {
 
 // --- TIMELINE ---
 
-enum TimelineEventType {
-  PREP
-  TRANSPORT
-  CEREMONY
-  PHOTO
-  RECEPTION
-  FOOD
-  MUSIC
-  GENERAL
+model TimelineCategory {
+  id             String         @id @default(cuid())
+  weddingId      String
+  wedding        Wedding        @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  name           String
+  colour         String         @default("#6366f1")
+  sortOrder      Int            @default(0)
+  isActive       Boolean        @default(true)
+  timelineEvents TimelineEvent[]
+  createdAt      DateTime       @default(now())
+
+  @@index([weddingId])
 }
 
 model TimelineEvent {
@@ -524,7 +528,8 @@ model TimelineEvent {
   location     String?
   notes        String?
 
-  eventType    TimelineEventType @default(GENERAL)
+  categoryId   String?
+  category     TimelineCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   supplierId   String?
   supplier     Supplier?         @relation(fields: [supplierId], references: [id], onDelete: SetNull)

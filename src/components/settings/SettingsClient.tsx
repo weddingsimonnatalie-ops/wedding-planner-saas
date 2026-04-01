@@ -168,6 +168,14 @@ export function SettingsClient({
             </p>
             <CategoriesManager entityType="task" apiBase="/api/task-categories" />
           </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-base font-medium text-gray-900 mb-1">Timeline Categories</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Categories for organising your wedding day timeline events.
+            </p>
+            <CategoriesManager entityType="timeline" apiBase="/api/timeline-categories" />
+          </div>
         </div>
       )}
 
