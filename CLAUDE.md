@@ -409,11 +409,30 @@ Three roles defined in the `UserRole` Prisma enum:
 - VIEWER sees ReadOnlyBanner: "You have view-only access to tasks." and complete checkbox is disabled
 - VIEWER cannot see suppliers at all so never sees the supplier tasks section
 
+### Timeline (`/timeline`)
+- **Header row**: title + "Add event" button (ADMIN only); rendered in `TimelineList.tsx`
+- Chronological list of wedding day events sorted by start time
+- Each event shows: time, duration, title, location, vendor badge (if linked), notes
+- **Category badges**: colour-coded labels from configurable Timeline Categories
+- **Add / edit modal**: title, start time (datetime picker), duration (dropdown), category (dropdown from Settings), location, vendor (dropdown from suppliers), notes
+- **Print view**: opens new window with clean A4 layout; time, duration, title, location, notes columns; category badge with colour
+- **Empty state**: "No events yet" with description for ADMIN
+- **Timeline categories**: configurable (Settings → Categories → Timeline Categories) with name, colour, sort order, active flag
+  - Default categories seeded on migration: Prep, Transport, Ceremony, Photo, Reception, Food, Music, General
+  - Deleting a category nullifies `categoryId` on events (events become "Other")
+
+**Role permissions for timeline:**
+| Role | View | Add/Edit/Delete |
+|------|------|-----------------|
+| ADMIN | ✅ | ✅ |
+| VIEWER | ✅ | ❌ |
+| RSVP_MANAGER | ✅ | ❌ |
+
 ### Settings
 Organized into 4 tabs accessible to ADMIN only:
 - **General tab**: Wedding Details (couple name, date, venue), Notifications (reminder email), Session Timeout (inactivity timeout + warning time), Wedding Colour Theme (palette picker)
 - **Meals tab**: Meal Options — add/edit/deactivate meal choices
-- **Categories tab**: Supplier Categories, Appointment Categories, Task Categories — each with add/edit/delete/reorder
+- **Categories tab**: Supplier Categories, Appointment Categories, Task Categories, Timeline Categories — each with add/edit/delete/reorder
 - **Users tab**: User Management (inline) + link to Security page
 
 Other settings pages:
@@ -692,6 +711,18 @@ Tasks track wedding to-do items. Key fields:
 
 `TaskCategory` has name (unique), colour, sortOrder, isActive.
 
+### TimelineEvent / TimelineCategory
+Timeline events track the wedding day schedule. Key fields:
+- `title` — required
+- `startTime` — when the event starts
+- `durationMins` — duration in minutes (default 30)
+- `location` — optional location string
+- `notes` — optional additional details
+- `categoryId` — optional FK to `TimelineCategory` (nullable if category deleted)
+- `supplierId` — optional FK to `Supplier` (for vendor-linked events)
+
+`TimelineCategory` has name, colour, sortOrder, isActive. Events inherit colour from their category for visual display. Deleting a category nullifies `categoryId` on affected events.
+
 ---
 
 ## 5. Migrations
@@ -720,6 +751,7 @@ Tasks track wedding to-do items. Key fields:
 | 21 | `add_unsubscribed_at` | Adds `unsubscribedAt DateTime?` to `Guest`. Set when guest clicks unsubscribe link in RSVP email; guest is skipped from future email sends. GDPR compliance feature. |
 | 22 | `add_theme_hue` | Adds `themeHue Int NOT NULL DEFAULT 330` to `Wedding`. Stores the HSL hue for the per-wedding colour theme. |
 | 23 | `add_composite_indexes` | Adds composite indexes: `Guest(weddingId, email)` for duplicate email checks, `Appointment(weddingId, date)` for dashboard stats and appointment count queries. |
+| 24 | `add_timeline_category` | Creates `TimelineCategory` table with default categories (Prep, Transport, Ceremony, Photo, Reception, Food, Music, General). Adds `categoryId` to `TimelineEvent` replacing `eventType` enum. Migrates existing events to category IDs. Drops `TimelineEventType` enum. |
 
 **Important**: Migration 4 (`PARTIAL`) was applied directly via `docker compose exec db psql` and manually inserted into `_prisma_migrations`. If restoring to a fresh DB from the schema, all migrations will run in order automatically — no special handling needed. If the DB already exists from before migration 4, run:
 ```sql
@@ -860,6 +892,7 @@ wedding-planner/
 │   │   │   ├── suppliers/     — Supplier list + [id] (no inline add form — add via SupplierModal)
 │   │   │   ├── payments/      — Cross-supplier payments page
 │   │   │   ├── appointments/  — Appointment list
+│   │   │   ├── timeline/      — Wedding day timeline page
 │   │   │   └── settings/      — Settings pages
 │   │   ├── rsvp/[token]/      — Public RSVP page (no auth)
 │   │   ├── login/             — Login page
@@ -890,6 +923,10 @@ wedding-planner/
 │           ├── SeatingVisualView.tsx      — react-konva canvas visual view (dynamically imported, ssr:false)
 │           ├── PrintDesigner.tsx          — Print designer page: settings + preview
 │           └── PrintTableBlock.tsx        — Table block component for print layout (horizontal/vertical)
+│       ├── timeline/
+│           ├── TimelineList.tsx           — Timeline event list with category badges
+│           ├── TimelineEventModal.tsx     — Add/edit event modal
+│           └── TimelinePrintView.tsx      — Print-friendly timeline view
 │       └── billing/
 │           ├── ActivateTrialButton.tsx   — "Activate subscription" button; ends trial, starts billing
 │           └── SyncFromStripeButton.tsx   — "Refresh from Stripe" button; manual sync for billing page
@@ -956,6 +993,11 @@ GET/PUT/DELETE /api/tasks/[id]          — Task detail; PUT requires ADMIN
 PATCH      /api/tasks/[id]/complete     — Toggle complete (ADMIN + RSVP_MANAGER); creates next recurrence for recurring tasks
 GET/POST   /api/task-categories         — Task category list + create (ADMIN)
 PUT/DELETE /api/task-categories/[id]    — Update/delete category; DELETE returns 409 if tasks use it (force=true to nullify and delete)
+GET/POST   /api/timeline                — Timeline events list (sorted by startTime) + create (ADMIN)
+GET/PUT/DELETE /api/timeline/[id]       — Timeline event detail; PUT/DELETE requires ADMIN
+GET/POST   /api/timeline-categories     — Timeline category list + create (ADMIN)
+GET/PUT/DELETE /api/timeline-categories/[id] — Update/delete category; DELETE returns 409 if events use it (force=true to nullify and delete)
+PUT        /api/timeline-categories/reorder — Reorder categories (ADMIN)
 GET        /api/health                  — Health check endpoint: database connectivity, Redis connectivity (if configured), returns status JSON
 POST       /api/billing/sync            — Manually sync Stripe subscription data; ADMIN only; returns { changed, before, after }
 POST       /api/billing/checkout        — Create Stripe checkout session for users without subscription; ADMIN only; returns { checkoutUrl }
