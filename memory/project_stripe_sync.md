@@ -1,6 +1,6 @@
 ---
 name: Stripe sync and recovery
-description: Auto-recovery from missed webhooks; syncWeddingFromStripe() utility + billing page sync + manual sync button + nightly cron + webhook hardening — all phases complete
+description: Auto-recovery from missed webhooks; syncWeddingFromStripe() utility + billing page sync + manual sync button + nightly cron + webhook hardening + security hardening — all phases complete
 type: project
 ---
 
@@ -28,6 +28,7 @@ Started 2026-03-29. Merged to `main` 2026-03-29.
 | 3 | `POST /api/billing/sync` endpoint + "Refresh from Stripe" button | ✅ complete |
 | 4 | Nightly reconciliation cron (Inngest) | ✅ complete |
 | 5 | Webhook hardening (`checkout.session.completed` null subscription guard) | ✅ complete |
+| 6 | Security audit hardening (2026-04-03) | ✅ complete |
 
 All phases merged to `main`.
 
@@ -71,3 +72,25 @@ All phases merged to `main`.
 - Enhancement: if null, schedule a delayed Inngest event (30s) that calls `syncWeddingFromStripe()` to pick up the subscription ID once available
 - `stripeSyncDelayed` Inngest function handles the delayed sync
 - Closes the gap that caused the current "Complete billing setup" bug in local dev and protects against the same race in production
+
+## Phase 6 — security audit hardening (2026-04-03)
+
+Changes from a security audit of the Stripe integration.
+
+**`src/app/api/webhooks/stripe/route.ts`:**
+- `STRIPE_WEBHOOK_SECRET` now explicitly checked before `constructEvent`; missing secret returns 500 with a clear log rather than a misleading "Invalid signature" 400
+- All three `updateMany` calls (`invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.deleted`) replaced with `findUnique` + `update`; orphaned subscription IDs now log a `warn` instead of silently no-oping (since `stripeSubscriptionId` is `@unique`, `updateMany` always hit 0 or 1 rows but masked not-found)
+- `customer.subscription.deleted` no longer does a second `findFirst` after update to get weddingId for Inngest; reuses the record from the `findUnique`
+- Missing `weddingId` in `checkout.session.completed` now returns 400 (Stripe retries) instead of `break`-ing into the event-recorded path — previously the event was recorded as processed but the subscription was never activated
+
+**`src/lib/inngest/functions/stripe-reconcile.ts`:**
+- Nightly cron now includes a `purge-old-stripe-events` step that deletes `StripeEvent` rows older than 90 days (Stripe never replays events that old)
+
+**`prisma/schema.prisma`:**
+- Added `@@index([processedAt])` to `StripeEvent` — supports the cleanup query; migration `20260403030000_stripe_event_processed_at_index`
+
+**`src/lib/env.ts`:**
+- `validateEnv()` now warns at startup if `STRIPE_WEBHOOK_SECRET` or `STRIPE_PRICE_ID_STANDARD` are missing
+
+**`src/app/api/billing/checkout/route.ts`:**
+- Explicit guard on `STRIPE_PRICE_ID_STANDARD` before the Stripe API call; returns 503 instead of a cryptic Stripe error

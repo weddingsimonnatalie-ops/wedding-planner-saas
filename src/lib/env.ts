@@ -58,5 +58,15 @@ export function getEnvConfig(): EnvConfig {
  */
 export function validateEnv(): void {
   getEnvConfig();
+
+  // Stripe keys are validated lazily in stripe.ts (not available at build time),
+  // but warn early so misconfigured deploys are visible in startup logs.
+  if (!process.env.STRIPE_SECRET_KEY)
+    console.warn("[env] STRIPE_SECRET_KEY not set — Stripe features will fail");
+  if (!process.env.STRIPE_WEBHOOK_SECRET)
+    console.warn("[env] STRIPE_WEBHOOK_SECRET not set — webhook signature verification will fail");
+  if (!process.env.STRIPE_PRICE_ID_STANDARD)
+    console.warn("[env] STRIPE_PRICE_ID_STANDARD not set — checkout will fail");
+
   console.log("[env] Environment validated successfully");
 }

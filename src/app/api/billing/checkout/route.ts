@@ -44,6 +44,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
+    const priceId = process.env.STRIPE_PRICE_ID_STANDARD;
+    if (!priceId) {
+      return NextResponse.json({ error: "Billing not configured" }, { status: 503 });
+    }
+
     const trialDays = parseInt(process.env.TRIAL_DAYS ?? "14", 10);
     const appUrl = (process.env.NEXTAUTH_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
@@ -53,7 +58,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       mode: "subscription",
       line_items: [
         {
-          price: process.env.STRIPE_PRICE_ID_STANDARD!,
+          price: priceId,
           quantity: 1,
         },
       ],

@@ -43,6 +43,18 @@ export const stripeReconcile = inngest.createFunction(
     }
 
     console.log(`[stripe-reconcile] Checked ${checked} weddings, updated ${updated}`);
-    return { checked, updated };
+
+    // Purge idempotency records older than 90 days — Stripe never replays events
+    // that old, so these rows are safe to remove.
+    const deleted = await step.run("purge-old-stripe-events", async () => {
+      const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      const result = await prisma.stripeEvent.deleteMany({
+        where: { processedAt: { lt: cutoff } },
+      });
+      return result.count;
+    });
+
+    console.log(`[stripe-reconcile] Purged ${deleted} old StripeEvent records`);
+    return { checked, updated, purged: deleted };
   }
 );

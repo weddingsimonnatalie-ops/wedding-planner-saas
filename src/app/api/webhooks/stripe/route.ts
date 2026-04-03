@@ -16,13 +16,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Missing stripe-signature header" }, { status: 400 });
   }
 
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.error("[stripe-webhook] STRIPE_WEBHOOK_SECRET is not set — cannot verify signature");
+    return NextResponse.json({ error: "Webhook misconfigured" }, { status: 500 });
+  }
+
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err) {
     console.error("Stripe webhook signature verification failed:", err);
     return NextResponse.json({ error: "Invalid webhook signature" }, { status: 400 });
@@ -45,7 +47,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         const weddingId = session.metadata?.weddingId;
         if (!weddingId) {
           console.error("checkout.session.completed: missing weddingId in metadata", session.id);
-          break;
+          // Return 400 so Stripe retries — do NOT fall through to record the event
+          return NextResponse.json({ error: "Missing weddingId in session metadata" }, { status: 400 });
         }
 
         // session.subscription can be null if Stripe hasn't created the subscription
@@ -88,8 +91,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
         // currentPeriodEnd from the subscription line item
         const periodEnd = invoiceObj.lines?.data[0]?.period?.end;
-        await prisma.wedding.updateMany({
+        const matchedWedding = await prisma.wedding.findUnique({
           where: { stripeSubscriptionId: subscriptionId },
+          select: { id: true },
+        });
+        if (!matchedWedding) {
+          console.warn(`invoice.payment_succeeded: no wedding found for subscription ${subscriptionId} — skipping`);
+          break;
+        }
+        await prisma.wedding.update({
+          where: { id: matchedWedding.id },
           data: {
             subscriptionStatus: "ACTIVE",
             currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
@@ -109,8 +120,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         if (!subscriptionId) break;
 
         const graceDays = parseInt(process.env.GRACE_PERIOD_DAYS ?? "7", 10);
-        await prisma.wedding.updateMany({
+        const failedWedding = await prisma.wedding.findUnique({
           where: { stripeSubscriptionId: subscriptionId },
+          select: { id: true },
+        });
+        if (!failedWedding) {
+          console.warn(`invoice.payment_failed: no wedding found for subscription ${subscriptionId} — skipping`);
+          break;
+        }
+        await prisma.wedding.update({
+          where: { id: failedWedding.id },
           data: {
             subscriptionStatus: "PAST_DUE",
             gracePeriodEndsAt: new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000),
@@ -124,8 +143,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
         const retentionDays = parseInt(process.env.DATA_RETENTION_DAYS ?? "90", 10);
-        await prisma.wedding.updateMany({
+        const cancelledWedding = await prisma.wedding.findUnique({
           where: { stripeSubscriptionId: subscription.id },
+          select: { id: true },
+        });
+        if (!cancelledWedding) {
+          console.warn(`customer.subscription.deleted: no wedding found for subscription ${subscription.id} — skipping`);
+          break;
+        }
+        await prisma.wedding.update({
+          where: { id: cancelledWedding.id },
           data: {
             subscriptionStatus: "CANCELLED",
             cancelledAt: new Date(),
@@ -134,13 +161,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             ),
           },
         });
-        const cancelledWedding = await prisma.wedding.findFirst({
-          where: { stripeSubscriptionId: subscription.id },
-          select: { id: true },
-        });
-        if (cancelledWedding) {
-          if (useInngest) await inngest.send({ name: "wedding/cancelled", data: { weddingId: cancelledWedding.id } });
-        }
+        if (useInngest) await inngest.send({ name: "wedding/cancelled", data: { weddingId: cancelledWedding.id } });
         console.log(`customer.subscription.deleted: subscription ${subscription.id} cancelled`);
         break;
       }

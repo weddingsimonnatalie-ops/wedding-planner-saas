@@ -170,6 +170,8 @@ model StripeEvent {
   eventId     String   @unique
   eventType   String
   processedAt DateTime @default(now())
+
+  @@index([processedAt])
 }
 
 model PayPalEvent {
