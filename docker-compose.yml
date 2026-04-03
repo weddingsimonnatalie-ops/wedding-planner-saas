@@ -116,8 +116,6 @@ services:
       PAYPAL_MODE: ${PAYPAL_MODE:-sandbox}
       PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID:-}
       PAYPAL_PLAN_ID_STANDARD: ${PAYPAL_PLAN_ID_STANDARD:-}
-      # Public PayPal client ID (safe to expose - used to conditionally show PayPal option in UI)
-      NEXT_PUBLIC_PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
       # S3-compatible file storage
       # Dev: MinIO running in Docker. Prod: Railway Buckets auto-injects these vars.
       AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://minio:9000}
