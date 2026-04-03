@@ -33,35 +33,40 @@ async function getAccessToken(): Promise<string> {
 
   // Start a new token fetch
   tokenFetchPromise = (async () => {
-    const clientId = process.env.PAYPAL_CLIENT_ID;
-    const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+    try {
+      const clientId = process.env.PAYPAL_CLIENT_ID;
+      const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
 
-    if (!clientId || !clientSecret) {
-      throw new Error("PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET must be set");
+      if (!clientId || !clientSecret) {
+        throw new Error("PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET must be set");
+      }
+
+      const response = await fetch(`${getPayPalBaseUrl()}/v1/oauth2/token`, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "grant_type=client_credentials",
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to get PayPal access token: ${response.status} ${text}`);
+      }
+
+      const data = (await response.json()) as { access_token: string; expires_in: number };
+      const accessToken = data.access_token;
+      const expiresAt = Date.now() + data.expires_in * 1000;
+
+      tokenCache = { accessToken, expiresAt };
+
+      return accessToken;
+    } finally {
+      // Always clear the in-flight promise so the next call retries rather than
+      // re-awaiting a cached rejection after a transient fetch failure.
+      tokenFetchPromise = null;
     }
-
-    const response = await fetch(`${getPayPalBaseUrl()}/v1/oauth2/token`, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: "grant_type=client_credentials",
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Failed to get PayPal access token: ${response.status} ${text}`);
-    }
-
-    const data = (await response.json()) as { access_token: string; expires_in: number };
-    const accessToken = data.access_token;
-    const expiresAt = Date.now() + data.expires_in * 1000;
-
-    tokenCache = { accessToken, expiresAt };
-    tokenFetchPromise = null;
-
-    return accessToken;
   })();
 
   return tokenFetchPromise;
@@ -227,6 +232,27 @@ export async function verifyWebhookSignature(
   const webhookId = process.env.PAYPAL_WEBHOOK_ID;
   if (!webhookId) {
     throw new Error("PAYPAL_WEBHOOK_ID is not set");
+  }
+
+  // Validate cert_url domain before forwarding to PayPal's verification API.
+  // Defence-in-depth: rejects forged requests that somehow bypass signature
+  // verification if a future PayPal API anomaly were exploited.
+  const allowedCertHosts = [
+    "api.paypal.com",
+    "api-m.paypal.com",
+    "api.sandbox.paypal.com",
+    "api-m.sandbox.paypal.com",
+  ];
+  let certHost: string;
+  try {
+    certHost = new URL(headers["paypal-cert-url"]).hostname;
+  } catch {
+    console.error("[PayPal] cert_url is not a valid URL:", headers["paypal-cert-url"]);
+    return false;
+  }
+  if (!allowedCertHosts.includes(certHost)) {
+    console.error("[PayPal] cert_url host not in allowlist:", certHost);
+    return false;
   }
 
   try {

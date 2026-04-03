@@ -45,11 +45,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Idempotency: skip if we've already processed this event
-  const existing = await prisma.payPalEvent.findUnique({
-    where: { eventId: event.id },
+  // Idempotency: claim the event before processing.
+  // Using createMany + skipDuplicates is atomic — if two deliveries race, only
+  // one gets count=1 and proceeds; the other returns 200 immediately.
+  // The trade-off vs the old check-then-record pattern: if processing throws a
+  // 500 after this point, PayPal will retry but the event is already recorded
+  // so the retry will be a no-op. This is preferable to duplicate processing.
+  const claimed = await prisma.payPalEvent.createMany({
+    data: [{ eventId: event.id, eventType: event.event_type }],
+    skipDuplicates: true,
   });
-  if (existing) {
+  if (claimed.count === 0) {
+    // Already processed by a previous delivery
     return NextResponse.json({ received: true });
   }
 
@@ -222,14 +229,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
   } catch (err) {
     console.error(`Error processing PayPal event ${event.id} (${event.event_type}):`, err);
-    // Don't record the event so PayPal retries it
     return NextResponse.json({ error: "Internal error processing event" }, { status: 500 });
   }
-
-  // Record event for idempotency
-  await prisma.payPalEvent.create({
-    data: { eventId: event.id, eventType: event.event_type },
-  });
 
   return NextResponse.json({ received: true });
 }

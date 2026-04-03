@@ -63,8 +63,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Verify the subscription belongs to this wedding (prevents cross-account claiming)
+    if (subscription.custom_id !== auth.weddingId) {
+      console.error(
+        `[paypal-capture] custom_id mismatch: expected ${auth.weddingId}, got ${subscription.custom_id}`
+      );
+      return NextResponse.json(
+        { error: "Subscription does not belong to this account" },
+        { status: 403 }
+      );
+    }
+
     // Validate status (should be APPROVED or ACTIVE after user approval)
-    const validStatuses = ["APPROVAL_PENDING", "APPROVED", "ACTIVE"];
+    const validStatuses = ["APPROVED", "ACTIVE"];
     if (!validStatuses.includes(subscription.status)) {
       return NextResponse.json(
         { error: `Unexpected subscription status: ${subscription.status}` },
