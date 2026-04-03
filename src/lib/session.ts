@@ -54,8 +54,15 @@ export async function requireAuth(): Promise<Session> {
  * @param userId - The user ID whose sessions should be invalidated
  */
 export async function invalidateUserSessions(userId: string): Promise<void> {
-  await prisma.user.update({
-    where: { id: userId },
-    data: { sessionVersion: { increment: 1 } },
-  });
+  await prisma.$transaction([
+    // Increment sessionVersion so any in-flight cached sessions are rejected
+    prisma.user.update({
+      where: { id: userId },
+      data: { sessionVersion: { increment: 1 } },
+    }),
+    // Delete all Better Auth sessions so the user must re-authenticate
+    prisma.session.deleteMany({
+      where: { userId },
+    }),
+  ]);
 }

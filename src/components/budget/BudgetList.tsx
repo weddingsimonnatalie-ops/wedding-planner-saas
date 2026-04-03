@@ -217,6 +217,10 @@ export function BudgetList() {
   const spentPercent = hasBudget && totalBudget > 0
     ? (summary.totalPaid / totalBudget) * 100
     : 0;
+  const contractedPercent = hasBudget && totalBudget > 0
+    ? (summary.totalContracted / totalBudget) * 100
+    : 0;
+  const isOverContracted = hasBudget && totalBudget !== null && summary.totalContracted > totalBudget;
 
   return (
     <div>
@@ -272,11 +276,26 @@ export function BudgetList() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Contracted</span>
-              <span className="font-medium">{fmt(summary.totalContracted)}</span>
+              <div className="text-right">
+                <span className={`font-medium ${isOverContracted ? "text-red-600" : ""}`}>
+                  {fmt(summary.totalContracted)}
+                </span>
+                {isOverContracted && (
+                  <p className="text-xs text-red-600">{fmt(summary.totalContracted - totalBudget!)} over budget</p>
+                )}
+                {hasBudget && !isOverContracted && contractedPercent > 0 && (
+                  <p className="text-xs text-gray-400">{Math.round(contractedPercent)}% committed</p>
+                )}
+              </div>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Paid</span>
-              <span className="font-medium">{fmt(summary.totalPaid)}</span>
+              <div className="text-right">
+                <span className="font-medium">{fmt(summary.totalPaid)}</span>
+                {hasBudget && spentPercent > 0 && (
+                  <p className="text-xs text-gray-400">{Math.round(spentPercent)}% of budget paid</p>
+                )}
+              </div>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Remaining</span>
@@ -307,12 +326,29 @@ export function BudgetList() {
             )}
           </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className={`bg-white rounded-lg border p-4 ${isOverContracted ? "border-red-300 bg-red-50" : "border-gray-200"}`}>
             <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
               <TrendingUp className="w-4 h-4" />
               Contracted
             </div>
-            <div className="text-xl font-bold text-gray-900">{fmt(summary.totalContracted)}</div>
+            <div className={`text-xl font-bold ${isOverContracted ? "text-red-600" : "text-gray-900"}`}>
+              {fmt(summary.totalContracted)}
+            </div>
+            {hasBudget && contractedPercent > 0 && (
+              <>
+                <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${isOverContracted ? "bg-red-500" : contractedPercent > 90 ? "bg-amber-400" : "bg-primary"}`}
+                    style={{ width: `${Math.min(contractedPercent, 100)}%` }}
+                  />
+                </div>
+                <p className={`text-xs mt-1 ${isOverContracted ? "text-red-600 font-medium" : "text-gray-400"}`}>
+                  {isOverContracted
+                    ? `${fmt(summary.totalContracted - totalBudget!)} over budget`
+                    : `${Math.round(contractedPercent)}% of budget committed`}
+                </p>
+              </>
+            )}
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -321,6 +357,19 @@ export function BudgetList() {
               Paid
             </div>
             <div className="text-xl font-bold text-gray-900">{fmt(summary.totalPaid)}</div>
+            {hasBudget && spentPercent > 0 && (
+              <>
+                <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${spentPercent > 100 ? "bg-red-500" : spentPercent > 90 ? "bg-amber-400" : "bg-primary"}`}
+                    style={{ width: `${Math.min(spentPercent, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs mt-1 text-gray-400">
+                  {Math.round(spentPercent)}% of budget paid
+                </p>
+              </>
+            )}
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -346,7 +395,7 @@ export function BudgetList() {
             Set your overall wedding budget in Settings to see how you&apos;re tracking against your total.
           </p>
           <Link
-            href="/settings"
+            href="/settings?tab=general"
             className="inline-block mt-2 text-sm font-medium text-primary hover:underline"
           >
             Set total budget →

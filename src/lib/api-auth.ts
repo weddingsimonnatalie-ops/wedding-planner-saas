@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
 import { UserRole, SubStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth-better";
 import { verifyWeddingCookie, COOKIE_NAME } from "@/lib/wedding-cookie";
+
+// The session_data cookie is Better Auth's cookie cache. Stripping it from request
+// headers forces auth.api.getSession() to do a live DB lookup, bypassing the cache.
+// This ensures invalidated sessions (deleted by invalidateUserSessions) are caught
+// immediately in API routes. Middleware still uses the cache (Edge runtime needs it).
+const SESSION_DATA_COOKIE = "better-auth.session_data";
 
 type SessionUser = {
   id: string;
@@ -32,11 +38,15 @@ type AuthFailure = { authorized: false; response: NextResponse };
  * role-based access for the authenticated user's WeddingMember record.
  *
  * Steps:
- *  1. Validate Better Auth session
+ *  1. Direct DB session lookup via session token cookie (bypasses Better Auth
+ *     cookie cache so invalidated/deleted sessions are detected immediately)
  *  2. Read and verify signed weddingId cookie — 401 if missing or tampered
  *  3. Query WeddingMember to confirm user is a member with one of allowedRoles
  *  4. Check subscription status — redirect to /billing/suspended if lapsed
  *  5. Check sessionVersion — 401 if session has been invalidated
+ *
+ * Note: middleware uses auth.api.getSession() with cookie cache (Edge runtime
+ * cannot use Prisma). API routes use this direct DB path instead.
  */
 export async function requireRole(
   allowedRoles: UserRole[],
@@ -44,8 +54,21 @@ export async function requireRole(
   options?: { allowLapsed?: boolean }
 ): Promise<AuthSuccess | AuthFailure> {
   try {
-    // Step 1: validate Better Auth session
-    const session = await auth.api.getSession({ headers: req.headers });
+    // Step 1: get session with cache bypassed — strip the session_data cookie so
+    // Better Auth falls back to a live DB lookup. Deleted sessions (from
+    // invalidateUserSessions) are therefore caught immediately.
+    const headersWithoutCache = new Headers(req.headers);
+    const cookies = headersWithoutCache.get("cookie") ?? "";
+    headersWithoutCache.set(
+      "cookie",
+      cookies
+        .split(";")
+        .map((c) => c.trim())
+        .filter((c) => !c.startsWith(`${SESSION_DATA_COOKIE}=`))
+        .join("; ")
+    );
+
+    const session = await auth.api.getSession({ headers: headersWithoutCache });
     if (!session?.user) {
       return {
         authorized: false,

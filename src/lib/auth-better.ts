@@ -23,7 +23,8 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24, // Update session every 24 hours
     cookieCache: {
       enabled: true,
-      maxAge: 60 * 60 * 24 * 30, // 30 days - matches session expiry to avoid re-validation issues
+      maxAge: 60 * 60 * 24 * 30, // 30 days — required for middleware (Edge runtime, no Prisma)
+      // API routes bypass this cache by querying the DB directly via requireRole().
     },
   },
   account: {

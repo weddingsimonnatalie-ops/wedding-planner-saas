@@ -7,6 +7,7 @@ interface WeddingConfigLike {
   weddingDate: Date | null;
   venueName: string | null;
   venueAddress: string | null;
+  totalBudget?: number | null;
 }
 
 interface WeddingConfigFormProps {
@@ -26,6 +27,9 @@ export function WeddingConfigForm({ config }: WeddingConfigFormProps) {
   const [venueAddress, setVenueAddress] = useState(
     config?.venueAddress ?? ""
   );
+  const [totalBudget, setTotalBudget] = useState(
+    config?.totalBudget != null ? String(config.totalBudget) : ""
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -44,6 +48,7 @@ export function WeddingConfigForm({ config }: WeddingConfigFormProps) {
         weddingDate: weddingDate || null,
         venueName: venueName || null,
         venueAddress: venueAddress || null,
+        totalBudget: totalBudget !== "" ? parseFloat(totalBudget) : null,
       }),
     });
 
@@ -108,6 +113,26 @@ export function WeddingConfigForm({ config }: WeddingConfigFormProps) {
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
           placeholder="123 Main Street, London"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Total budget
+        </label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">£</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={totalBudget}
+            onChange={(e) => setTotalBudget(e.target.value)}
+            className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            placeholder="0.00"
+            inputMode="decimal"
+          />
+        </div>
+        <p className="text-xs text-gray-500 mt-1">Your overall wedding budget for tracking purposes.</p>
       </div>
 
       {error && (

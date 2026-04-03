@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import {
   LayoutDashboard, Users, LayoutGrid, Briefcase, Settings,
-  Heart, LogOut, User, CalendarDays, CreditCard, CheckSquare, Clock,
+  Heart, LogOut, User, CalendarDays, CreditCard, CheckSquare, Clock, PiggyBank,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
 
@@ -29,6 +29,7 @@ const allNavItems = [
   { href: "/tasks",             label: "Tasks",        icon: CheckSquare,     roles: ["ADMIN", "VIEWER", "RSVP_MANAGER"] as UserRole[] },
   { href: "/suppliers",         label: "Suppliers",    icon: Briefcase,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/payments",          label: "Payments",     icon: CreditCard,      roles: ["ADMIN", "VIEWER"] as UserRole[] },
+  { href: "/budget",            label: "Budget",       icon: PiggyBank,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/settings",          label: "Settings",     icon: Settings,        roles: ["ADMIN"] as UserRole[] },
 ] as const;
 

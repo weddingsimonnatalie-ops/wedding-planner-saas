@@ -46,6 +46,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       sessionTimeout,
       sessionWarningTime,
       themeHue,
+      totalBudget,
     } = body;
 
     const errors = validateFields([
@@ -75,6 +76,9 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
             : {}),
           ...(themeHue !== undefined
             ? { themeHue: Math.max(0, Math.min(359, Math.round(Number(themeHue)))) }
+            : {}),
+          ...(totalBudget !== undefined
+            ? { totalBudget: totalBudget !== null ? Math.max(0, Number(totalBudget)) : null }
             : {}),
         },
       })

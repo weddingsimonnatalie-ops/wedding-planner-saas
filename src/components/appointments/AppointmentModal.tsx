@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { X } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
+import { ModalShell } from "@/components/ui/ModalShell";
 import { useFormDirtyRegistration } from "@/hooks/useFormDirtyRegistration";
 
 // ── Shared constants ──────────────────────────────────────────────────────────
@@ -114,13 +114,6 @@ export function AppointmentModal({ initial, prefillSupplierId, onSave, onClose }
       .catch(() => {});
   }, []);
 
-  // Close on Escape
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   const filteredSuppliers = supplierFilter
     ? suppliers.filter(s => s.name.toLowerCase().includes(supplierFilter.toLowerCase()))
     : suppliers;
@@ -160,27 +153,14 @@ export function AppointmentModal({ initial, prefillSupplierId, onSave, onClose }
   const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent";
 
   return (
-    <div
-      className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 px-4 pb-4 overflow-y-auto"
-      style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
-      onClick={onClose}
+    <ModalShell
+      title={initial ? "Edit appointment" : "Add appointment"}
+      onClose={onClose}
+      formId="appointment-modal-form"
+      submitLabel={saving ? "Saving…" : initial ? "Save changes" : "Add appointment"}
+      submitDisabled={saving}
     >
-      <div
-        className="bg-white rounded-xl shadow-xl w-full max-w-lg my-8 flex flex-col max-h-[calc(100vh-4rem-env(safe-area-inset-top))]"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 shrink-0">
-          <h2 className="text-base font-semibold text-gray-900">
-            {initial ? "Edit appointment" : "Add appointment"}
-          </h2>
-          <button onClick={onClose} className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-5 space-y-4 pb-20 md:pb-5">
+      <form id="appointment-modal-form" onSubmit={handleSave} className="p-5 space-y-4">
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
@@ -290,46 +270,7 @@ export function AppointmentModal({ initial, prefillSupplierId, onSave, onClose }
             </p>
           )}
 
-          {/* Footer - Desktop */}
-          <div className="hidden md:flex gap-2 pt-1">
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
-            >
-              {saving ? "Saving…" : initial ? "Save changes" : "Add appointment"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-
-        {/* Footer - Mobile sticky bar */}
-        <div
-          className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-end gap-3 px-4 py-3 z-50"
-          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
-          >
-            {saving ? "Saving…" : initial ? "Save changes" : "Add appointment"}
-          </button>
-        </div>
-      </div>
-    </div>
+      </form>
+    </ModalShell>
   );
 }

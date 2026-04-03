@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { X, Upload, Camera, FileText, Trash2 } from "lucide-react";
+import { Upload, Camera, FileText, Trash2 } from "lucide-react";
+import { ModalShell } from "@/components/ui/ModalShell";
 import Link from "next/link";
 import { fetchApi } from "@/lib/fetch";
 import { useFormDirtyRegistration } from "@/hooks/useFormDirtyRegistration";
@@ -60,13 +61,6 @@ export function PaymentModal({ onClose, onCreated }: Props) {
       })
       .catch(() => {});
   }, []);
-
-  // Close on Escape
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   // Handle file selection
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -190,29 +184,14 @@ export function PaymentModal({ onClose, onCreated }: Props) {
   const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent";
 
   return (
-    <div
-      className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 px-4 pb-4 overflow-y-auto"
-      style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
-      onClick={onClose}
+    <ModalShell
+      title="Add payment"
+      onClose={onClose}
+      formId="payment-modal-form"
+      submitLabel={saving ? "Creating…" : uploading ? "Uploading receipt…" : "Create payment"}
+      submitDisabled={saving || uploading}
     >
-      <div
-        className="bg-white rounded-xl shadow-xl w-full max-w-lg my-8 flex flex-col max-h-[calc(100vh-4rem-env(safe-area-inset-top))]"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 shrink-0">
-          <h2 className="text-base font-semibold text-gray-900">Add payment</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4 pb-20 md:pb-5">
+      <form id="payment-modal-form" onSubmit={handleSubmit} className="p-5 space-y-4">
           {/* Supplier */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -380,46 +359,7 @@ export function PaymentModal({ onClose, onCreated }: Props) {
             </p>
           )}
 
-          {/* Footer - Desktop */}
-          <div className="hidden md:flex justify-end gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || uploading}
-              className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
-            >
-              {saving ? "Creating…" : uploading ? "Uploading receipt…" : "Create payment"}
-            </button>
-          </div>
         </form>
-
-        {/* Footer - Mobile sticky bar */}
-        <div
-          className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-end gap-3 px-4 py-3 z-50"
-          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving || uploading}
-            className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
-          >
-            {saving ? "Creating…" : uploading ? "Uploading…" : "Create payment"}
-          </button>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

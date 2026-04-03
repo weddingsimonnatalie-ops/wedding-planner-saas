@@ -192,7 +192,7 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
       setCategories(prev => [...prev, created]);
       setEditName(n => ({ ...n, [created.id]: created.name }));
       setEditColour(c => ({ ...c, [created.id]: created.colour }));
-      setEditAllocated(a => ({ ...a, [created.id]: created.allocatedAmount ?? "" }));
+      setEditAllocated(a => ({ ...a, [created.id]: created.allocatedAmount != null ? String(created.allocatedAmount) : "" }));
       setNewName("");
       setNewColour("#6366f1");
       setNewAllocated("");

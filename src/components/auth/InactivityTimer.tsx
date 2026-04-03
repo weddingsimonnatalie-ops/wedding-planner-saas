@@ -139,6 +139,12 @@ export function InactivityTimer() {
           fetch("/api/auth/trust-device/check"),
         ]);
 
+        // If either returns 401, session is invalid — redirect to login immediately
+        if (timeoutRes.status === 401 || trustedRes.status === 401) {
+          window.location.href = "/login?reason=session-expired";
+          return;
+        }
+
         if (timeoutRes.ok) {
           const timeoutData = await timeoutRes.json();
           setTimeoutMs((timeoutData.timeoutMinutes || 60) * 60 * 1000);

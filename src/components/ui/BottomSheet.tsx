@@ -84,19 +84,24 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
           "fixed bottom-0 left-0 right-0 z-50 md:hidden",
           "bg-white rounded-t-2xl shadow-xl",
           "bottom-sheet-enter",
-          "max-h-[85vh] flex flex-col"
+          "h-[calc(100svh-env(safe-area-inset-top,0px))] flex flex-col"
         )}
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-        onTouchStart={handleTouchStart}
       >
-        {/* Handle */}
-        <div className="flex justify-center pt-2 pb-1 shrink-0">
+        {/* Handle — drag to close only from here */}
+        <div
+          className="flex justify-center pt-2 pb-1 shrink-0 cursor-grab active:cursor-grabbing"
+          onTouchStart={handleTouchStart}
+        >
           <div className="w-10 h-1 bg-gray-300 rounded-full" />
         </div>
 
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+          <div
+            className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0"
+            onTouchStart={handleTouchStart}
+          >
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
             <button
               onClick={onClose}

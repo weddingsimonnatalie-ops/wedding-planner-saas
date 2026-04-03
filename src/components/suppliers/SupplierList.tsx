@@ -15,7 +15,7 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   COMPLETE:  { label: "Complete",  cls: "bg-purple-100 text-purple-700" },
 };
 
-interface SupplierCategory { id: string; name: string; colour: string }
+interface SupplierCategory { id: string; name: string; colour: string; allocatedAmount: number | null }
 interface Payment { id: string; amount: number; status: string; dueDate: string | null; }
 interface Supplier {
   id: string;
@@ -196,9 +196,22 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
         <div className="space-y-6">
           {groupNames.map(groupName => {
             const catSuppliers = filtered.filter(s => (s.category?.name ?? "Uncategorised") === groupName);
+            const cat = categories.find(c => c.name === groupName);
+            const groupContracted = catSuppliers.reduce((sum, s) => sum + (s.contractValue ?? 0), 0);
+            const allocated = cat?.allocatedAmount ?? null;
+            const isOverAllocated = allocated !== null && groupContracted > allocated;
             return (
               <div key={groupName}>
-                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{groupName}</h2>
+                <div className="flex items-baseline justify-between mb-2">
+                  <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{groupName}</h2>
+                  {allocated !== null && (
+                    <span className={`text-xs font-medium ${isOverAllocated ? "text-red-600" : "text-gray-400"}`}>
+                      {fmt(groupContracted)} contracted
+                      <span className="text-gray-300 mx-1">/</span>
+                      <span className="text-gray-500">{fmt(allocated)} allocated</span>
+                    </span>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {catSuppliers.map(s => {
                     const { contracted, paid, remaining } = supplierTotals(s);

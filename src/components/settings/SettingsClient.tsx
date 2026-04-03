@@ -14,6 +14,7 @@ interface WeddingConfig {
   sessionTimeout: number;
   sessionWarningTime: number;
   themeHue: number;
+  totalBudget?: number | null;
 }
 import { UsersManager } from "./UsersManager";
 import { MealOptionsList } from "./MealOptionsList";
