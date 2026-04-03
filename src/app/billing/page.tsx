@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Heart, CreditCard, Calendar, Download, Zap } from "lucide-react";
 import { ActivateTrialButton } from "@/components/billing/ActivateTrialButton";
 import { SyncFromProviderButton } from "@/components/billing/SyncFromProviderButton";
-import { CancelPayPalButton } from "@/components/billing/CancelPayPalButton";
+import { PayPalSubscriptionButton } from "@/components/billing/PayPalSubscriptionButton";
 import { syncWeddingFromStripe } from "@/lib/stripe-sync";
 import { syncWeddingFromPayPal } from "@/lib/paypal-sync";
 
@@ -191,20 +191,25 @@ export default async function BillingPage() {
         </>
       ) : (
         <>
-          <CancelPayPalButton />
-          <p className="text-xs text-gray-400 text-center mt-4">
-            PayPal subscriptions are managed through your PayPal account. To update
-            your payment method, visit{" "}
-            <a
-              href="https://www.paypal.com/myaccount/autopay/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              paypal.com
-            </a>
-            .
-          </p>
+          <PayPalSubscriptionButton
+            status={status}
+            paypalSubscriptionId={wedding?.paypalSubscriptionId ?? null}
+          />
+          {status !== "CANCELLED" && status !== "PAST_DUE" && (
+            <p className="text-xs text-gray-400 text-center mt-4">
+              PayPal subscriptions are managed through your PayPal account. To update
+              your payment method, visit{" "}
+              <a
+                href="https://www.paypal.com/myaccount/autopay/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                paypal.com
+              </a>
+              .
+            </p>
+          )}
         </>
       )}
 
