@@ -226,152 +226,153 @@ export function UsersManager({ initialUsers, initialInvites, ownerUserId, curren
                 const isVerified = !!user.emailVerified;
                 return (
                   <li key={user.id}>
-                    <div className="flex items-center gap-3 px-5 py-3.5 flex-wrap">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
-                          {user.name ?? "—"}
-                          {isOwn && <span className="ml-2 text-xs text-gray-400">(you)</span>}
-                        </p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
-                      </div>
-
-                      {/* Role dropdown */}
-                      <div
-                        className="relative shrink-0"
-                        title={isOwn ? "You cannot change your own role" : undefined}
-                      >
-                        <select
-                          value={user.role}
-                          disabled={isOwn || isChangingRole}
-                          onChange={(e) => handleRoleChange(user.id, user.name, e.target.value as UserRole)}
-                          className={`text-xs border rounded-lg pl-2 pr-6 py-1 appearance-none focus:outline-none focus:ring-2 focus:ring-primary transition-colors font-medium ${
-                            roleBadgeClass[user.role]
-                          } ${
-                            isOwn || isChangingRole
-                              ? "cursor-not-allowed opacity-70"
-                              : "cursor-pointer hover:opacity-80"
-                          }`}
-                        >
-                          {ROLE_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-1.5 flex items-center">
-                          <svg className="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
+                    <div className="px-5 py-3.5 space-y-2">
+                      {/* Row 1: name/email + action buttons */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900">
+                            {user.name ?? "—"}
+                            {isOwn && <span className="ml-2 text-xs text-gray-400">(you)</span>}
+                          </p>
+                          <p className="text-xs text-gray-500">{user.email}</p>
                         </div>
-                        {isChangingRole && (
-                          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
-                        )}
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          {!isOwn && user.id !== ownerUserId && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setEditUser(user)}
+                                title="Edit user"
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setResetPasswordUser(user)}
+                                title="Reset password"
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                              >
+                                <KeyRound className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(user.id, user.name, user.email)}
+                                title="Remove from wedding"
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Verification status */}
-                      {emailVerificationRequired && (
-                        isVerified ? (
-                          <span className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 shrink-0">
-                            <CheckCircle className="w-3 h-3" />
-                            Verified
-                          </span>
-                        ) : (
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
-                              <Mail className="w-3 h-3" />
-                              Unverified
+                      {/* Row 2: role dropdown + badges */}
+                      <div className="flex items-center flex-wrap gap-2">
+                        {/* Role dropdown */}
+                        <div
+                          className="relative shrink-0"
+                          title={isOwn ? "You cannot change your own role" : undefined}
+                        >
+                          <select
+                            value={user.role}
+                            disabled={isOwn || isChangingRole}
+                            onChange={(e) => handleRoleChange(user.id, user.name, e.target.value as UserRole)}
+                            className={`text-xs border rounded-lg pl-2 pr-6 py-1 appearance-none focus:outline-none focus:ring-2 focus:ring-primary transition-colors font-medium ${
+                              roleBadgeClass[user.role]
+                            } ${
+                              isOwn || isChangingRole
+                                ? "cursor-not-allowed opacity-70"
+                                : "cursor-pointer hover:opacity-80"
+                            }`}
+                          >
+                            {ROLE_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-1.5 flex items-center">
+                            <svg className="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                          {isChangingRole && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                          )}
+                        </div>
+
+                        {/* Verification status */}
+                        {emailVerificationRequired && (
+                          isVerified ? (
+                            <span className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 shrink-0">
+                              <CheckCircle className="w-3 h-3" />
+                              Verified
+                            </span>
+                          ) : (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                <Mail className="w-3 h-3" />
+                                Unverified
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleResendVerification(user.id)}
+                                title="Resend verification email"
+                                className="text-xs text-primary hover:text-primary/80 transition-colors"
+                              >
+                                Resend
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleVerify(user.id)}
+                                title="Manually verify user"
+                                className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                              >
+                                Verify
+                              </button>
+                            </div>
+                          )
+                        )}
+
+                        {/* Lock badge + unlock button */}
+                        {user.lockedUntil && new Date(user.lockedUntil) > new Date() && (
+                          <>
+                            <span className="flex items-center gap-1 text-xs text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5 shrink-0">
+                              &#128274; Locked until{" "}
+                              {new Date(user.lockedUntil).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </span>
                             <button
                               type="button"
-                              onClick={() => handleResendVerification(user.id)}
-                              title="Resend verification email"
-                              className="text-xs text-primary hover:text-primary/80 transition-colors"
+                              onClick={() => handleUnlock(user.id)}
+                              title="Unlock account"
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-red-700 border border-red-200 hover:bg-red-50 transition-colors shrink-0"
                             >
-                              Resend
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleVerify(user.id)}
-                              title="Manually verify user"
-                              className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                            >
-                              Verify
-                            </button>
-                          </div>
-                        )
-                      )}
-
-                      {/* Lock badge + unlock button */}
-                      {user.lockedUntil && new Date(user.lockedUntil) > new Date() && (
-                        <>
-                          <span className="flex items-center gap-1 text-xs text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5 shrink-0">
-                            &#128274; Locked until{" "}
-                            {new Date(user.lockedUntil).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleUnlock(user.id)}
-                            title="Unlock account"
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-red-700 border border-red-200 hover:bg-red-50 transition-colors shrink-0"
-                          >
-                            <LockOpen className="w-3 h-3" />
-                            Unlock
-                          </button>
-                        </>
-                      )}
-
-                      {/* 2FA badge */}
-                      {user.twoFactorEnabled ? (
-                        <span className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 shrink-0">
-                          <ShieldCheck className="w-3 h-3" />
-                          2FA on
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400 shrink-0">No 2FA</span>
-                      )}
-
-                      <p className="text-xs text-gray-400 shrink-0">
-                        {new Date(user.createdAt).toLocaleDateString()}
-                      </p>
-
-                      {!isOwn ? (
-                        user.id === ownerUserId ? (
-                          // Owner: no actions available to other admins
-                          <div className="w-20" />
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => setEditUser(user)}
-                              title="Edit user"
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setResetPasswordUser(user)}
-                              title="Reset password"
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                            >
-                              <KeyRound className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(user.id, user.name, user.email)}
-                              title="Remove from wedding"
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
+                              <LockOpen className="w-3 h-3" />
+                              Unlock
                             </button>
                           </>
-                        )
-                      ) : (
-                        <div className="w-20" />
-                      )}
+                        )}
+
+                        {/* 2FA badge */}
+                        {user.twoFactorEnabled ? (
+                          <span className="flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 shrink-0">
+                            <ShieldCheck className="w-3 h-3" />
+                            2FA on
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400 shrink-0">No 2FA</span>
+                        )}
+
+                        <p className="text-xs text-gray-400 shrink-0">
+                          {new Date(user.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
                   </li>
                 );

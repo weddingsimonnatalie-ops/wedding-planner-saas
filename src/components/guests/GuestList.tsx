@@ -303,7 +303,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
     });
     setSendingId(null);
     const data = await res.json();
-    showToast(data.message ?? (res.ok ? "Email sent" : "Failed to send email"), res.ok);
+    showToast(data.error ?? data.message ?? (res.ok ? "Email sent" : "Failed to send email"), res.ok);
   }
 
   async function copyRsvpLink(token: string) {
@@ -612,8 +612,8 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
           <PrintGuestListButton />
         </div>
 
-        {/* Mobile: More ▾ dropdown */}
-        <div className="sm:hidden relative" ref={moreMenuRef}>
+        {/* Mobile: More ▾ dropdown — hidden on mobile */}
+        <div className="hidden relative" ref={moreMenuRef}>
           <button
             type="button"
             onClick={() => setShowMoreMenu(v => !v)}
@@ -1131,8 +1131,9 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                         </span>
                       ))}
                       {g.unsubscribedAt && (
-                        <span title="Unsubscribed from emails">
-                          <XCircle className="w-3 h-3 text-gray-400 shrink-0" />
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px] shrink-0">
+                          <XCircle className="w-3 h-3" />
+                          Unsubscribed
                         </span>
                       )}
                       <span className="flex-1" />

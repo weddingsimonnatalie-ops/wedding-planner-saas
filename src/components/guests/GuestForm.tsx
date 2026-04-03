@@ -221,7 +221,7 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
     });
     setSendingEmail(false);
     const data = await res.json();
-    setEmailToast({ msg: data.message ?? (res.ok ? "Email sent" : "Failed to send"), ok: res.ok });
+    setEmailToast({ msg: data.error ?? data.message ?? (res.ok ? "Email sent" : "Failed to send"), ok: res.ok });
     setTimeout(() => setEmailToast(null), 4000);
   }
 
@@ -675,26 +675,26 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
       {/* Mobile fixed bottom bar */}
       {!readOnly && (
         <div
-          className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-gray-200 flex items-center gap-3 px-4"
+          className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-gray-200 flex items-center justify-end gap-3 px-5 py-4"
           style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
           {/* Unsaved changes indicator */}
           {isDirty && !saving && (
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Unsaved changes" />
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse mr-auto" title="Unsaved changes" />
           )}
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex-1 px-4 py-3 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors min-h-[44px]"
-          >
-            {saving ? "Saving…" : isEdit ? "Save changes" : "Add guest"}
-          </button>
           <button
             type="button"
             onClick={() => router.push("/guests")}
-            className="px-4 py-3 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px]"
+            className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
+          >
+            {saving ? "Saving…" : isEdit ? "Save changes" : "Add guest"}
           </button>
         </div>
       )}

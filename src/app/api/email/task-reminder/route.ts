@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, requireEmailFeature } from "@/lib/api-auth";
-import { sendPaymentReminderEmail } from "@/lib/email";
+import { sendTaskReminderEmail } from "@/lib/email";
 import { checkRateLimit, getEmailRateLimit } from "@/lib/rate-limit";
 import { withTenantContext } from "@/lib/tenant";
-
 import { handleDbError } from "@/lib/db-error";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -15,8 +14,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const emailGate = requireEmailFeature(auth.wedding.subscriptionStatus);
     if (emailGate) return emailGate;
 
-    // Rate limit per user to prevent email abuse
-    const rateKey = `email:payment:${auth.user.id}`;
+    const rateKey = `email:task:${auth.user.id}`;
     const { max, windowMs } = getEmailRateLimit();
     const rateCheck = await checkRateLimit(rateKey, max, windowMs);
     if (rateCheck.limited) {
@@ -26,27 +24,24 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { paymentId } = await req.json();
-    if (!paymentId) return NextResponse.json({ error: "paymentId required" }, { status: 400 });
+    const { taskId } = await req.json();
+    if (!taskId) return NextResponse.json({ error: "taskId required" }, { status: 400 });
 
-    const payment = await withTenantContext(weddingId, async (tx) => {
-      return tx.payment.findUnique({
-        where: { id: paymentId, weddingId },
-        include: { supplier: true },
-      });
+    const task = await withTenantContext(weddingId, async (tx) => {
+      return tx.task.findUnique({ where: { id: taskId, weddingId } });
     });
 
-    if (!payment) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const to = auth.user.email;
     if (!to) return NextResponse.json({ error: "No recipient email configured" }, { status: 400 });
 
-    const result = await sendPaymentReminderEmail(
+    const result = await sendTaskReminderEmail(
       to,
-      payment.supplier.name,
-      payment.label,
-      payment.amount,
-      payment.dueDate ? new Date(payment.dueDate) : new Date()
+      task.title,
+      task.priority,
+      task.dueDate ? new Date(task.dueDate) : null,
+      task.notes
     );
 
     return NextResponse.json(result, { status: result.ok ? 200 : 500 });
@@ -54,5 +49,4 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   } catch (error) {
     return handleDbError(error);
   }
-
 }

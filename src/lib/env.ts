@@ -24,13 +24,7 @@ interface EnvConfig {
   nextauthUrl: string;
   // Optional
   redisUrl?: string;
-  smtp?: {
-    host: string;
-    port: string;
-    user: string;
-    pass: string;
-    from: string;
-  };
+  resendApiKey?: string;
 }
 
 let config: EnvConfig | null = null;
@@ -45,35 +39,14 @@ export function getEnvConfig(): EnvConfig {
   // Optional: Redis
   const redisUrl = getEnv("REDIS_URL");
 
-  // Optional: SMTP (all or nothing)
-  const smtpHost = getEnv("SMTP_HOST");
-  const smtpPort = getEnv("SMTP_PORT");
-  const smtpUser = getEnv("SMTP_USER");
-  const smtpPass = getEnv("SMTP_PASS");
-  const smtpFrom = getEnv("SMTP_FROM");
-
-  let smtp: EnvConfig["smtp"];
-  if (smtpHost || smtpUser || smtpPass || smtpFrom) {
-    // If any SMTP var is set, require all of them
-    if (!smtpHost || !smtpUser || !smtpPass || !smtpFrom) {
-      throw new Error(
-        "SMTP configuration incomplete. If using SMTP, you must set: SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_FROM"
-      );
-    }
-    smtp = {
-      host: smtpHost,
-      port: smtpPort || "587",
-      user: smtpUser,
-      pass: smtpPass,
-      from: smtpFrom,
-    };
-  }
+  // Optional: Resend (email sending)
+  const resendApiKey = getEnv("RESEND_API_KEY");
 
   config = {
     nextauthSecret,
     nextauthUrl,
     redisUrl,
-    smtp,
+    resendApiKey,
   };
 
   return config;

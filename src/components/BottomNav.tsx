@@ -19,10 +19,26 @@ const TABS = [
   { href: "/payments", label: "Payments", icon: CreditCard, roles: ["ADMIN", "VIEWER"] as UserRole[] },
 ] as const;
 
+// Hide the bottom nav on detail/edit pages (e.g. /guests/[id], /suppliers/[id])
+// so the full screen is available for the form. These are paths with a segment
+// after a known section root that isn't a recognised sub-page.
+const SECTION_ROOTS = ["/guests", "/suppliers", "/appointments", "/tasks", "/payments", "/timeline"];
+
+function isDetailPage(pathname: string): boolean {
+  return SECTION_ROOTS.some((root) => {
+    if (!pathname.startsWith(root + "/")) return false;
+    const rest = pathname.slice(root.length + 1);
+    // Allow known sub-pages (settings tabs, print-designer, etc.) to keep nav
+    return rest.length > 0 && !rest.startsWith("new");
+  });
+}
+
 export function BottomNav({ role, taskBadge, onOpenSidebar }: BottomNavProps) {
   const pathname = usePathname();
 
   const visibleTabs = TABS.filter(tab => tab.roles === null || tab.roles.includes(role));
+
+  if (isDetailPage(pathname)) return null;
 
   return (
     <nav

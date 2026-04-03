@@ -1,4 +1,4 @@
-import * as nodemailer from "nodemailer";
+import { Resend } from "resend";
 import * as he from "he";
 
 /**
@@ -41,21 +41,40 @@ const safeUrl = (value: string | null | undefined): string => {
   }
 };
 
-function getTransporter() {
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+function getResend(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  return new Resend(apiKey);
+}
 
-  if (!host || !user || !pass) {
-    return null;
+async function sendEmail(params: {
+  to: string;
+  subject: string;
+  html?: string;
+  text: string;
+}): Promise<{ ok: boolean; message: string }> {
+  const resend = getResend();
+  const from = process.env.SMTP_FROM ?? "noreply@localhost";
+
+  if (!resend) {
+    console.log(`[email] RESEND_API_KEY not configured. Would send to ${params.to}: ${params.subject}`);
+    return { ok: true, message: "Email logged to console (Resend not configured)" };
   }
 
-  return nodemailer.createTransport({
-    host,
-    port: parseInt(process.env.SMTP_PORT ?? "587"),
-    secure: false,
-    auth: { user, pass },
+  const { error } = await resend.emails.send({
+    from,
+    to: params.to,
+    subject: params.subject,
+    html: params.html,
+    text: params.text,
   });
+
+  if (error) {
+    console.error(`[email] Failed to send to ${params.to}: ${error.message}`);
+    return { ok: false, message: `Failed to send: ${error.message}` };
+  }
+
+  return { ok: true, message: `Email sent to ${params.to}` };
 }
 
 export async function sendRsvpEmail(
@@ -67,8 +86,6 @@ export async function sendRsvpEmail(
   themeHue?: number | null
 ): Promise<{ ok: boolean; message: string }> {
   const accentColor = hslToHex(themeHue ?? 330, 60, 55);
-  const transporter = getTransporter();
-  const from = process.env.SMTP_FROM ?? "noreply@localhost";
   const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const rsvpUrl = `${baseUrl}/rsvp/${rsvpToken}`;
   const unsubscribeUrl = `${baseUrl}/unsubscribe/${rsvpToken}`;
@@ -126,21 +143,7 @@ Don't want to receive reminder emails? Unsubscribe here: ${unsubscribeUrl}`;
 </body>
 </html>`;
 
-  if (!transporter) {
-    console.log(`[email] SMTP not configured. Would send to ${guestEmail}:`);
-    console.log(`[email] Subject: ${subject}`);
-    console.log(`[email] RSVP URL: ${rsvpUrl}`);
-    return { ok: true, message: `Email logged to console (SMTP not configured)` };
-  }
-
-  try {
-    await transporter.sendMail({ from, to: guestEmail, subject, text, html });
-    return { ok: true, message: `Email sent to ${guestEmail}` };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[email] Failed to send to ${guestEmail}: ${msg}`);
-    return { ok: false, message: `Failed to send: ${msg}` };
-  }
+  return sendEmail({ to: guestEmail, subject, html, text });
 }
 
 export async function sendAppointmentReminderEmail(
@@ -153,9 +156,6 @@ export async function sendAppointmentReminderEmail(
   supplierName: string | null,
   notes: string | null
 ): Promise<{ ok: boolean; message: string }> {
-  const transporter = getTransporter();
-  const from = process.env.SMTP_FROM ?? "noreply@localhost";
-
   const dateStr = date.toLocaleDateString("en-GB", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   }) + " at " + date.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true });
@@ -173,18 +173,7 @@ export async function sendAppointmentReminderEmail(
 
   const text = `You have an upcoming appointment:\n\n${lines}`;
 
-  if (!transporter) {
-    console.log(`[email] SMTP not configured. Appointment reminder would be sent to ${to}: ${subject}`);
-    return { ok: true, message: "Email logged to console (SMTP not configured)" };
-  }
-
-  try {
-    await transporter.sendMail({ from, to, subject, text });
-    return { ok: true, message: `Reminder sent to ${to}` };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { ok: false, message: `Failed to send: ${msg}` };
-  }
+  return sendEmail({ to, subject, text });
 }
 
 export async function sendPaymentReminderEmail(
@@ -194,24 +183,31 @@ export async function sendPaymentReminderEmail(
   amount: number,
   dueDate: Date
 ): Promise<{ ok: boolean; message: string }> {
-  const transporter = getTransporter();
-  const from = process.env.SMTP_FROM ?? "noreply@localhost";
   const due = dueDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const subject = `Payment reminder: ${supplierName} — ${label}`;
   const text = `Reminder: ${label} of £${amount.toFixed(2)} to ${supplierName} is due on ${due}.`;
 
-  if (!transporter) {
-    console.log(`[email] SMTP not configured. Payment reminder would be sent to ${to}`);
-    return { ok: true, message: "Email logged to console (SMTP not configured)" };
-  }
+  return sendEmail({ to, subject, text });
+}
 
-  try {
-    await transporter.sendMail({ from, to, subject, text });
-    return { ok: true, message: `Reminder sent to ${to}` };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { ok: false, message: `Failed to send: ${msg}` };
-  }
+export async function sendTaskReminderEmail(
+  to: string,
+  title: string,
+  priority: string,
+  dueDate: Date | null,
+  notes: string | null
+): Promise<{ ok: boolean; message: string }> {
+  const subject = `Task reminder: ${title}`;
+  const lines = [
+    `Task: ${title}`,
+    `Priority: ${priority.charAt(0) + priority.slice(1).toLowerCase()}`,
+    dueDate
+      ? `Due: ${dueDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`
+      : null,
+    notes ? `Notes: ${notes}` : null,
+  ].filter(Boolean).join("\n");
+  const text = `Reminder for your upcoming task:\n\n${lines}`;
+  return sendEmail({ to, subject, text });
 }
 
 /**
@@ -237,8 +233,6 @@ export async function sendVerificationEmail(
   themeHue?: number | null
 ): Promise<{ ok: boolean; message: string }> {
   const accentColor = hslToHex(themeHue ?? 330, 60, 55);
-  const transporter = getTransporter();
-  const from = process.env.SMTP_FROM ?? "noreply@localhost";
   const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const verifyUrl = `${baseUrl}/verify-email/${verificationToken}`;
 
@@ -274,20 +268,7 @@ export async function sendVerificationEmail(
 </body>
 </html>`;
 
-  if (!transporter) {
-    console.log(`[email] SMTP not configured. Verification email would be sent to ${userEmail}:`);
-    console.log(`[email] Verification URL: ${verifyUrl}`);
-    return { ok: true, message: "Email logged to console (SMTP not configured)" };
-  }
-
-  try {
-    await transporter.sendMail({ from, to: userEmail, subject, text, html });
-    return { ok: true, message: `Verification email sent to ${userEmail}` };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[email] Failed to send verification to ${userEmail}: ${msg}`);
-    return { ok: false, message: `Failed to send: ${msg}` };
-  }
+  return sendEmail({ to: userEmail, subject, html, text });
 }
 
 /**
@@ -301,8 +282,6 @@ export async function sendInviteEmail(
   themeHue?: number | null
 ): Promise<{ ok: boolean; message: string }> {
   const accentColor = hslToHex(themeHue ?? 330, 60, 55);
-  const transporter = getTransporter();
-  const from = process.env.SMTP_FROM ?? "noreply@localhost";
 
   const roleLabel: Record<string, string> = {
     ADMIN: "Admin",
@@ -345,20 +324,7 @@ export async function sendInviteEmail(
 </body>
 </html>`;
 
-  if (!transporter) {
-    console.log(`[email] SMTP not configured. Invite would be sent to ${to}:`);
-    console.log(`[email] Invite URL: ${inviteUrl}`);
-    return { ok: true, message: "Email logged to console (SMTP not configured)" };
-  }
-
-  try {
-    await transporter.sendMail({ from, to, subject, text, html });
-    return { ok: true, message: `Invite sent to ${to}` };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[email] Failed to send invite to ${to}: ${msg}`);
-    return { ok: false, message: `Failed to send: ${msg}` };
-  }
+  return sendEmail({ to, subject, html, text });
 }
 
 export { generateVerificationToken };

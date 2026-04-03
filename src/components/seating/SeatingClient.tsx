@@ -236,6 +236,12 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
     }
   }, []);
 
+  // Assign guest to a table and immediately set a specific seat number (mobile flow)
+  const assignGuestWithSeat = useCallback(async (guestId: string, tableId: string, seatNumber: number): Promise<string | null> => {
+    await assignGuest(guestId, tableId);
+    return assignSeat(guestId, seatNumber);
+  }, [assignGuest, assignSeat]);
+
   // Silent PATCH — updates local state + calls API, no toast
   const patchTable = useCallback(async (tableId: string, updates: Partial<TableWithGuests>) => {
     setTables((prev) =>
@@ -515,6 +521,7 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
             onDeleteTable={deleteTable}
             onUpdateTable={updateTable}
             onAssignSeat={assignSeat}
+            onAssignWithSeat={assignGuestWithSeat}
             readOnly={role !== "ADMIN" && role !== undefined}
           />
         ) : tab === "visual" ? (

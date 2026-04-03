@@ -16,6 +16,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { GuestSummary, TableWithGuests, MealOptionSummary } from "@/lib/seating-types";
 import { isReceptionEligible } from "@/lib/seating-types";
 import { Plus, Trash2, X, Pencil } from "lucide-react";
+import { MobileSeatSheet } from "./MobileSeatSheet";
 
 const COLOUR_PRESETS = [
   "#e2e8f0", "#fca5a5", "#fdba74", "#fcd34d",
@@ -33,7 +34,15 @@ interface Props {
   onDeleteTable: (tableId: string) => void;
   onUpdateTable: (tableId: string, updates: any) => void;
   onAssignSeat: (guestId: string, seatNumber: number | null) => Promise<string | null>;
+  onAssignWithSeat?: (guestId: string, tableId: string, seatNumber: number) => Promise<string | null>;
   readOnly?: boolean;
+}
+
+interface MobilePickerTarget {
+  tableId: string;
+  tableName: string;
+  tableShape: string;
+  seatNumber: number | null;
 }
 
 interface SeatPrompt {
@@ -53,6 +62,7 @@ export function SeatingListView({
   onDeleteTable,
   onUpdateTable,
   onAssignSeat,
+  onAssignWithSeat,
   readOnly = false,
 }: Props) {
   const [search, setSearch] = useState("");
@@ -63,6 +73,12 @@ export function SeatingListView({
   const [newTableName, setNewTableName] = useState("");
   const [newTableShape, setNewTableShape] = useState("ROUND");
   const [newTableCapacity, setNewTableCapacity] = useState(8);
+
+  // Mobile seat picker state
+  const [mobilePickerOpen, setMobilePickerOpen] = useState(false);
+  const [mobilePickerTarget, setMobilePickerTarget] = useState<MobilePickerTarget | null>(null);
+  const [mobilePickerSearch, setMobilePickerSearch] = useState("");
+  const [mobilePickerAssigning, setMobilePickerAssigning] = useState(false);
 
   // Seat prompt shown after assigning a guest to a table
   const [seatPrompt, setSeatPrompt] = useState<SeatPrompt | null>(null);
@@ -139,6 +155,27 @@ export function SeatingListView({
     }
   }
 
+  function handleMobileSeatTap(tableId: string, tableName: string, tableShape: string, seatNumber: number | null) {
+    setMobilePickerTarget({ tableId, tableName, tableShape, seatNumber });
+    setMobilePickerSearch("");
+    setMobilePickerOpen(true);
+  }
+
+  async function handleMobileGuestSelect(guestId: string) {
+    if (!mobilePickerTarget) return;
+    setMobilePickerAssigning(true);
+
+    if (mobilePickerTarget.seatNumber !== null && onAssignWithSeat) {
+      await onAssignWithSeat(guestId, mobilePickerTarget.tableId, mobilePickerTarget.seatNumber);
+    } else {
+      onAssign(guestId, mobilePickerTarget.tableId);
+    }
+
+    setMobilePickerAssigning(false);
+    setMobilePickerOpen(false);
+    setMobilePickerTarget(null);
+  }
+
   async function handleAddTable() {
     if (!newTableName.trim()) return;
     await onCreateTable({ name: newTableName.trim(), shape: newTableShape, capacity: newTableCapacity });
@@ -170,7 +207,8 @@ export function SeatingListView({
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex flex-col md:flex-row gap-4 h-full min-h-0">
+      {/* ── Desktop layout (drag-and-drop) ── */}
+      <div className="hidden md:flex md:flex-row gap-4 h-full min-h-0">
         {/* Left panel: unassigned guests — hidden in read-only mode */}
         {!readOnly && <div className="w-full md:w-72 flex flex-col bg-white rounded-xl border border-gray-200 min-h-0 max-h-64 md:max-h-none">
           <div className="p-3 border-b border-gray-100">
@@ -328,6 +366,137 @@ export function SeatingListView({
         </div>
       </div>
 
+      {/* ── Mobile layout (tap-to-assign) ── */}
+      <div className="md:hidden space-y-3 pb-20">
+        {/* Unassigned count banner */}
+        {!readOnly && (
+          <div className={`rounded-xl px-4 py-3 text-sm text-center ${
+            unassigned.length === 0
+              ? "bg-green-50 text-green-700"
+              : "bg-amber-50 text-amber-700"
+          }`}>
+            {unassigned.length === 0
+              ? "All guests assigned! 🎉"
+              : `${unassigned.length} guest${unassigned.length !== 1 ? "s" : ""} still to seat — tap a seat to assign`}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {tables.length === 0 && (
+          <div className="bg-white rounded-xl border border-dashed border-gray-300 py-10 text-center">
+            <p className="text-gray-400 text-sm">No tables yet</p>
+            {!readOnly && (
+              <button
+                onClick={() => setShowAddTable(true)}
+                className="mt-2 text-sm text-primary hover:underline"
+              >
+                Add the first table
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Table cards */}
+        {tables.map((table) => (
+          <MobileTableCard
+            key={table.id}
+            table={table}
+            mealSummary={mealSummary(table.guests)}
+            onRemoveGuest={onRemove}
+            onDeleteTable={onDeleteTable}
+            onUpdateTable={onUpdateTable}
+            onAssignSeat={onAssignSeat}
+            onTapSeat={(seatNumber) =>
+              handleMobileSeatTap(table.id, table.name, table.shape, seatNumber)
+            }
+            readOnly={readOnly}
+          />
+        ))}
+
+        {/* Add table form / button */}
+        {!readOnly && showAddTable ? (
+          <div className="bg-white rounded-xl border border-primary/30 p-4 space-y-3">
+            <p className="text-sm font-medium text-gray-700">New table</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="col-span-2">
+                <input
+                  autoFocus
+                  value={newTableName}
+                  onChange={(e) => setNewTableName(e.target.value)}
+                  placeholder="Table name *"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  onKeyDown={(e) => e.key === "Enter" && handleAddTable()}
+                />
+              </div>
+              <div>
+                <select
+                  value={newTableShape}
+                  onChange={(e) => setNewTableShape(e.target.value)}
+                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="ROUND">Round</option>
+                  <option value="RECTANGULAR">Rectangular</option>
+                  <option value="OVAL">Oval</option>
+                </select>
+              </div>
+              <div>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={newTableCapacity}
+                  onChange={(e) => setNewTableCapacity(Number(e.target.value))}
+                  placeholder="Capacity"
+                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAddTable}
+                className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium"
+              >
+                Add table
+              </button>
+              <button
+                onClick={() => setShowAddTable(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : !readOnly ? (
+          <button
+            onClick={() => setShowAddTable(true)}
+            className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Add table
+          </button>
+        ) : null}
+      </div>
+
+      {/* Mobile guest picker sheet */}
+      <MobileSeatSheet
+        open={mobilePickerOpen}
+        onClose={() => { setMobilePickerOpen(false); setMobilePickerTarget(null); }}
+        title={
+          mobilePickerTarget?.seatNumber != null
+            ? `Assign Seat ${mobilePickerTarget.seatNumber}`
+            : "Add to table"
+        }
+        subtitle={
+          mobilePickerTarget
+            ? `${mobilePickerTarget.tableName} · ${mobilePickerTarget.tableShape.charAt(0) + mobilePickerTarget.tableShape.slice(1).toLowerCase()}`
+            : ""
+        }
+        unassigned={unassigned}
+        search={mobilePickerSearch}
+        onSearchChange={setMobilePickerSearch}
+        onSelect={handleMobileGuestSelect}
+        assigning={mobilePickerAssigning}
+      />
+
       <DragOverlay>
         {activeGuest && (
           <div className="px-3 py-2 bg-white shadow-lg rounded-lg border border-primary text-sm font-medium text-gray-800">
@@ -381,6 +550,316 @@ export function SeatingListView({
         </div>
       )}
     </DndContext>
+  );
+}
+
+// ── Mobile table card ─────────────────────────────────────────────────────────
+
+function MobileTableCard({
+  table,
+  mealSummary,
+  onRemoveGuest,
+  onDeleteTable,
+  onUpdateTable,
+  onAssignSeat,
+  onTapSeat,
+  readOnly = false,
+}: {
+  table: TableWithGuests;
+  mealSummary: string;
+  onRemoveGuest: (guestId: string, tableId: string) => void;
+  onDeleteTable: (tableId: string) => void;
+  onUpdateTable: (tableId: string, updates: any) => void;
+  onAssignSeat: (guestId: string, seatNumber: number | null) => Promise<string | null>;
+  onTapSeat: (seatNumber: number | null) => void;
+  readOnly?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(table.name);
+  const [editShape, setEditShape] = useState<string>(table.shape);
+  const [editCapacity, setEditCapacity] = useState(table.capacity);
+  const [editColour, setEditColour] = useState(table.colour ?? "#e2e8f0");
+  const [editNotes, setEditNotes] = useState(table.notes ?? "");
+  const [editSaving, setEditSaving] = useState(false);
+
+  function openEdit() {
+    setEditName(table.name);
+    setEditShape(table.shape);
+    setEditCapacity(table.capacity);
+    setEditColour(table.colour ?? "#e2e8f0");
+    setEditNotes(table.notes ?? "");
+    setEditing(true);
+  }
+
+  async function saveEdit() {
+    if (!editName.trim()) return;
+    setEditSaving(true);
+    await onUpdateTable(table.id, {
+      name: editName.trim(),
+      shape: editShape,
+      capacity: editCapacity,
+      colour: editColour,
+      notes: editNotes.trim() || null,
+    });
+    setEditSaving(false);
+    setEditing(false);
+  }
+
+  // Build a map of seatNumber → guest for fast lookup
+  const seatMap = new Map<number, GuestSummary>();
+  table.guests.forEach((g) => {
+    if (g.seatNumber != null) seatMap.set(g.seatNumber, g);
+  });
+  const unseatedGuests = [...table.guests]
+    .filter((g) => g.seatNumber == null)
+    .sort((a, b) => (a.lastName || "").localeCompare(b.lastName || "") || (a.firstName || "").localeCompare(b.firstName || ""));
+
+  const full = table.guests.length >= table.capacity;
+  const nearFull = table.guests.length / table.capacity >= 0.75;
+
+  const borderColor = full ? "border-red-300" : nearFull ? "border-amber-300" : "border-gray-200";
+  const headerBg = full ? "bg-red-50" : nearFull ? "bg-amber-50" : "bg-gray-50";
+  const capacityColor = full ? "text-red-600 font-semibold" : nearFull ? "text-amber-600" : "text-gray-500";
+
+  return (
+    <div className={`bg-white rounded-xl border-2 ${borderColor} overflow-hidden`}>
+      {/* Header */}
+      <div className={`flex items-center justify-between px-4 py-3 ${headerBg}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          {table.colour && table.colour !== "#e2e8f0" && (
+            <span
+              className="w-3 h-3 rounded-full flex-shrink-0 border border-gray-300"
+              style={{ background: table.colour }}
+            />
+          )}
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-900 truncate">{table.name}</p>
+            {table.notes && (
+              <p className="text-xs text-gray-400 italic truncate">{table.notes}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+          <span className="text-xs text-gray-400 capitalize mr-0.5">
+            {table.shape.charAt(0) + table.shape.slice(1).toLowerCase()}
+          </span>
+          <span className={`text-xs ${capacityColor}`}>
+            {table.guests.length}/{table.capacity}
+            {full && " FULL"}
+          </span>
+          {!readOnly && (
+            <>
+              <button
+                type="button"
+                onClick={openEdit}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-white/60 active:bg-white transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Delete "${table.name}"? This will unassign ${table.guests.length} guests.`)) {
+                    onDeleteTable(table.id);
+                  }
+                }}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Inline edit form */}
+      {editing && !readOnly && (
+        <div className="px-4 py-3 border-b border-gray-100 space-y-3 bg-gray-50">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="col-span-2">
+              <label className="text-[10px] text-gray-400 block mb-0.5">Name</label>
+              <input
+                autoFocus
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                onKeyDown={(e) => e.key === "Enter" && saveEdit()}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 block mb-0.5">Shape</label>
+              <select
+                value={editShape}
+                onChange={(e) => setEditShape(e.target.value)}
+                className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="ROUND">Round</option>
+                <option value="RECTANGULAR">Rectangular</option>
+                <option value="OVAL">Oval</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400 block mb-0.5">Capacity</label>
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={editCapacity}
+                onChange={(e) => setEditCapacity(Number(e.target.value))}
+                className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              {editCapacity < table.guests.length && (
+                <p className="text-[10px] text-amber-600 mt-0.5">
+                  {table.guests.length} guests assigned
+                </p>
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-400 block mb-1">Colour</label>
+            <div className="flex flex-wrap gap-2">
+              {COLOUR_PRESETS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setEditColour(c)}
+                  className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                  style={{ background: c, borderColor: editColour === c ? "#6366f1" : "#d1d5db" }}
+                />
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-400 block mb-0.5">Notes</label>
+            <textarea
+              value={editNotes}
+              onChange={(e) => setEditNotes(e.target.value)}
+              rows={2}
+              placeholder="Optional notes for this table"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={saveEdit}
+              disabled={editSaving || !editName.trim()}
+              className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-60"
+            >
+              {editSaving ? "Saving…" : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Seat rows: numbered seats 1..capacity */}
+      <div className="divide-y divide-gray-50">
+        {Array.from({ length: table.capacity }, (_, i) => i + 1).map((seatNum) => {
+          const guest = seatMap.get(seatNum);
+          if (guest) {
+            const declined = !isReceptionEligible(guest);
+            return (
+              <div
+                key={seatNum}
+                className={`flex items-center gap-3 px-4 py-3 ${declined ? "opacity-60" : ""}`}
+              >
+                <span className="text-xs font-medium text-indigo-400 w-7 flex-shrink-0">
+                  S{seatNum}
+                </span>
+                <span className={`flex-1 text-sm min-w-0 truncate ${declined ? "text-amber-700" : "text-gray-800"}`}>
+                  {guest.firstName} {guest.lastName}
+                  {declined && (
+                    <span className="ml-1.5 text-xs text-amber-500">declined</span>
+                  )}
+                </span>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveGuest(guest.id, table.id)}
+                    className="p-1 text-gray-300 hover:text-red-500 active:text-red-600 transition-colors flex-shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            );
+          }
+          return (
+            <div key={seatNum} className="flex items-center gap-3 px-4 py-3">
+              <span className="text-xs font-medium text-gray-300 w-7 flex-shrink-0">
+                S{seatNum}
+              </span>
+              <span className="flex-1 text-sm text-gray-400">— Empty —</span>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => onTapSeat(seatNum)}
+                  className="text-xs text-primary border border-primary/30 rounded-lg px-3 py-1 hover:bg-primary/5 active:bg-primary/10 flex-shrink-0 transition-colors"
+                >
+                  + Assign
+                </button>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Unseated guests (at this table but no seat number) */}
+        {unseatedGuests.map((guest) => {
+          const declined = !isReceptionEligible(guest);
+          return (
+            <div
+              key={guest.id}
+              className={`flex items-center gap-3 px-4 py-3 ${declined ? "opacity-60" : ""}`}
+            >
+              <span className="text-xs text-gray-300 w-7 flex-shrink-0">·</span>
+              <span className={`flex-1 text-sm min-w-0 truncate ${declined ? "text-amber-700" : "text-gray-700"}`}>
+                {guest.firstName} {guest.lastName}
+                <span className="ml-1.5 text-xs text-gray-400">(no seat)</span>
+                {declined && (
+                  <span className="ml-1.5 text-xs text-amber-500">declined</span>
+                )}
+              </span>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => onRemoveGuest(guest.id, table.id)}
+                  className="p-1 text-gray-300 hover:text-red-500 active:text-red-600 transition-colors flex-shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Add guest without a specific seat */}
+        {!readOnly && !full && (
+          <div className="px-4 py-2.5">
+            <button
+              type="button"
+              onClick={() => onTapSeat(null)}
+              className="text-xs text-gray-400 hover:text-primary active:text-primary/80 transition-colors"
+            >
+              + Add guest (no seat number)
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Meal summary */}
+      {mealSummary && (
+        <div className="px-4 py-2.5 border-t border-gray-100">
+          <p className="text-xs text-gray-400">{mealSummary}</p>
+        </div>
+      )}
+    </div>
   );
 }
 

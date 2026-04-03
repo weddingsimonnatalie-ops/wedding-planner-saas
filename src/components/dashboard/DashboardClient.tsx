@@ -46,6 +46,7 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [markPaidConfirm, setMarkPaidConfirm] = useState<DashStats["payments"][0] | null>(null);
+  const [markDoneConfirm, setMarkDoneConfirm] = useState<DashStats["tasks"]["upcoming"][0] | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -59,6 +60,26 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  async function handleMarkDone(taskId: string) {
+    const res = await fetch(`/api/tasks/${taskId}/complete`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isCompleted: true }),
+    });
+    if (res.ok) {
+      setStats(prev => prev ? {
+        ...prev,
+        tasks: {
+          ...prev.tasks,
+          upcoming: prev.tasks.upcoming.filter(t => t.id !== taskId),
+          overdue: prev.tasks.upcoming.find(t => t.id === taskId && t.dueDate && new Date(t.dueDate) < new Date())
+            ? Math.max(0, prev.tasks.overdue - 1)
+            : prev.tasks.overdue,
+        },
+      } : prev);
+    }
+  }
 
   async function handleMarkPaid(paymentId: string, supplierId: string) {
     const today = new Date().toISOString().slice(0, 10);
@@ -85,6 +106,14 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ paymentId }),
+    });
+  }
+
+  async function handleSendTaskReminder(taskId: string) {
+    await fetch("/api/email/task-reminder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId }),
     });
   }
 
@@ -422,6 +451,12 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
                       {a.supplierName}
                     </Link>
                   )}
+                  <Link
+                    href="/appointments"
+                    className="text-xs text-primary hover:underline shrink-0"
+                  >
+                    View
+                  </Link>
                 </div>
               );
             })}
@@ -488,25 +523,67 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
                 t.priority === "HIGH"   ? "bg-red-500" :
                 t.priority === "MEDIUM" ? "bg-amber-400" : "bg-gray-400";
               return (
-                <div key={t.id} className={`px-5 py-3 flex items-center gap-3 ${isOverdue ? "bg-red-50/40" : ""}`}>
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${dotCls}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${isOverdue ? "text-red-700" : "text-gray-800"}`}>
-                      {t.title}
-                    </p>
-                    {t.assignedToName && (
-                      <p className="text-xs text-gray-400">{t.assignedToName}</p>
-                    )}
+                <div key={t.id} className={`px-5 py-3 ${isOverdue ? "bg-red-50/40" : ""}`}>
+                  {/* Content row */}
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 mt-0.5">
+                      {isOverdue
+                        ? <AlertCircle className="w-4 h-4 text-red-500" />
+                        : <span className={`inline-block w-2 h-2 rounded-full mt-1 ${dotCls}`} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium truncate ${isOverdue ? "text-red-700" : "text-gray-800"}`}>
+                        {t.title}
+                      </p>
+                      {dueLabel && (
+                        <p className={`text-xs ${dueCls}`}>{dueLabel}</p>
+                      )}
+                      {t.assignedToName && (
+                        <p className="text-xs text-gray-400">{t.assignedToName}</p>
+                      )}
+                    </div>
                   </div>
-                  {dueLabel && (
-                    <p className={`text-xs shrink-0 ${dueCls}`}>{dueLabel}</p>
-                  )}
+                  {/* Action row — always on its own line, never overlaps */}
+                  <div className="flex items-center gap-2 mt-2 justify-end">
+                    <button
+                      onClick={() => setMarkDoneConfirm(t)}
+                      className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
+                    >
+                      <Check className="w-3 h-3" /> Mark as Done
+                    </button>
+                    <button
+                      onClick={() => handleSendTaskReminder(t.id)}
+                      title="Send reminder email"
+                      className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-primary rounded-lg hover:bg-primary/5 transition-colors"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                    </button>
+                    <Link
+                      href="/tasks"
+                      className="text-xs text-primary hover:underline"
+                    >
+                      View
+                    </Link>
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {markDoneConfirm && (
+        <ConfirmModal
+          message={
+            <span>Mark <strong>{markDoneConfirm.title}</strong> as done?</span>
+          }
+          onConfirm={() => {
+            handleMarkDone(markDoneConfirm.id);
+            setMarkDoneConfirm(null);
+          }}
+          onCancel={() => setMarkDoneConfirm(null)}
+        />
+      )}
 
       {markPaidConfirm && (
         <ConfirmModal

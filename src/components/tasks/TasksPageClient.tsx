@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Plus, Edit2, Trash2, CheckSquare, ChevronDown, RefreshCw,
-  Check, X, Search,
+  Check, RotateCcw, Mail, X, Search,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -55,16 +55,16 @@ function dueDateClass(dueDate: string | null, isCompleted: boolean): string {
   return "text-gray-500";
 }
 
-function priorityDot(priority: TaskPriority) {
-  const colour =
-    priority === "HIGH"   ? "bg-red-500" :
-    priority === "MEDIUM" ? "bg-amber-400" :
-    "bg-gray-400";
+function PriorityBadge({ priority }: { priority: TaskPriority }) {
+  const cls =
+    priority === "HIGH"   ? "bg-red-100 text-red-700 border-red-200" :
+    priority === "MEDIUM" ? "bg-amber-100 text-amber-700 border-amber-200" :
+                            "bg-gray-100 text-gray-600 border-gray-200";
+  const label = priority.charAt(0) + priority.slice(1).toLowerCase();
   return (
-    <span
-      className={`inline-block w-2 h-2 rounded-full shrink-0 ${colour}`}
-      title={priority.charAt(0) + priority.slice(1).toLowerCase()}
-    />
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cls}`}>
+      {label}
+    </span>
   );
 }
 
@@ -96,143 +96,140 @@ function TaskRow({
   onEdit?: (t: TaskData) => void;
   onDelete?: (t: TaskData) => void;
 }) {
+  const [reminding, setReminding] = useState(false);
+  const [reminded, setReminded] = useState(false);
+
+  async function handleRemind(e: React.MouseEvent) {
+    e.stopPropagation();
+    setReminding(true);
+    const res = await fetch("/api/email/task-reminder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId: task.id }),
+    });
+    setReminding(false);
+    if (res.ok) setReminded(true);
+  }
+
   const notesPreview = task.notes
     ? (task.notes.length > 80 ? task.notes.slice(0, 80) + "…" : task.notes)
     : null;
 
-  const metaParts: React.ReactNode[] = [];
-  if (task.category) {
-    metaParts.push(
-      <span key="cat" className="flex items-center gap-1">
-        <span
-          className="inline-block w-2 h-2 rounded-full"
-          style={{ backgroundColor: task.category.colour }}
-        />
-        {task.category.name}
-      </span>
-    );
-  }
-  if (task.assignedTo) {
-    metaParts.push(
-      <span key="user">{task.assignedTo.name ?? task.assignedTo.email}</span>
-    );
-  }
-  if (task.supplier) {
-    metaParts.push(
-      <Link
-        key="supplier"
-        href={`/suppliers/${task.supplier.id}`}
-        className="text-primary hover:underline"
-        onClick={e => e.stopPropagation()}
-      >
-        {task.supplier.name}
-      </Link>
-    );
-  }
-
-  const label = dueDateLabel(task.dueDate ?? null, task.isCompleted);
-  const cls   = dueDateClass(task.dueDate ?? null, task.isCompleted);
+  const dueLabel = dueDateLabel(task.dueDate ?? null, task.isCompleted);
+  const dueCls   = dueDateClass(task.dueDate ?? null, task.isCompleted);
+  const isOverdue = !task.isCompleted && !!task.dueDate && new Date(task.dueDate) < new Date();
 
   return (
     <div
-      className={`flex items-start gap-2 py-3 border-b border-gray-100 last:border-0 transition-all duration-200 ${
-        isSelected ? "bg-primary/5 -mx-4 px-4 rounded" : ""
-      }`}
+      role={onEdit ? "button" : undefined}
+      tabIndex={onEdit ? 0 : undefined}
+      onClick={() => onEdit?.(task)}
+      onKeyDown={e => { if (onEdit && (e.key === "Enter" || e.key === " ")) onEdit(task); }}
+      className={`bg-white rounded-xl border p-4 transition-all duration-200 ${
+        isOverdue ? "border-red-200 bg-red-50/20" : "border-gray-200"
+      } ${isSelected ? "ring-2 ring-primary" : ""} ${onEdit ? "cursor-pointer" : ""}`}
     >
-      {/* Bulk select checkbox */}
-      {canBulkSelect && (
-        <label
-          className="flex items-center justify-center min-h-[44px] min-w-[44px] shrink-0 cursor-pointer -m-2 p-2"
-          onClick={e => e.stopPropagation()}
-        >
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={() => onToggleSelect(task.id)}
-            className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-          />
-        </label>
-      )}
-
-      {/* Complete checkbox */}
-      <button
-        type="button"
-        onClick={() => canComplete && onToggleComplete(task)}
-        disabled={!canComplete}
-        className={`shrink-0 group min-w-[44px] min-h-[44px] flex items-center justify-center -m-2 p-2 ${
-          canComplete ? "" : "cursor-not-allowed opacity-40"
-        }`}
-        title={
-          !canComplete
-            ? "You don't have permission to complete tasks"
-            : task.isCompleted ? "Mark incomplete" : "Mark complete"
-        }
-      >
-        {task.isCompleted ? (
-          <div className="w-4 h-4 rounded border-2 border-primary bg-primary flex items-center justify-center transition-colors duration-200">
-            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8">
-              <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-        ) : (
-          <div className={`w-4 h-4 rounded border-2 border-gray-300 transition-colors duration-200 ${canComplete ? "group-hover:border-primary" : ""}`} />
+      {/* Top row: checkbox + priority badge + category + recurring */}
+      <div className="flex items-center gap-2 flex-wrap mb-1" onClick={e => e.stopPropagation()}>
+        {canBulkSelect && (
+          <label className="flex items-center cursor-pointer" onClick={e => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onToggleSelect(task.id)}
+              className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+            />
+          </label>
         )}
-      </button>
-
-      {/* Priority dot */}
-      <div className="mt-1.5 shrink-0">{priorityDot(task.priority)}</div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        {/* Title line - stacks on mobile */}
-        <div className="flex items-start justify-between gap-1 md:gap-2 flex-wrap">
-          <p
-            className={`text-sm font-medium leading-tight transition-all duration-200 flex-1 min-w-0 ${
-              task.isCompleted ? "line-through text-gray-400" : "text-gray-900"
-            }`}
-          >
-            <span className="break-words">{task.title}</span>
-            {task.isRecurring && task.recurringInterval && (
-              <span title={`Recurring ${INTERVAL_LABEL[task.recurringInterval]}`} className="ml-1.5 inline-flex items-center">
-                <RefreshCw className="w-3 h-3 shrink-0 text-gray-400" />
-              </span>
-            )}
-          </p>
-          {label && (
-            <span className={`text-xs shrink-0 ${cls}`}>{label}</span>
-          )}
-        </div>
-
-        {task.isCompleted && task.completedAt && (
-          <p className="text-xs text-gray-400 mt-0.5">
-            Completed {fmtDate(task.completedAt)}
-          </p>
+        <PriorityBadge priority={task.priority} />
+        {task.category && (
+          <span className="flex items-center gap-1 text-sm font-medium text-gray-700">
+            <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: task.category.colour }} />
+            {task.category.name}
+          </span>
         )}
-
-        {metaParts.length > 0 && (
-          <div className="flex items-center gap-1.5 flex-wrap mt-1 text-xs text-gray-500">
-            {metaParts.map((p, i) => (
-              <span key={i} className="flex items-center gap-1 truncate">
-                {i > 0 && <span className="text-gray-300 select-none mx-0.5">·</span>}
-                {p}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {notesPreview && (
-          <p className="text-xs text-gray-400 mt-1 line-clamp-1">{notesPreview}</p>
+        {task.isRecurring && task.recurringInterval && (
+          <span title={`Recurring ${INTERVAL_LABEL[task.recurringInterval]}`} className="inline-flex items-center text-gray-400">
+            <RefreshCw className="w-3 h-3" />
+          </span>
         )}
       </div>
 
-      {/* Edit / Delete - hidden on mobile (use swipe actions) */}
-      {(onEdit || onDelete) && (
-        <div className="hidden md:flex items-center gap-1 shrink-0">
+      {/* Title */}
+      <p className={`text-sm font-semibold ${task.isCompleted ? "line-through text-gray-400" : "text-gray-900"}`}>
+        {task.title}
+      </p>
+
+      {/* Due date + assignee + supplier */}
+      {(dueLabel || task.assignedTo || task.supplier) && (
+        <p className={`text-xs mt-0.5 ${dueCls}`} onClick={e => e.stopPropagation()}>
+          {dueLabel}
+          {task.assignedTo && (
+            <span className="text-gray-500">{dueLabel ? " · " : ""}{task.assignedTo.name ?? task.assignedTo.email}</span>
+          )}
+          {task.supplier && (
+            <>
+              {(dueLabel || task.assignedTo) ? <span className="text-gray-400"> · </span> : null}
+              <Link href={`/suppliers/${task.supplier.id}`} className="text-primary hover:underline" onClick={e => e.stopPropagation()}>
+                {task.supplier.name}
+              </Link>
+            </>
+          )}
+        </p>
+      )}
+
+      {/* Completed date */}
+      {task.isCompleted && task.completedAt && (
+        <p className="text-xs text-gray-400 mt-0.5">Completed {fmtDate(task.completedAt)}</p>
+      )}
+
+      {/* Notes */}
+      {notesPreview && (
+        <p className="text-xs text-gray-400 mt-1 line-clamp-1 italic">{notesPreview}</p>
+      )}
+
+      {/* Action bar */}
+      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 flex-wrap" onClick={e => e.stopPropagation()}>
+        {canComplete && !task.isCompleted && (
+          <button
+            type="button"
+            onClick={() => onToggleComplete(task)}
+            className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
+          >
+            <Check className="w-3 h-3" /> Mark as Done
+          </button>
+        )}
+        {canComplete && task.isCompleted && (
+          <button
+            type="button"
+            onClick={() => onToggleComplete(task)}
+            className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] bg-gray-50 text-gray-600 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-100 transition-colors"
+          >
+            <RotateCcw className="w-3 h-3" /> Mark not done
+          </button>
+        )}
+        {!task.isCompleted && (
+          reminded ? (
+            <span className="flex items-center gap-1 text-xs text-green-600">
+              <Check className="w-3 h-3" /> Sent
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={handleRemind}
+              disabled={reminding}
+              className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] text-gray-500 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              <Mail className="w-3 h-3" /> {reminding ? "…" : "Reminder"}
+            </button>
+          )
+        )}
+        <div className="ml-auto flex items-center gap-1">
           {onEdit && (
             <button
               type="button"
               onClick={() => onEdit(task)}
-              className="rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
               title="Edit"
             >
               <Edit2 className="w-3.5 h-3.5" />
@@ -242,14 +239,14 @@ function TaskRow({
             <button
               type="button"
               onClick={() => onDelete(task)}
-              className="rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
               title="Delete"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -282,37 +279,30 @@ function GroupSection({
   const someSelected = ids.some(id => selectedIds.has(id));
 
   return (
-    <div className={`bg-white rounded-xl border ${borderCls}`}>
-      <div className="px-4 pt-3">
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg mb-1 ${headerCls}`}>
-          {canBulkSelect && (
-            <label className="flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer -m-2 p-2">
-              <input
-                type="checkbox"
-                checked={allSelected}
-                ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
-                onChange={() => onToggleSelectAll(ids, !allSelected)}
-                className="w-3.5 h-3.5 rounded border-current text-primary focus:ring-primary cursor-pointer"
-              />
-            </label>
-          )}
-          <span className="text-xs font-semibold uppercase tracking-wide">{label}</span>
-          <span className="text-xs opacity-70">({tasks.length})</span>
-        </div>
+    <div>
+      {/* Group header */}
+      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg mb-2 ${headerCls}`}>
+        {canBulkSelect && (
+          <label className="flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer -m-2 p-2">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
+              onChange={() => onToggleSelectAll(ids, !allSelected)}
+              className="w-3.5 h-3.5 rounded border-current text-primary focus:ring-primary cursor-pointer"
+            />
+          </label>
+        )}
+        <span className="text-xs font-semibold uppercase tracking-wide">{label}</span>
+        <span className="text-xs opacity-70">({tasks.length})</span>
       </div>
-      <div className="px-4 pb-2">
+
+      {/* Individual task cards */}
+      <div className="space-y-3">
         {tasks.map(t => (
           <SwipeableRow
             key={t.id}
             actions={[
-              ...(canComplete
-                ? [{
-                    icon: <Check className="w-5 h-5" />,
-                    label: t.isCompleted ? "Undo" : "Done",
-                    colour: "bg-green-500",
-                    onClick: () => onToggleComplete(t),
-                  }]
-                : []),
               ...(onDelete
                 ? [{
                     icon: <Trash2 className="w-5 h-5" />,
@@ -848,7 +838,7 @@ export function TasksPageClient() {
 
       {/* ── Bulk action bar ─────────────────────────────────────────────────── */}
       {selCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-center px-4 py-3 bg-white border-t border-gray-200 shadow-lg md:left-56" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+        <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-40 flex items-center justify-center px-4 py-3 bg-white border-t border-gray-200 shadow-lg md:left-56" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
           <div className="flex items-center gap-2 flex-wrap justify-center">
             <span className="text-sm text-gray-600 font-medium mr-1">
               {selCount} selected
