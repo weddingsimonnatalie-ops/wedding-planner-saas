@@ -110,6 +110,12 @@ services:
       TRIAL_DAYS: ${TRIAL_DAYS:-14}
       GRACE_PERIOD_DAYS: ${GRACE_PERIOD_DAYS:-7}
       DATA_RETENTION_DAYS: ${DATA_RETENTION_DAYS:-90}
+      # PayPal billing
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-}
+      PAYPAL_MODE: ${PAYPAL_MODE:-sandbox}
+      PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID:-}
+      PAYPAL_PLAN_ID_STANDARD: ${PAYPAL_PLAN_ID_STANDARD:-}
       # S3-compatible file storage
       # Dev: MinIO running in Docker. Prod: Railway Buckets auto-injects these vars.
       AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://minio:9000}

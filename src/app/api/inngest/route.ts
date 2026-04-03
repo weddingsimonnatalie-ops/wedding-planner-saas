@@ -12,6 +12,7 @@ import {
   preDeletionWarning,
   stripeReconcile,
   stripeSyncDelayed,
+  paypalReconcile,
 } from "@/lib/inngest";
 
 export const { GET, POST, PUT } = serve({
@@ -28,5 +29,6 @@ export const { GET, POST, PUT } = serve({
     preDeletionWarning,
     stripeReconcile,
     stripeSyncDelayed,
+    paypalReconcile,
   ],
 });

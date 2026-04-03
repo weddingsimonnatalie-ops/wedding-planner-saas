@@ -4,16 +4,18 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
+import { createSubscription } from "@/lib/paypal";
 import { signWeddingCookie, COOKIE_NAME, MAX_AGE_SECONDS } from "@/lib/wedding-cookie";
 import { handleDbError } from "@/lib/db-error";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const body = await req.json();
-    const { name, email, password } = body as {
+    const { name, email, password, provider = "stripe" } = body as {
       name?: string;
       email?: string;
       password?: string;
+      provider?: "stripe" | "paypal";
     };
 
     // Validate inputs
@@ -34,6 +36,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
     if (name.trim().length > 100) {
       return NextResponse.json({ error: "Name too long (max 100 characters)" }, { status: 400 });
+    }
+    if (provider !== "stripe" && provider !== "paypal") {
+      return NextResponse.json({ error: "Invalid payment provider" }, { status: 400 });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
@@ -67,62 +72,128 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       },
     });
 
-    // Create Stripe Customer
-    const customer = await stripe.customers.create({
-      email: normalizedEmail,
-      name: name.trim(),
-      metadata: { userId: user.id },
-    });
-
-    // Create Wedding record + WeddingMember
+    const appUrl = (process.env.NEXTAUTH_URL ?? "http://localhost:3001").replace(/\/$/, "");
     const trialDays = parseInt(process.env.TRIAL_DAYS ?? "14", 10);
-    const wedding = await prisma.wedding.create({
-      data: {
-        stripeCustomerId: customer.id,
-        subscriptionStatus: "TRIALING",
-        trialEndsAt: new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000),
-        members: {
-          create: {
-            userId: user.id,
-            role: "ADMIN",
+    const trialEndsAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
+
+    // Branch based on provider
+    if (provider === "paypal") {
+      // ── PayPal flow ───────────────────────────────────────────────────────
+      // Create Wedding with PayPal provider (no Stripe customer)
+      const wedding = await prisma.wedding.create({
+        data: {
+          billingProvider: "PAYPAL",
+          stripeCustomerId: null, // No Stripe customer for PayPal users
+          subscriptionStatus: "TRIALING",
+          trialEndsAt,
+          members: {
+            create: {
+              userId: user.id,
+              role: "ADMIN",
+            },
           },
         },
-      },
-    });
+      });
 
-    // Create Stripe Checkout session
-    const appUrl = (process.env.NEXTAUTH_URL ?? "http://localhost:3001").replace(/\/$/, "");
-    const checkoutSession = await stripe.checkout.sessions.create({
-      customer: customer.id,
-      payment_method_types: ["card"],
-      mode: "subscription",
-      line_items: [
-        {
-          price: process.env.STRIPE_PRICE_ID_STANDARD!,
-          quantity: 1,
+      // Create PayPal subscription
+      const paypalPlanId = process.env.PAYPAL_PLAN_ID_STANDARD;
+      if (!paypalPlanId) {
+        return NextResponse.json(
+          { error: "PayPal billing is not configured" },
+          { status: 500 }
+        );
+      }
+
+      const returnUrl = `${appUrl}/onboarding/wedding?paypal=success`;
+      const cancelUrl = `${appUrl}/register`;
+
+      const { subscriptionId, approvalUrl } = await createSubscription(
+        paypalPlanId,
+        normalizedEmail,
+        returnUrl,
+        cancelUrl,
+        wedding.id
+      );
+
+      // Store the subscription ID if PayPal returned it immediately
+      // (May be null for some PayPal flows — webhook will handle it)
+      if (subscriptionId) {
+        await prisma.wedding.update({
+          where: { id: wedding.id },
+          data: { paypalSubscriptionId: subscriptionId },
+        });
+      }
+
+      // Sign and set weddingId cookie
+      const token = await signWeddingCookie({ weddingId: wedding.id, role: "ADMIN" });
+      const response = NextResponse.json({ checkoutUrl: approvalUrl });
+      response.cookies.set(COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: appUrl.startsWith("https://"),
+        sameSite: "lax",
+        maxAge: MAX_AGE_SECONDS,
+        path: "/",
+      });
+
+      return response;
+    } else {
+      // ── Stripe flow (existing) ────────────────────────────────────────────
+      // Create Stripe Customer
+      const customer = await stripe.customers.create({
+        email: normalizedEmail,
+        name: name.trim(),
+        metadata: { userId: user.id },
+      });
+
+      // Create Wedding record + WeddingMember
+      const wedding = await prisma.wedding.create({
+        data: {
+          stripeCustomerId: customer.id,
+          billingProvider: "STRIPE",
+          subscriptionStatus: "TRIALING",
+          trialEndsAt,
+          members: {
+            create: {
+              userId: user.id,
+              role: "ADMIN",
+            },
+          },
         },
-      ],
-      subscription_data: {
-        trial_period_days: trialDays,
+      });
+
+      // Create Stripe Checkout session
+      const checkoutSession = await stripe.checkout.sessions.create({
+        customer: customer.id,
+        payment_method_types: ["card"],
+        mode: "subscription",
+        line_items: [
+          {
+            price: process.env.STRIPE_PRICE_ID_STANDARD!,
+            quantity: 1,
+          },
+        ],
+        subscription_data: {
+          trial_period_days: trialDays,
+          metadata: { weddingId: wedding.id },
+        },
+        success_url: `${appUrl}/onboarding/wedding?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${appUrl}/register`,
         metadata: { weddingId: wedding.id },
-      },
-      success_url: `${appUrl}/onboarding/wedding?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/register`,
-      metadata: { weddingId: wedding.id },
-    });
+      });
 
-    // Sign and set weddingId cookie
-    const token = await signWeddingCookie({ weddingId: wedding.id, role: "ADMIN" });
-    const response = NextResponse.json({ checkoutUrl: checkoutSession.url });
-    response.cookies.set(COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: appUrl.startsWith("https://"),
-      sameSite: "lax",
-      maxAge: MAX_AGE_SECONDS,
-      path: "/",
-    });
+      // Sign and set weddingId cookie
+      const token = await signWeddingCookie({ weddingId: wedding.id, role: "ADMIN" });
+      const response = NextResponse.json({ checkoutUrl: checkoutSession.url });
+      response.cookies.set(COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: appUrl.startsWith("https://"),
+        sameSite: "lax",
+        maxAge: MAX_AGE_SECONDS,
+        path: "/",
+      });
 
-    return response;
+      return response;
+    }
   } catch (error) {
     return handleDbError(error);
   }
