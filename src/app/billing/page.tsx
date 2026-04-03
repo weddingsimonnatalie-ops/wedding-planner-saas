@@ -4,20 +4,24 @@ import { requireServerContext } from "@/lib/server-context";
 import { prisma } from "@/lib/prisma";
 import { Heart, CreditCard, Calendar, Download, Zap } from "lucide-react";
 import { ActivateTrialButton } from "@/components/billing/ActivateTrialButton";
-import { SyncFromStripeButton } from "@/components/billing/SyncFromStripeButton";
+import { SyncFromProviderButton } from "@/components/billing/SyncFromProviderButton";
+import { CancelPayPalButton } from "@/components/billing/CancelPayPalButton";
 import { syncWeddingFromStripe } from "@/lib/stripe-sync";
+import { syncWeddingFromPayPal } from "@/lib/paypal-sync";
 
 export default async function BillingPage() {
   const ctx = await requireServerContext(["ADMIN"]);
 
-  // Fetch wedding with stripeCustomerId to check if sync is needed
+  // Fetch wedding with billing provider info
   let wedding = await prisma.wedding.findUnique({
     where: { id: ctx.weddingId },
     select: {
       coupleName: true,
       subscriptionStatus: true,
+      billingProvider: true,
       stripeCustomerId: true,
       stripeSubscriptionId: true,
+      paypalSubscriptionId: true,
       currentPeriodEnd: true,
       trialEndsAt: true,
       gracePeriodEndsAt: true,
@@ -26,18 +30,25 @@ export default async function BillingPage() {
     },
   });
 
-  // Auto-sync from Stripe on page load if customer exists
-  // This recovers from missed webhooks (e.g. checkout.session.completed)
-  if (wedding?.stripeCustomerId) {
-    await syncWeddingFromStripe(ctx.weddingId);
+  // Auto-sync from provider on page load
+  // This recovers from missed webhooks
+  if (wedding) {
+    if (wedding.billingProvider === "STRIPE" && wedding.stripeCustomerId) {
+      await syncWeddingFromStripe(ctx.weddingId);
+    } else if (wedding.billingProvider === "PAYPAL" && wedding.paypalSubscriptionId) {
+      await syncWeddingFromPayPal(ctx.weddingId);
+    }
+
     // Re-fetch to get fresh data after sync
     wedding = await prisma.wedding.findUnique({
       where: { id: ctx.weddingId },
       select: {
         coupleName: true,
         subscriptionStatus: true,
+        billingProvider: true,
         stripeCustomerId: true,
         stripeSubscriptionId: true,
+        paypalSubscriptionId: true,
         currentPeriodEnd: true,
         trialEndsAt: true,
         gracePeriodEndsAt: true,
@@ -64,6 +75,7 @@ export default async function BillingPage() {
   };
 
   const status = wedding?.subscriptionStatus ?? "TRIALING";
+  const provider = wedding?.billingProvider ?? "STRIPE";
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
@@ -74,13 +86,15 @@ export default async function BillingPage() {
         <h1 className="text-2xl font-semibold text-gray-900">Billing</h1>
       </div>
 
-      <SyncFromStripeButton />
+      <SyncFromProviderButton provider={provider} />
 
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="font-semibold text-gray-900">Wedding Planner</h2>
-            <p className="text-sm text-gray-500">Standard plan · £12/month</p>
+            <p className="text-sm text-gray-500">
+              Standard plan · £12/month · {provider === "PAYPAL" ? "PayPal" : "Card"}
+            </p>
           </div>
           <span
             className={`px-3 py-1 rounded-full text-sm font-medium ${statusColour[status]}`}
@@ -148,24 +162,51 @@ export default async function BillingPage() {
               </p>
             </div>
           </div>
-          <ActivateTrialButton hasSubscription={!!wedding?.stripeSubscriptionId} />
+          <ActivateTrialButton
+            provider={provider}
+            hasSubscription={
+              provider === "STRIPE"
+                ? !!wedding?.stripeSubscriptionId
+                : !!wedding?.paypalSubscriptionId
+            }
+          />
         </div>
       )}
 
-      <form action="/api/billing/portal" method="POST">
-        <button
-          type="submit"
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
-        >
-          <CreditCard className="w-4 h-4" />
-          Manage subscription in Stripe
-        </button>
-      </form>
-
-      <p className="text-xs text-gray-400 text-center mt-4">
-        You&apos;ll be redirected to Stripe to manage your subscription, payment
-        method, and invoices.
-      </p>
+      {provider === "STRIPE" ? (
+        <>
+          <form action="/api/billing/portal" method="POST">
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+            >
+              <CreditCard className="w-4 h-4" />
+              Manage subscription in Stripe
+            </button>
+          </form>
+          <p className="text-xs text-gray-400 text-center mt-4">
+            You&apos;ll be redirected to Stripe to manage your subscription, payment
+            method, and invoices.
+          </p>
+        </>
+      ) : (
+        <>
+          <CancelPayPalButton />
+          <p className="text-xs text-gray-400 text-center mt-4">
+            PayPal subscriptions are managed through your PayPal account. To update
+            your payment method, visit{" "}
+            <a
+              href="https://www.paypal.com/myaccount/autopay/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              paypal.com
+            </a>
+            .
+          </p>
+        </>
+      )}
 
       <div className="mt-8 border-t border-gray-200 pt-8">
         <h2 className="text-sm font-semibold text-gray-700 mb-1">Your data</h2>

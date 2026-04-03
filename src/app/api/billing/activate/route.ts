@@ -14,6 +14,9 @@ import { handleDbError } from "@/lib/db-error";
  * Stripe will invoice the customer right away and attempt to charge
  * their saved payment method.
  *
+ * For PayPal subscriptions, this endpoint returns an error because
+ * PayPal trial activation is automatic (no API call needed).
+ *
  * The DB subscription status update (TRIALING → ACTIVE or PAST_DUE)
  * happens asynchronously via the existing invoice.payment_succeeded /
  * invoice.payment_failed webhook handlers — no extra webhook handling needed.
@@ -25,11 +28,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const wedding = await prisma.wedding.findUnique({
       where: { id: auth.weddingId },
-      select: { subscriptionStatus: true, stripeSubscriptionId: true },
+      select: { subscriptionStatus: true, stripeSubscriptionId: true, billingProvider: true },
     });
 
     if (!wedding) {
       return NextResponse.json({ error: "Wedding not found" }, { status: 404 });
+    }
+
+    // PayPal trials activate automatically
+    if (wedding.billingProvider === "PAYPAL") {
+      return NextResponse.json(
+        { error: "PayPal subscriptions activate automatically at the end of the trial period" },
+        { status: 400 }
+      );
     }
 
     if (wedding.subscriptionStatus !== "TRIALING") {

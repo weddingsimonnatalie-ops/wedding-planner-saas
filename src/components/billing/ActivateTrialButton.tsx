@@ -2,24 +2,34 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Zap, Loader2, CheckCircle2, AlertCircle, CreditCard } from "lucide-react";
+import { Zap, Loader2, CheckCircle2, AlertCircle, CreditCard, Wallet } from "lucide-react";
 
 type State = "idle" | "loading" | "success" | "error" | "checkout";
 
 interface Props {
-  /**
-   * Whether the wedding has a stripeSubscriptionId on record.
-   * False means checkout was never completed — we need to create a checkout session.
-   */
+  provider: "STRIPE" | "PAYPAL";
   hasSubscription: boolean;
 }
 
-export function ActivateTrialButton({ hasSubscription }: Props) {
+export function ActivateTrialButton({ provider, hasSubscription }: Props) {
   const router = useRouter();
   const [state, setState] = useState<State>("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
-  // No Stripe subscription on record — checkout was never completed.
+  // PayPal-specific: if subscription exists, show message (no manual activation)
+  if (provider === "PAYPAL" && hasSubscription) {
+    return (
+      <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800">
+        <Wallet className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
+        <span>
+          Your PayPal subscription will activate automatically when the trial ends.
+          No action needed.
+        </span>
+      </div>
+    );
+  }
+
+  // No subscription on record — checkout was never completed.
   // Show a button to create a checkout session.
   if (!hasSubscription) {
     async function handleCheckout() {
@@ -28,7 +38,9 @@ export function ActivateTrialButton({ hasSubscription }: Props) {
       setErrorMsg("");
 
       try {
-        const res = await fetch("/api/billing/checkout", { method: "POST" });
+        const endpoint =
+          provider === "STRIPE" ? "/api/billing/checkout" : "/api/billing/paypal-checkout";
+        const res = await fetch(endpoint, { method: "POST" });
         const data = await res.json();
 
         if (!res.ok) {
@@ -37,7 +49,7 @@ export function ActivateTrialButton({ hasSubscription }: Props) {
           return;
         }
 
-        // Redirect to Stripe Checkout
+        // Redirect to checkout (Stripe or PayPal approval URL)
         if (data.checkoutUrl) {
           window.location.href = data.checkoutUrl;
         }
@@ -82,14 +94,24 @@ export function ActivateTrialButton({ hasSubscription }: Props) {
           </>
         ) : (
           <>
-            <CreditCard className="w-4 h-4" />
-            Complete billing setup
+            {provider === "STRIPE" ? (
+              <>
+                <CreditCard className="w-4 h-4" />
+                Complete billing setup
+              </>
+            ) : (
+              <>
+                <Wallet className="w-4 h-4" />
+                Set up PayPal payment
+              </>
+            )}
           </>
         )}
       </button>
     );
   }
 
+  // Has subscription — Stripe only (PayPal already handled above)
   async function handleActivate() {
     if (state === "loading") return;
     setState("loading");
@@ -151,7 +173,7 @@ export function ActivateTrialButton({ hasSubscription }: Props) {
             href="/api/billing/portal"
             className="text-sm text-primary hover:text-primary/80 font-medium underline underline-offset-2"
           >
-            {hasSubscription ? "Update payment method →" : "Complete checkout →"}
+            Update payment method →
           </a>
         </div>
       </div>

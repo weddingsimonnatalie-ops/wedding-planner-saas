@@ -77,6 +77,11 @@ enum SubStatus {
   PAUSED
 }
 
+enum BillingProvider {
+  STRIPE
+  PAYPAL
+}
+
 model Wedding {
   id                   String          @id @default(cuid())
   coupleName           String          @default("Our Wedding")
@@ -93,6 +98,10 @@ model Wedding {
   // Stripe
   stripeCustomerId     String?         @unique
   stripeSubscriptionId String?         @unique
+
+  // Billing (provider-agnostic)
+  billingProvider      BillingProvider @default(STRIPE)
+  paypalSubscriptionId String?         @unique
   subscriptionStatus   SubStatus       @default(TRIALING)
   subscriptionPlan     String?
   currentPeriodEnd     DateTime?
@@ -157,6 +166,13 @@ model WeddingInvite {
 }
 
 model StripeEvent {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  eventType   String
+  processedAt DateTime @default(now())
+}
+
+model PayPalEvent {
   id          String   @id @default(cuid())
   eventId     String   @unique
   eventType   String

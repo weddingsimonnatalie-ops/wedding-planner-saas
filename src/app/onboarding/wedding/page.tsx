@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Heart, Calendar, MapPin, Users, Banknote } from "lucide-react";
 
 const CURRENCY_SYMBOLS = [
@@ -14,8 +14,9 @@ const CURRENCY_SYMBOLS = [
   { symbol: "kr", label: "NOK" },
 ] as const;
 
-export default function OnboardingWeddingPage() {
+function OnboardingWeddingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [coupleName, setCoupleName] = useState("");
   const [weddingDate, setWeddingDate] = useState("");
   const [venueName, setVenueName] = useState("");
@@ -24,6 +25,33 @@ export default function OnboardingWeddingPage() {
   const [customCurrency, setCustomCurrency] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [paypalCaptureDone, setPaypalCaptureDone] = useState(false);
+
+  // Capture PayPal subscription ID from redirect URL
+  useEffect(() => {
+    const paypalSuccess = searchParams.get("paypal");
+    const subscriptionId = searchParams.get("subscription_id");
+
+    if (paypalSuccess === "success" && subscriptionId && !paypalCaptureDone) {
+      setPaypalCaptureDone(true);
+      fetch("/api/billing/paypal-capture", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscriptionId }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.ok) {
+            console.log("[onboarding] PayPal subscription captured");
+          } else {
+            console.error("[onboarding] PayPal capture failed:", data.error);
+          }
+        })
+        .catch((err) => {
+          console.error("[onboarding] PayPal capture error:", err);
+        });
+    }
+  }, [searchParams, paypalCaptureDone]);
 
   // Pre-populate from existing wedding config if any
   useEffect(() => {
@@ -242,5 +270,13 @@ export default function OnboardingWeddingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OnboardingWeddingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 to-pink-100"><div className="text-gray-500">Loading…</div></div>}>
+      <OnboardingWeddingContent />
+    </Suspense>
   );
 }
