@@ -181,6 +181,12 @@ model PayPalEvent {
   processedAt DateTime @default(now())
 }
 
+// Singleton global config — always has exactly one row with id = "global"
+model AppConfig {
+  id                   String  @id @default("global")
+  registrationsEnabled Boolean @default(true)
+}
+
 // --- GUESTS ---
 
 model Guest {

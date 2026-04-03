@@ -9,9 +9,10 @@ type PaymentProvider = "stripe" | "paypal";
 
 interface Props {
   paypalConfigured: boolean;
+  registrationsEnabled: boolean;
 }
 
-export default function RegisterClient({ paypalConfigured }: Props) {
+export default function RegisterClient({ paypalConfigured, registrationsEnabled }: Props) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -65,6 +66,30 @@ export default function RegisterClient({ paypalConfigured }: Props) {
       setError("Something went wrong. Please try again.");
       setLoading(false);
     }
+  }
+
+  if (!registrationsEnabled) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 to-pink-100 px-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
+            <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center mb-4 mx-auto">
+              <Heart className="w-7 h-7 text-white fill-white" />
+            </div>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-2">Registrations closed</h1>
+            <p className="text-sm text-gray-500">
+              New accounts are not currently being accepted. Please check back later.
+            </p>
+            <p className="text-sm text-center text-gray-500 mt-6">
+              Already have an account?{" "}
+              <Link href="/login" className="text-primary hover:underline font-medium">
+                Sign in
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

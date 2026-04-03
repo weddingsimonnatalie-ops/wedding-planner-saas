@@ -1,12 +1,20 @@
+import { prisma } from "@/lib/prisma";
 import RegisterClient from "./RegisterClient";
 
-// Server component - checks PayPal config and passes to client
-export default function RegisterPage() {
-  // PayPal is configured if both client ID and secret are set
+// Server component - checks PayPal config and registration status
+export default async function RegisterPage() {
   const paypalConfigured = !!(
     process.env.PAYPAL_CLIENT_ID &&
     process.env.PAYPAL_CLIENT_SECRET
   );
 
-  return <RegisterClient paypalConfigured={paypalConfigured} />;
+  const config = await prisma.appConfig.findUnique({ where: { id: "global" } });
+  const registrationsEnabled = config?.registrationsEnabled ?? true;
+
+  return (
+    <RegisterClient
+      paypalConfigured={paypalConfigured}
+      registrationsEnabled={registrationsEnabled}
+    />
+  );
 }

@@ -10,6 +10,15 @@ import { handleDbError } from "@/lib/db-error";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
+    // Check registrations are enabled before doing anything else
+    const config = await prisma.appConfig.findUnique({ where: { id: "global" } });
+    if (config && !config.registrationsEnabled) {
+      return NextResponse.json(
+        { error: "New registrations are currently disabled." },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const { name, email, password, provider = "stripe" } = body as {
       name?: string;
