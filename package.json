@@ -43,6 +43,7 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-konva": "^19.2.3",
+    "resend": "^6.10.0",
     "stripe": "^20.4.1",
     "tailwind-merge": "^2.5.5",
     "ua-parser-js": "^2.0.9"
