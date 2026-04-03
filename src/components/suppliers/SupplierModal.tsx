@@ -6,6 +6,7 @@ import { ModalShell } from "@/components/ui/ModalShell";
 import { fetchApi } from "@/lib/fetch";
 import { useRefresh } from "@/context/RefreshContext";
 import { useFormDirtyRegistration } from "@/hooks/useFormDirtyRegistration";
+import { useWedding } from "@/context/WeddingContext";
 
 interface SupplierCategory { id: string; name: string }
 
@@ -24,6 +25,7 @@ interface Props {
 export function SupplierModal({ onClose }: Props) {
   const router = useRouter();
   const { triggerRefresh } = useRefresh();
+  const { currencySymbol } = useWedding();
 
   const [categories, setCategories] = useState<SupplierCategory[]>([]);
   const [categoryId, setCategoryId]     = useState("");
@@ -201,7 +203,7 @@ export function SupplierModal({ onClose }: Props) {
 
           {/* Contract value */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contract value (£)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contract value ({currencySymbol})</label>
             <input
               type="text"
               inputMode="decimal"

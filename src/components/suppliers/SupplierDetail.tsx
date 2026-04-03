@@ -57,8 +57,8 @@ function toDateInputValue(date: Date | string | null | undefined): string {
   return new Date(date).toISOString().slice(0, 10);
 }
 
-function fmt(n: number) {
-  return "£" + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmt(symbol: string, n: number) {
+  return symbol + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function fmtDate(d: Date | string | null | undefined) {
   if (!d) return "—";
@@ -72,7 +72,7 @@ function fmtSize(bytes: number) {
 
 export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierData }) {
   const { can: perms } = usePermissions();
-  const { subscriptionStatus } = useWedding();
+  const { subscriptionStatus, currencySymbol } = useWedding();
   const canSendEmail = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
   const emailBlockReason = getEmailBlockReason(subscriptionStatus);
   const canUpload = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
@@ -558,7 +558,7 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
                   <Field label="Website">
                     <input value={form.website} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://…" className={inputCls} />
                   </Field>
-                  <Field label="Contract value (£)">
+                  <Field label={`Contract value (${currencySymbol})`}>
                     <input type="text" inputMode="decimal" value={form.contractValue} onChange={e => setForm(f => ({ ...f, contractValue: e.target.value }))} className={inputCls} />
                   </Field>
                   <div className="flex items-center gap-2">
@@ -585,7 +585,7 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
                   <InfoRow label="Email" value={supplier.email} link={supplier.email ? `mailto:${supplier.email}` : undefined} />
                   <InfoRow label="Phone" value={supplier.phone} link={supplier.phone ? `tel:${supplier.phone}` : undefined} />
                   <InfoRow label="Website" value={supplier.website} link={supplier.website ?? undefined} external />
-                  <InfoRow label="Contract value" value={supplier.contractValue != null ? fmt(supplier.contractValue) : null} />
+                  <InfoRow label="Contract value" value={supplier.contractValue != null ? fmt(currencySymbol, supplier.contractValue) : null} />
                   <InfoRow
                     label="Contract signed"
                     value={supplier.contractSigned ? `Yes${supplier.contractSignedAt ? ` · ${fmtDate(supplier.contractSignedAt)}` : ""}` : "No"}
@@ -634,9 +634,9 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
             {contracted > 0 && (
               <div className="px-4 py-3 border-b border-gray-100">
                 <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Paid {fmt(totalPaid)} of {fmt(contracted)}</span>
+                  <span>Paid {fmt(currencySymbol, totalPaid)} of {fmt(currencySymbol, contracted)}</span>
                   <span className={remaining > 0 ? "text-amber-700" : "text-green-700"}>
-                    {remaining > 0 ? `${fmt(remaining)} remaining` : "Fully paid"}
+                    {remaining > 0 ? `${fmt(currencySymbol, remaining)} remaining` : "Fully paid"}
                   </span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -667,7 +667,7 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
                           {editPayErrors.label && <p className="text-xs text-red-500 mt-0.5">{editPayErrors.label}</p>}
                         </div>
                         <div>
-                          <label className="text-xs text-gray-400 block mb-0.5">Amount (£)</label>
+                          <label className="text-xs text-gray-400 block mb-0.5">Amount ({currencySymbol})</label>
                           <input
                             type="text" inputMode="decimal"
                             value={editPayForm.amount}
@@ -750,7 +750,7 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ps.cls}`}>{ps.label}</span>
                       </div>
                       <p className="text-xs text-gray-500">
-                        {fmt(p.amount)}
+                        {fmt(currencySymbol, p.amount)}
                         {p.dueDate && ` · Due ${fmtDate(p.dueDate)}`}
                         {p.paidDate && ` · Paid ${fmtDate(p.paidDate)}`}
                       </p>
@@ -825,7 +825,7 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
                       type="text" inputMode="decimal"
                       value={payForm.amount}
                       onChange={e => setPayForm(f => ({ ...f, amount: e.target.value }))}
-                      placeholder="Amount (£)"
+                      placeholder={`Amount (${currencySymbol})`}
                       className={inputCls}
                     />
                   </div>

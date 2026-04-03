@@ -19,7 +19,7 @@ interface Props {
 }
 
 export function PaymentModal({ onClose, onCreated }: Props) {
-  const { subscriptionStatus, role } = useWedding();
+  const { subscriptionStatus, role, currencySymbol } = useWedding();
   const canUpload = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
   const uploadBlockReason = getUploadBlockReason(subscriptionStatus);
 
@@ -241,7 +241,7 @@ export function PaymentModal({ onClose, onCreated }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Amount (£) <span className="text-red-500">*</span>
+                Amount ({currencySymbol}) <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"

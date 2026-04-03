@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useWedding } from "@/context/WeddingContext";
 // Matches the fields from the Wedding model used in this form
 interface WeddingConfigLike {
   coupleName: string;
@@ -15,6 +16,7 @@ interface WeddingConfigFormProps {
 }
 
 export function WeddingConfigForm({ config }: WeddingConfigFormProps) {
+  const { currencySymbol } = useWedding();
   const [coupleName, setCoupleName] = useState(
     config?.coupleName ?? "Our Wedding"
   );
@@ -120,7 +122,7 @@ export function WeddingConfigForm({ config }: WeddingConfigFormProps) {
           Total budget
         </label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">£</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">{currencySymbol}</span>
           <input
             type="number"
             min="0"

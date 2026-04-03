@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Settings, TrendingUp, TrendingDown, DollarSign, PiggyBank, AlertTriangle } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useWedding } from "@/context/WeddingContext";
 import { useRefresh } from "@/context/RefreshContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
@@ -35,13 +36,13 @@ interface BudgetSummary {
   };
 }
 
-function fmt(n: number | null | undefined) {
+function fmt(symbol: string, n: number | null | undefined) {
   if (n == null) return "—";
-  return "£" + n.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return symbol + n.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
-function fmtFloat(n: number) {
-  return "£" + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmtFloat(symbol: string, n: number) {
+  return symbol + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function ProgressCircle({ percent, colour, size = 80 }: { percent: number; colour: string; size?: number }) {
@@ -76,6 +77,7 @@ function ProgressCircle({ percent, colour, size = 80 }: { percent: number; colou
 }
 
 function CategoryCard({ category }: { category: CategoryBreakdown }) {
+  const { currencySymbol } = useWedding();
   const percentUsed = category.allocated > 0 ? (category.paid / category.allocated) * 100 : 0;
   const progressColour = category.isOverBudget
     ? "#ef4444"
@@ -114,20 +116,20 @@ function CategoryCard({ category }: { category: CategoryBreakdown }) {
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
             <div>
               <span className="text-gray-400">Allocated:</span>
-              <span className="ml-1 text-gray-700">{fmt(category.allocated)}</span>
+              <span className="ml-1 text-gray-700">{fmt(currencySymbol, category.allocated)}</span>
             </div>
             <div>
               <span className="text-gray-400">Spent:</span>
-              <span className="ml-1 text-gray-700">{fmt(category.paid)}</span>
+              <span className="ml-1 text-gray-700">{fmt(currencySymbol, category.paid)}</span>
             </div>
             <div>
               <span className="text-gray-400">Contracted:</span>
-              <span className="ml-1 text-gray-700">{fmt(category.contracted)}</span>
+              <span className="ml-1 text-gray-700">{fmt(currencySymbol, category.contracted)}</span>
             </div>
             <div>
               <span className="text-gray-400">Remaining:</span>
               <span className={`ml-1 ${category.remaining < 0 ? "text-red-600 font-medium" : "text-gray-700"}`}>
-                {fmt(category.remaining)}
+                {fmt(currencySymbol, category.remaining)}
               </span>
             </div>
           </div>
@@ -157,6 +159,7 @@ function CategoryCard({ category }: { category: CategoryBreakdown }) {
 export function BudgetList() {
   const { can } = usePermissions();
   const { refreshToken } = useRefresh();
+  const { currencySymbol } = useWedding();
   const [summary, setSummary] = useState<BudgetSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -253,7 +256,7 @@ export function BudgetList() {
           <div className="flex items-center gap-2">
             <PiggyBank className="w-5 h-5 text-primary" />
             <span className="text-lg font-bold">
-              {hasBudget ? fmt(summary.totalBudget) : "No budget set"}
+              {hasBudget ? fmt(currencySymbol, summary.totalBudget) : "No budget set"}
             </span>
           </div>
           <span className="text-xs text-gray-400">
@@ -267,21 +270,21 @@ export function BudgetList() {
             {hasBudget && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Total Budget</span>
-                <span className="font-medium">{fmt(summary.totalBudget)}</span>
+                <span className="font-medium">{fmt(currencySymbol, summary.totalBudget)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Allocated</span>
-              <span className="font-medium">{fmt(summary.totalAllocated)}</span>
+              <span className="font-medium">{fmt(currencySymbol, summary.totalAllocated)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Contracted</span>
               <div className="text-right">
                 <span className={`font-medium ${isOverContracted ? "text-red-600" : ""}`}>
-                  {fmt(summary.totalContracted)}
+                  {fmt(currencySymbol, summary.totalContracted)}
                 </span>
                 {isOverContracted && (
-                  <p className="text-xs text-red-600">{fmt(summary.totalContracted - totalBudget!)} over budget</p>
+                  <p className="text-xs text-red-600">{fmt(currencySymbol, summary.totalContracted - totalBudget!)} over budget</p>
                 )}
                 {hasBudget && !isOverContracted && contractedPercent > 0 && (
                   <p className="text-xs text-gray-400">{Math.round(contractedPercent)}% committed</p>
@@ -291,7 +294,7 @@ export function BudgetList() {
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Paid</span>
               <div className="text-right">
-                <span className="font-medium">{fmt(summary.totalPaid)}</span>
+                <span className="font-medium">{fmt(currencySymbol, summary.totalPaid)}</span>
                 {hasBudget && spentPercent > 0 && (
                   <p className="text-xs text-gray-400">{Math.round(spentPercent)}% of budget paid</p>
                 )}
@@ -300,7 +303,7 @@ export function BudgetList() {
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Remaining</span>
               <span className={`font-medium ${summary.totalRemaining < 0 ? "text-red-600" : ""}`}>
-                {fmt(summary.totalRemaining)}
+                {fmt(currencySymbol, summary.totalRemaining)}
               </span>
             </div>
           </div>
@@ -314,7 +317,7 @@ export function BudgetList() {
               {hasBudget ? "Total Budget" : "Allocated"}
             </div>
             <div className="text-xl font-bold text-gray-900">
-              {hasBudget ? fmt(summary.totalBudget) : fmt(summary.totalAllocated)}
+              {hasBudget ? fmt(currencySymbol, summary.totalBudget) : fmt(currencySymbol, summary.totalAllocated)}
             </div>
             {hasBudget && allocatedPercent > 0 && (
               <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -332,7 +335,7 @@ export function BudgetList() {
               Contracted
             </div>
             <div className={`text-xl font-bold ${isOverContracted ? "text-red-600" : "text-gray-900"}`}>
-              {fmt(summary.totalContracted)}
+              {fmt(currencySymbol, summary.totalContracted)}
             </div>
             {hasBudget && contractedPercent > 0 && (
               <>
@@ -344,7 +347,7 @@ export function BudgetList() {
                 </div>
                 <p className={`text-xs mt-1 ${isOverContracted ? "text-red-600 font-medium" : "text-gray-400"}`}>
                   {isOverContracted
-                    ? `${fmt(summary.totalContracted - totalBudget!)} over budget`
+                    ? `${fmt(currencySymbol, summary.totalContracted - totalBudget!)} over budget`
                     : `${Math.round(contractedPercent)}% of budget committed`}
                 </p>
               </>
@@ -356,7 +359,7 @@ export function BudgetList() {
               <TrendingDown className="w-4 h-4" />
               Paid
             </div>
-            <div className="text-xl font-bold text-gray-900">{fmt(summary.totalPaid)}</div>
+            <div className="text-xl font-bold text-gray-900">{fmt(currencySymbol, summary.totalPaid)}</div>
             {hasBudget && spentPercent > 0 && (
               <>
                 <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -378,7 +381,7 @@ export function BudgetList() {
               Remaining
             </div>
             <div className={`text-xl font-bold ${summary.totalRemaining < 0 ? "text-red-600" : "text-gray-900"}`}>
-              {fmt(summary.totalRemaining)}
+              {fmt(currencySymbol, summary.totalRemaining)}
             </div>
           </div>
         </div>
@@ -455,11 +458,11 @@ export function BudgetList() {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="text-gray-400">Contracted:</span>
-                  <span className="ml-1">{fmt(summary.unallocated.contracted)}</span>
+                  <span className="ml-1">{fmt(currencySymbol, summary.unallocated.contracted)}</span>
                 </div>
                 <div>
                   <span className="text-gray-400">Paid:</span>
-                  <span className="ml-1">{fmt(summary.unallocated.paid)}</span>
+                  <span className="ml-1">{fmt(currencySymbol, summary.unallocated.paid)}</span>
                 </div>
               </div>
               {can.editBudget && (

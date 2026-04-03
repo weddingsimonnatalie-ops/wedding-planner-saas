@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { fetchApi } from "@/lib/fetch";
+import { useWedding } from "@/context/WeddingContext";
 import { UserRole } from "@prisma/client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -41,6 +42,7 @@ interface DashStats {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function DashboardClient({ userName, role }: { userName?: string; role?: UserRole }) {
+  const { currencySymbol } = useWedding();
   const showFinance = role === "ADMIN" || role === "VIEWER" || role === undefined;
   const [stats, setStats] = useState<DashStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -160,7 +162,7 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
               ? `${Math.round((stats.budget.paid / stats.budget.contracted) * 100)}%`
               : "—"}
             sub={stats.budget.contracted > 0
-              ? `${fmt(stats.budget.remaining)} remaining`
+              ? `${fmt(currencySymbol, stats.budget.remaining)} remaining`
               : "No suppliers yet"}
             href="/suppliers"
           />
@@ -218,7 +220,7 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
               ].map(({ label, value, cls }) => (
                 <div key={label} className="flex justify-between items-baseline">
                   <span className="text-xs text-gray-500">{label}</span>
-                  <span className={`text-sm font-semibold ${cls}`}>{fmt(value)}</span>
+                  <span className={`text-sm font-semibold ${cls}`}>{fmt(currencySymbol, value)}</span>
                 </div>
               ))}
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden mt-2">
@@ -300,7 +302,7 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
                     <div className="flex justify-between items-baseline mb-1">
                       <span className="text-sm font-medium text-gray-800 truncate">{cat.name}</span>
                       <span className={`text-xs ${isOver ? "text-red-600 font-medium" : "text-gray-500"}`}>
-                        {fmt(cat.paid)} / {fmt(cat.allocated)}
+                        {fmt(currencySymbol, cat.paid)} / {fmt(currencySymbol, cat.allocated)}
                       </span>
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -362,7 +364,7 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
                       {due}
                     </p>
                   </div>
-                  <p className="text-sm font-semibold text-gray-800 shrink-0">{fmt(p.amount)}</p>
+                  <p className="text-sm font-semibold text-gray-800 shrink-0">{fmt(currencySymbol, p.amount)}</p>
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => setMarkPaidConfirm(p)}
@@ -590,7 +592,7 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
           message={
             <span>
               Mark <strong>{markPaidConfirm.supplierName} — {markPaidConfirm.label}</strong>{" "}
-              ({fmt(markPaidConfirm.amount)}) as paid?
+              ({fmt(currencySymbol, markPaidConfirm.amount)}) as paid?
             </span>
           }
           onConfirm={() => {
@@ -756,8 +758,8 @@ function DashboardSkeleton() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmt(n: number) {
-  return "£" + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmt(symbol: string, n: number) {
+  return symbol + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 const SUPPLIER_STATUS: Record<string, { label: string; cls: string }> = {

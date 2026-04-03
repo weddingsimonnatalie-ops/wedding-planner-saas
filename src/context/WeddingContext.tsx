@@ -7,6 +7,7 @@ type WeddingContextValue = {
   weddingId: string;
   role: UserRole;
   subscriptionStatus: SubStatus;
+  currencySymbol: string;
 };
 
 const WeddingContext = createContext<WeddingContextValue | null>(null);
@@ -15,15 +16,17 @@ export function WeddingProvider({
   weddingId,
   role,
   subscriptionStatus,
+  currencySymbol,
   children,
 }: {
   weddingId: string;
   role: UserRole;
   subscriptionStatus: SubStatus;
+  currencySymbol: string;
   children: React.ReactNode;
 }) {
   return (
-    <WeddingContext.Provider value={{ weddingId, role, subscriptionStatus }}>
+    <WeddingContext.Provider value={{ weddingId, role, subscriptionStatus, currencySymbol }}>
       {children}
     </WeddingContext.Provider>
   );
@@ -33,7 +36,7 @@ export function useWedding(): WeddingContextValue {
   const ctx = useContext(WeddingContext);
   if (!ctx) {
     // Fallback for components rendered outside the dashboard layout
-    return { weddingId: "", role: "VIEWER", subscriptionStatus: "TRIALING" };
+    return { weddingId: "", role: "VIEWER", subscriptionStatus: "TRIALING", currencySymbol: "£" };
   }
   return ctx;
 }

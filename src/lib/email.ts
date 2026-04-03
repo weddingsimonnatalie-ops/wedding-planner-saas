@@ -181,11 +181,12 @@ export async function sendPaymentReminderEmail(
   supplierName: string,
   label: string,
   amount: number,
-  dueDate: Date
+  dueDate: Date,
+  currencySymbol: string = "£"
 ): Promise<{ ok: boolean; message: string }> {
   const due = dueDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const subject = `Payment reminder: ${supplierName} — ${label}`;
-  const text = `Reminder: ${label} of £${amount.toFixed(2)} to ${supplierName} is due on ${due}.`;
+  const text = `Reminder: ${label} of ${currencySymbol}${amount.toFixed(2)} to ${supplierName} is due on ${due}.`;
 
   return sendEmail({ to, subject, text });
 }

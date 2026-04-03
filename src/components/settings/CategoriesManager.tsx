@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown, Save } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { useWedding } from "@/context/WeddingContext";
 
 const PRESET_COLOURS = [
   "#64748b", "#ef4444", "#f97316", "#f59e0b", "#eab308",
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export function CategoriesManager({ entityType, apiBase }: Props) {
+  const { currencySymbol } = useWedding();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -292,7 +294,7 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
               {/* Budget allocation (supplier only) */}
               {entityType === "supplier" && (
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <span className="text-xs text-gray-400">£</span>
+                  <span className="text-xs text-gray-400">{currencySymbol}</span>
                   <input
                     type="number"
                     value={editAllocated[cat.id] ?? ""}
@@ -374,7 +376,7 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
             {/* Budget allocation (supplier only) */}
             {entityType === "supplier" && (
               <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-400">£</span>
+                <span className="text-xs text-gray-400">{currencySymbol}</span>
                 <input
                   type="number"
                   value={newAllocated}

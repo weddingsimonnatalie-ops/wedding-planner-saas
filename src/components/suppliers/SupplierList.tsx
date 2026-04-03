@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, ExternalLink, ChevronDown } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useWedding } from "@/context/WeddingContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { SupplierModal } from "./SupplierModal";
 
@@ -28,8 +29,8 @@ interface Supplier {
   payments: Payment[];
 }
 
-function fmt(n: number) {
-  return "£" + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmt(symbol: string, n: number) {
+  return symbol + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function supplierTotals(s: Supplier) {
@@ -41,6 +42,7 @@ function supplierTotals(s: Supplier) {
 
 export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[] }) {
   const { can: perms } = usePermissions();
+  const { currencySymbol } = useWedding();
   const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
   const [categories, setCategories] = useState<SupplierCategory[]>([]);
   const [catFilter, setCatFilter] = useState("");
@@ -121,7 +123,7 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
           className="md:hidden flex items-center justify-between w-full bg-white rounded-lg border border-gray-200 px-4 py-2.5"
         >
           <div className="flex items-center gap-3">
-            <span className="text-lg font-bold text-gray-900">{fmt(totals.contracted)}</span>
+            <span className="text-lg font-bold text-gray-900">{fmt(currencySymbol, totals.contracted)}</span>
             <span className="text-sm font-medium text-gray-700">Contracted</span>
           </div>
           <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showStats ? "rotate-180" : ""}`} />
@@ -130,8 +132,8 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
         {showStats && (
           <div className="flex flex-col gap-1 md:hidden">
             {[
-              { label: "Paid", value: fmt(totals.paid), cls: "text-green-700" },
-              { label: "Remaining", value: fmt(totals.remaining), cls: "text-amber-700" },
+              { label: "Paid", value: fmt(currencySymbol, totals.paid), cls: "text-green-700" },
+              { label: "Remaining", value: fmt(currencySymbol, totals.remaining), cls: "text-amber-700" },
               { label: "Overdue", value: String(totals.overdue), cls: totals.overdue > 0 ? "text-red-600" : "text-gray-500" },
             ].map(({ label, value, cls }) => (
               <div key={label} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2">
@@ -144,9 +146,9 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
         {/* Desktop: 4-column card grid */}
         <div className="hidden md:grid md:grid-cols-4 md:gap-3">
           {[
-            { label: "Contracted", value: fmt(totals.contracted), cls: "text-gray-900" },
-            { label: "Paid", value: fmt(totals.paid), cls: "text-green-700" },
-            { label: "Remaining", value: fmt(totals.remaining), cls: "text-amber-700" },
+            { label: "Contracted", value: fmt(currencySymbol, totals.contracted), cls: "text-gray-900" },
+            { label: "Paid", value: fmt(currencySymbol, totals.paid), cls: "text-green-700" },
+            { label: "Remaining", value: fmt(currencySymbol, totals.remaining), cls: "text-amber-700" },
             { label: "Overdue", value: String(totals.overdue), cls: totals.overdue > 0 ? "text-red-600" : "text-gray-500" },
           ].map(({ label, value, cls }) => (
             <div key={label} className="bg-white rounded-xl border border-gray-200 px-4 py-3 text-center min-w-0">
@@ -206,9 +208,9 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
                   <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{groupName}</h2>
                   {allocated !== null && (
                     <span className={`text-xs font-medium ${isOverAllocated ? "text-red-600" : "text-gray-400"}`}>
-                      {fmt(groupContracted)} contracted
+                      {fmt(currencySymbol, groupContracted)} contracted
                       <span className="text-gray-300 mx-1">/</span>
-                      <span className="text-gray-500">{fmt(allocated)} allocated</span>
+                      <span className="text-gray-500">{fmt(currencySymbol, allocated)} allocated</span>
                     </span>
                   )}
                 </div>
@@ -237,16 +239,16 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
                         <div className="grid grid-cols-3 gap-2 text-xs mb-3">
                           <div>
                             <p className="text-gray-400">Contracted</p>
-                            <p className="font-medium text-gray-800">{contracted > 0 ? fmt(contracted) : "—"}</p>
+                            <p className="font-medium text-gray-800">{contracted > 0 ? fmt(currencySymbol, contracted) : "—"}</p>
                           </div>
                           <div>
                             <p className="text-gray-400">Paid</p>
-                            <p className="font-medium text-green-700">{paid > 0 ? fmt(paid) : "—"}</p>
+                            <p className="font-medium text-green-700">{paid > 0 ? fmt(currencySymbol, paid) : "—"}</p>
                           </div>
                           <div>
                             <p className="text-gray-400">Remaining</p>
                             <p className={`font-medium ${remaining > 0 ? "text-amber-700" : "text-gray-400"}`}>
-                              {remaining > 0 ? fmt(remaining) : "—"}
+                              {remaining > 0 ? fmt(currencySymbol, remaining) : "—"}
                             </p>
                           </div>
                         </div>

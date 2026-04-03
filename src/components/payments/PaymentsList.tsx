@@ -59,8 +59,8 @@ interface EditForm {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function fmt(n: number) {
-  return "£" + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmt(symbol: string, n: number) {
+  return symbol + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function fmtDate(d: string | null | undefined) {
@@ -98,6 +98,7 @@ function StatusBadge({ status }: { status: string }) {
 // ── Summary bar ────────────────────────────────────────────────────────────────
 
 function SummaryBar({ payments }: { payments: PaymentItem[] }) {
+  const { currencySymbol } = useWedding();
   const [showStats, setShowStats] = useState(false);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -134,7 +135,7 @@ function SummaryBar({ payments }: { payments: PaymentItem[] }) {
         className="md:hidden flex items-center justify-between w-full bg-white rounded-lg border border-gray-200 px-4 py-2.5"
       >
         <div className="flex items-center gap-3">
-          <span className="text-lg font-bold text-gray-900">{fmt(totalRemaining)}</span>
+          <span className="text-lg font-bold text-gray-900">{fmt(currencySymbol, totalRemaining)}</span>
           <span className="text-sm font-medium text-gray-700">Remaining</span>
         </div>
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showStats ? "rotate-180" : ""}`} />
@@ -143,15 +144,15 @@ function SummaryBar({ payments }: { payments: PaymentItem[] }) {
       {showStats && (
         <div className="flex flex-col gap-1 md:hidden">
           <div className="flex items-center justify-between bg-amber-50 rounded-lg border border-amber-200 px-3 py-2">
-            <span className="font-semibold text-sm text-amber-700">{fmt(dueThisMonth)}</span>
+            <span className="font-semibold text-sm text-amber-700">{fmt(currencySymbol, dueThisMonth)}</span>
             <span className="text-sm text-amber-600">Due this month</span>
           </div>
           <div className="flex items-center justify-between bg-red-50 rounded-lg border border-red-200 px-3 py-2">
-            <span className="font-semibold text-sm text-red-700">{fmt(totalOverdue)}</span>
+            <span className="font-semibold text-sm text-red-700">{fmt(currencySymbol, totalOverdue)}</span>
             <span className="text-sm text-red-500">Overdue</span>
           </div>
           <div className="flex items-center justify-between bg-green-50 rounded-lg border border-green-200 px-3 py-2">
-            <span className="font-semibold text-sm text-green-700">{fmt(paidThisYear)}</span>
+            <span className="font-semibold text-sm text-green-700">{fmt(currencySymbol, paidThisYear)}</span>
             <span className="text-sm text-green-600">Paid this year</span>
           </div>
         </div>
@@ -159,19 +160,19 @@ function SummaryBar({ payments }: { payments: PaymentItem[] }) {
       {/* Desktop: 4-column card grid */}
       <div className="hidden md:grid md:grid-cols-4 md:gap-3">
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center min-w-0">
-          <p className="text-lg font-bold text-gray-900 truncate">{fmt(totalRemaining)}</p>
+          <p className="text-lg font-bold text-gray-900 truncate">{fmt(currencySymbol, totalRemaining)}</p>
           <p className="text-xs text-gray-500 leading-tight">Remaining</p>
         </div>
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center min-w-0">
-          <p className="text-lg font-bold text-amber-700 truncate">{fmt(dueThisMonth)}</p>
+          <p className="text-lg font-bold text-amber-700 truncate">{fmt(currencySymbol, dueThisMonth)}</p>
           <p className="text-xs text-amber-600 leading-tight">Due this month</p>
         </div>
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center min-w-0">
-          <p className="text-lg font-bold text-red-700 truncate">{fmt(totalOverdue)}</p>
+          <p className="text-lg font-bold text-red-700 truncate">{fmt(currencySymbol, totalOverdue)}</p>
           <p className="text-xs text-red-500 leading-tight">Overdue</p>
         </div>
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center min-w-0">
-          <p className="text-lg font-bold text-green-700 truncate">{fmt(paidThisYear)}</p>
+          <p className="text-lg font-bold text-green-700 truncate">{fmt(currencySymbol, paidThisYear)}</p>
           <p className="text-xs text-green-600 leading-tight">Paid this year</p>
         </div>
       </div>
@@ -192,6 +193,7 @@ function PaymentEditForm({
   onSave: (form: EditForm) => Promise<void>;
   onCancel: () => void;
 }) {
+  const { currencySymbol } = useWedding();
   const [form, setForm] = useState<EditForm>({
     label: payment.label,
     amount: String(payment.amount),
@@ -254,7 +256,7 @@ function PaymentEditForm({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Amount (£)</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Amount ({currencySymbol})</label>
           <input
             type="text"
             inputMode="decimal"
@@ -375,7 +377,7 @@ function PaymentCard({
     );
   }
 
-  const { subscriptionStatus } = useWedding();
+  const { subscriptionStatus, currencySymbol } = useWedding();
   const canSendEmail = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
   const emailBlockReason = getEmailBlockReason(subscriptionStatus);
   const canUpload = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
@@ -410,7 +412,7 @@ function PaymentCard({
           </div>
           <p className="text-sm font-semibold text-gray-900">{payment.label}</p>
           <p className="text-xs text-gray-500 mt-0.5">
-            {fmt(payment.amount)}
+            {fmt(currencySymbol, payment.amount)}
             {payment.dueDate && ` · Due ${fmtDate(payment.dueDate)}`}
             {payment.paidDate && ` · Paid ${fmtDate(payment.paidDate)}`}
           </p>
@@ -421,7 +423,7 @@ function PaymentCard({
             <div className="mt-2">
               <div className="flex justify-between text-xs text-gray-400 mb-0.5">
                 <span>Supplier total</span>
-                <span>{fmt(supplier.totalPaid)} / {fmt(supplier.contractValue!)}</span>
+                <span>{fmt(currencySymbol, supplier.totalPaid)} / {fmt(currencySymbol, supplier.contractValue!)}</span>
               </div>
               <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div
@@ -590,6 +592,7 @@ function GroupSection({
   initiallyOpen = true,
   readOnly = false,
 }: GroupSectionProps) {
+  const { currencySymbol } = useWedding();
   const [open, setOpen] = useState(initiallyOpen);
   const total = payments.reduce((s, p) => s + p.amount, 0);
 
@@ -608,7 +611,7 @@ function GroupSection({
         ) : (
           <p className={`text-xs font-semibold uppercase tracking-wide ${accentCls}`}>{title}</p>
         )}
-        <p className="text-xs font-medium text-gray-400">{fmt(total)}</p>
+        <p className="text-xs font-medium text-gray-400">{fmt(currencySymbol, total)}</p>
       </div>
       <div className="h-px bg-gray-200 mb-3" />
 
@@ -642,6 +645,7 @@ function GroupSection({
 
 export function PaymentsList() {
   const { can: perms } = usePermissions();
+  const { currencySymbol } = useWedding();
   const router = useRouter();
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1127,7 +1131,7 @@ export function PaymentsList() {
               <strong>
                 {deleteConfirm.supplier.name} — {deleteConfirm.label}
               </strong>{" "}
-              ({fmt(deleteConfirm.amount)})?
+              ({fmt(currencySymbol, deleteConfirm.amount)})?
             </span>
           }
           onConfirm={() => handleDelete(deleteConfirm)}

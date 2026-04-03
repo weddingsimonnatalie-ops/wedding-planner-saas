@@ -87,6 +87,7 @@ model Wedding {
   sessionTimeout       Int             @default(30)
   sessionWarningTime   Int             @default(5)
   themeHue             Int             @default(330)
+  currencySymbol       String          @default("£")
   totalBudget         Float?          // Overall wedding budget
 
   // Stripe

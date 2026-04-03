@@ -14,6 +14,7 @@ interface WeddingConfig {
   sessionTimeout: number;
   sessionWarningTime: number;
   themeHue: number;
+  currencySymbol: string;
   totalBudget?: number | null;
 }
 import { UsersManager } from "./UsersManager";
@@ -22,6 +23,7 @@ import { CategoriesManager } from "./CategoriesManager";
 import { NotificationsForm } from "./NotificationsForm";
 import { SessionTimeoutSettings } from "./SessionTimeoutSettings";
 import { ThemeColorPicker } from "./ThemeColorPicker";
+import { CurrencySymbolPicker } from "./CurrencySymbolPicker";
 import { TwoFactorSettings } from "./TwoFactorSettings";
 import { TrustedDevicesList } from "./TrustedDevicesList";
 import { WeddingConfigForm } from "@/components/wedding-config-form";
@@ -128,6 +130,14 @@ export function SettingsClient({
               Choose a colour that matches your wedding palette. It will be used throughout the planner.
             </p>
             <ThemeColorPicker initialHue={config?.themeHue ?? 330} />
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-base font-medium text-gray-900 mb-1">Currency Symbol</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Choose the symbol shown next to monetary amounts throughout the planner.
+            </p>
+            <CurrencySymbolPicker initialSymbol={config?.currencySymbol ?? "£"} />
           </div>
         </div>
       )}

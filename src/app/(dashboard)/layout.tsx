@@ -26,7 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       : Promise.resolve(0),
     prisma.wedding.findUnique({
       where: { id: ctx.weddingId },
-      select: { subscriptionStatus: true, gracePeriodEndsAt: true, themeHue: true },
+      select: { subscriptionStatus: true, gracePeriodEndsAt: true, themeHue: true, currencySymbol: true },
     }),
   ]);
 
@@ -51,11 +51,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   };
 
   const themeHue = weddingBilling?.themeHue ?? 330;
+  const currencySymbol = weddingBilling?.currencySymbol ?? "£";
 
   return (
     <>
     <style dangerouslySetInnerHTML={{ __html: `:root { --primary: ${themeHue} 60% 55%; --ring: ${themeHue} 60% 55%; }` }} />
-    <WeddingProvider weddingId={ctx.weddingId} role={ctx.role} subscriptionStatus={weddingBilling?.subscriptionStatus ?? "TRIALING"}>
+    <WeddingProvider weddingId={ctx.weddingId} role={ctx.role} subscriptionStatus={weddingBilling?.subscriptionStatus ?? "TRIALING"} currencySymbol={currencySymbol}>
       <RefreshProvider>
         <FormDirtyProvider>
           {weddingBilling && (

@@ -2,7 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Heart, Calendar, MapPin, Users } from "lucide-react";
+import { Heart, Calendar, MapPin, Users, Banknote } from "lucide-react";
+
+const CURRENCY_SYMBOLS = [
+  { symbol: "£", label: "GBP" },
+  { symbol: "$", label: "USD" },
+  { symbol: "€", label: "EUR" },
+  { symbol: "¥", label: "JPY" },
+  { symbol: "₹", label: "INR" },
+  { symbol: "Fr", label: "CHF" },
+  { symbol: "kr", label: "NOK" },
+] as const;
 
 export default function OnboardingWeddingPage() {
   const router = useRouter();
@@ -10,6 +20,8 @@ export default function OnboardingWeddingPage() {
   const [weddingDate, setWeddingDate] = useState("");
   const [venueName, setVenueName] = useState("");
   const [venueAddress, setVenueAddress] = useState("");
+  const [currencySymbol, setCurrencySymbol] = useState("£");
+  const [customCurrency, setCustomCurrency] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,6 +38,15 @@ export default function OnboardingWeddingPage() {
         }
         if (data.venueName) setVenueName(data.venueName);
         if (data.venueAddress) setVenueAddress(data.venueAddress);
+        if (data.currencySymbol) {
+          const isCommon = CURRENCY_SYMBOLS.some(c => c.symbol === data.currencySymbol);
+          if (isCommon) {
+            setCurrencySymbol(data.currencySymbol);
+          } else {
+            setCurrencySymbol(data.currencySymbol);
+            setCustomCurrency(data.currencySymbol);
+          }
+        }
       })
       .catch(() => {
         // Non-fatal — form just starts empty
@@ -50,6 +71,7 @@ export default function OnboardingWeddingPage() {
           weddingDate: weddingDate || null,
           venueName: venueName.trim() || null,
           venueAddress: venueAddress.trim() || null,
+          currencySymbol: currencySymbol || "£",
         }),
       });
 
@@ -154,6 +176,50 @@ export default function OnboardingWeddingPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 placeholder="123 High Street, London"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <span className="flex items-center gap-1.5">
+                  <Banknote className="w-3.5 h-3.5" />
+                  Currency symbol
+                </span>
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {CURRENCY_SYMBOLS.map(({ symbol, label }) => (
+                  <button
+                    key={symbol}
+                    type="button"
+                    onClick={() => {
+                      setCurrencySymbol(symbol);
+                      setCustomCurrency("");
+                    }}
+                    className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors focus:outline-none ${
+                      currencySymbol === symbol && !customCurrency
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {symbol} <span className="text-xs text-gray-400">{label}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  maxLength={5}
+                  placeholder="Custom…"
+                  value={customCurrency}
+                  onChange={(e) => {
+                    setCustomCurrency(e.target.value);
+                    if (e.target.value.trim()) setCurrencySymbol(e.target.value.trim());
+                  }}
+                  className="w-28 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+                {customCurrency && (
+                  <span className="text-xs text-gray-500">Using &ldquo;{customCurrency}&rdquo;</span>
+                )}
+              </div>
             </div>
 
             <div className="flex gap-3 pt-2">

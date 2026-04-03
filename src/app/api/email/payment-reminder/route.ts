@@ -29,12 +29,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const { paymentId } = await req.json();
     if (!paymentId) return NextResponse.json({ error: "paymentId required" }, { status: 400 });
 
-    const payment = await withTenantContext(weddingId, async (tx) => {
-      return tx.payment.findUnique({
-        where: { id: paymentId, weddingId },
-        include: { supplier: true },
-      });
-    });
+    const [payment, wedding] = await withTenantContext(weddingId, async (tx) =>
+      Promise.all([
+        tx.payment.findUnique({
+          where: { id: paymentId, weddingId },
+          include: { supplier: true },
+        }),
+        tx.wedding.findUnique({ where: { id: weddingId }, select: { currencySymbol: true } }),
+      ])
+    );
 
     if (!payment) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -46,7 +49,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       payment.supplier.name,
       payment.label,
       payment.amount,
-      payment.dueDate ? new Date(payment.dueDate) : new Date()
+      payment.dueDate ? new Date(payment.dueDate) : new Date(),
+      wedding?.currencySymbol ?? "£"
     );
 
     return NextResponse.json(result, { status: result.ok ? 200 : 500 });
