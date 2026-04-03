@@ -8,8 +8,13 @@ export default async function RegisterPage() {
     process.env.PAYPAL_CLIENT_SECRET
   );
 
-  const config = await prisma.appConfig.findUnique({ where: { id: "global" } });
-  const registrationsEnabled = config?.registrationsEnabled ?? true;
+  let registrationsEnabled = true;
+  try {
+    const config = await prisma.appConfig.findUnique({ where: { id: "global" } });
+    registrationsEnabled = config?.registrationsEnabled ?? true;
+  } catch {
+    // Table may not exist yet if migration hasn't run — default to enabled
+  }
 
   return (
     <RegisterClient
