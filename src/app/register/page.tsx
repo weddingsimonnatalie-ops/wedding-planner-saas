@@ -7,6 +7,9 @@ import { signIn } from "@/lib/auth-client";
 
 type PaymentProvider = "stripe" | "paypal";
 
+// PayPal is configured if NEXT_PUBLIC_PAYPAL_CLIENT_ID is set
+const PAYPAL_CONFIGURED = !!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -156,38 +159,40 @@ export default function RegisterPage() {
               />
             </div>
 
-            {/* Payment provider selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment method
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setProvider("stripe")}
-                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-                    provider === "stripe"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <CreditCard className="w-4 h-4" />
-                  Card (Stripe)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setProvider("paypal")}
-                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-                    provider === "paypal"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <Wallet className="w-4 h-4" />
-                  PayPal
-                </button>
+            {/* Payment provider selection - only show PayPal option if configured */}
+            {PAYPAL_CONFIGURED && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment method
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setProvider("stripe")}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+                      provider === "stripe"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Card (Stripe)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProvider("paypal")}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+                      provider === "paypal"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    <Wallet className="w-4 h-4" />
+                    PayPal
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <button
               type="submit"
@@ -196,14 +201,14 @@ export default function RegisterPage() {
             >
               {loading
                 ? "Setting up your account…"
-                : provider === "stripe"
+                : provider === "stripe" || !PAYPAL_CONFIGURED
                   ? "Create account & continue to payment"
                   : "Create account & continue to PayPal"}
             </button>
           </form>
 
           <p className="text-xs text-gray-400 text-center mt-4">
-            {provider === "stripe" ? (
+            {provider === "stripe" || !PAYPAL_CONFIGURED ? (
               <>
                 You&apos;ll be redirected to Stripe to add your card. Your 14-day trial starts immediately — you won&apos;t be charged until day 7.
               </>
