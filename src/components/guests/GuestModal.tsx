@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useRefresh } from "@/context/RefreshContext";
 import { useFormDirtyRegistration } from "@/hooks/useFormDirtyRegistration";
 import { ModalShell } from "@/components/ui/ModalShell";
+import { useWedding } from "@/context/WeddingContext";
+import { getEvents } from "@/lib/eventNames";
 
 interface Props {
   onClose: () => void;
@@ -14,6 +16,8 @@ interface Props {
 export function GuestModal({ onClose, groups }: Props) {
   const router = useRouter();
   const { triggerRefresh } = useRefresh();
+  const { eventNames } = useWedding();
+  const events = getEvents(eventNames);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName]   = useState("");
@@ -24,6 +28,7 @@ export function GuestModal({ onClose, groups }: Props) {
   const [ceremony, setCeremony]   = useState(true);
   const [reception, setReception] = useState(true);
   const [afterparty, setAfterparty] = useState(false);
+  const [rehearsalDinner, setRehearsalDinner] = useState(false);
   const [notes, setNotes]         = useState("");
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState("");
@@ -41,9 +46,10 @@ export function GuestModal({ onClose, groups }: Props) {
       !ceremony || // defaults to true
       !reception || // defaults to true
       afterparty || // defaults to false
+      rehearsalDinner || // defaults to false
       notes !== ""
     );
-  }, [firstName, lastName, email, phone, groupName, isChild, ceremony, reception, afterparty, notes]);
+  }, [firstName, lastName, email, phone, groupName, isChild, ceremony, reception, afterparty, rehearsalDinner, notes]);
 
   useFormDirtyRegistration("guest-modal", "New Guest", isDirty);
 
@@ -65,6 +71,7 @@ export function GuestModal({ onClose, groups }: Props) {
         invitedToCeremony: ceremony,
         invitedToReception: reception,
         invitedToAfterparty: afterparty,
+        invitedToRehearsalDinner: rehearsalDinner,
         notes: notes || null,
       }),
     });
@@ -83,6 +90,14 @@ export function GuestModal({ onClose, groups }: Props) {
 
   const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent";
   const grouplistId = "guest-modal-group-suggestions";
+
+  // Map event keys to state setters
+  const eventStateMap: Record<string, { val: boolean; set: (v: boolean) => void }> = {
+    ceremony: { val: ceremony, set: setCeremony },
+    meal: { val: reception, set: setReception },
+    eveningParty: { val: afterparty, set: setAfterparty },
+    rehearsalDinner: { val: rehearsalDinner, set: setRehearsalDinner },
+  };
 
   return (
     <ModalShell
@@ -174,21 +189,21 @@ export function GuestModal({ onClose, groups }: Props) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Invited to</label>
             <div className="flex flex-wrap gap-4">
-              {[
-                { label: "Ceremony",   val: ceremony,   set: setCeremony },
-                { label: "Reception",  val: reception,  set: setReception },
-                { label: "Afterparty", val: afterparty, set: setAfterparty },
-              ].map(({ label, val, set }) => (
-                <label key={label} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={val}
-                    onChange={e => set(e.target.checked)}
-                    className="w-4 h-4 rounded text-primary"
-                  />
-                  <span className="text-sm text-gray-700">{label}</span>
-                </label>
-              ))}
+              {events.map((event) => {
+                const state = eventStateMap[event.key];
+                if (!state) return null;
+                return (
+                  <label key={event.key} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={state.val}
+                      onChange={e => state.set(e.target.checked)}
+                      className="w-4 h-4 rounded text-primary"
+                    />
+                    <span className="text-sm text-gray-700">{event.name}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
 

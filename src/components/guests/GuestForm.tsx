@@ -8,6 +8,7 @@ import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { useFormDirtyRegistration } from "@/hooks/useFormDirtyRegistration";
 import { useWedding, getEmailBlockReason } from "@/context/WeddingContext";
 import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
+import { getEvents } from "@/lib/eventNames";
 
 interface Guest {
   id: string;
@@ -20,15 +21,18 @@ interface Guest {
   invitedToCeremony: boolean;
   invitedToReception: boolean;
   invitedToAfterparty: boolean;
+  invitedToRehearsalDinner: boolean;
   notes: string | null;
   rsvpStatus: string;
   isManualOverride: boolean;
   attendingCeremony: boolean | null;
   attendingReception: boolean | null;
   attendingAfterparty: boolean | null;
+  attendingRehearsalDinner: boolean | null;
   attendingCeremonyMaybe: boolean;
   attendingReceptionMaybe: boolean;
   attendingAfterpartyMaybe: boolean;
+  attendingRehearsalDinnerMaybe: boolean;
   mealChoice: string | null;
   dietaryNotes: string | null;
   rsvpToken: string;
@@ -62,7 +66,8 @@ const ALL_STATUSES = ["PENDING", "ACCEPTED", "PARTIAL", "DECLINED", "MAYBE"] as 
 
 export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnly = false }: Props) {
   const roCls = readOnly ? "bg-gray-50 cursor-not-allowed opacity-75" : "";
-  const { subscriptionStatus } = useWedding();
+  const { subscriptionStatus, eventNames } = useWedding();
+  const events = getEvents(eventNames);
   const canSendEmail = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
   const emailBlockReason = getEmailBlockReason(subscriptionStatus);
   const router = useRouter();
@@ -81,6 +86,7 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
   const [ceremony, setCeremony] = useState(guest?.invitedToCeremony ?? true);
   const [reception, setReception] = useState(guest?.invitedToReception ?? true);
   const [afterparty, setAfterparty] = useState(guest?.invitedToAfterparty ?? false);
+  const [rehearsalDinner, setRehearsalDinner] = useState(guest?.invitedToRehearsalDinner ?? false);
   const [notes, setNotes] = useState(guest?.notes ?? "");
 
   // ── Meal fields (edit only, saved via main form) ──────────────────────────
@@ -102,6 +108,7 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
         ceremony !== g.invitedToCeremony ||
         reception !== g.invitedToReception ||
         afterparty !== g.invitedToAfterparty ||
+        rehearsalDinner !== g.invitedToRehearsalDinner ||
         (notes || "") !== (g.notes || "") ||
         (mealChoice || "") !== (g.mealChoice || "") ||
         (dietaryNotes || "") !== (g.dietaryNotes || "")
@@ -118,10 +125,11 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
         !ceremony || // defaults to true, so false is a change
         !reception || // defaults to true, so false is a change
         afterparty || // defaults to false, so true is a change
+        rehearsalDinner || // defaults to false, so true is a change
         notes !== ""
       );
     }
-  }, [isEdit, guest, firstName, lastName, email, phone, groupName, isChild, ceremony, reception, afterparty, notes, mealChoice, dietaryNotes]);
+  }, [isEdit, guest, firstName, lastName, email, phone, groupName, isChild, ceremony, reception, afterparty, rehearsalDinner, notes, mealChoice, dietaryNotes]);
 
   // Register dirty state with global context
   const formId = isEdit && guest ? `guest-${guest.id}` : "guest-new";
@@ -156,6 +164,7 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
     setCeremony(fresh.invitedToCeremony);
     setReception(fresh.invitedToReception);
     setAfterparty(fresh.invitedToAfterparty);
+    setRehearsalDinner(fresh.invitedToRehearsalDinner);
     setNotes(fresh.notes ?? "");
     setMealChoice(fresh.mealChoice ?? "");
     setDietaryNotes(fresh.dietaryNotes ?? "");
@@ -268,6 +277,7 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
       invitedToCeremony: ceremony,
       invitedToReception: reception,
       invitedToAfterparty: afterparty,
+      invitedToRehearsalDinner: rehearsalDinner,
       notes: notes || null,
       ...(isEdit ? {
         mealChoice: mealChoice || null,
@@ -405,22 +415,28 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Invited to</label>
         <div className="flex flex-wrap gap-4">
-          {[
-            { label: "Ceremony", val: ceremony, set: setCeremony },
-            { label: "Reception", val: reception, set: setReception },
-            { label: "Afterparty", val: afterparty, set: setAfterparty },
-          ].map(({ label, val, set }) => (
-            <label key={label} className={`flex items-center gap-2 ${readOnly ? "cursor-not-allowed opacity-75" : "cursor-pointer"}`}>
-              <input
-                type="checkbox"
-                disabled={readOnly}
-                checked={val}
-                onChange={(e) => !readOnly && set(e.target.checked)}
-                className="w-4 h-4 rounded text-primary"
-              />
-              <span className="text-sm text-gray-700">{label}</span>
-            </label>
-          ))}
+          {events.map((event) => {
+            const stateMap: Record<string, { val: boolean; set: (v: boolean) => void }> = {
+              ceremony: { val: ceremony, set: setCeremony },
+              meal: { val: reception, set: setReception },
+              eveningParty: { val: afterparty, set: setAfterparty },
+              rehearsalDinner: { val: rehearsalDinner, set: setRehearsalDinner },
+            };
+            const state = stateMap[event.key];
+            if (!state) return null;
+            return (
+              <label key={event.key} className={`flex items-center gap-2 ${readOnly ? "cursor-not-allowed opacity-75" : "cursor-pointer"}`}>
+                <input
+                  type="checkbox"
+                  disabled={readOnly}
+                  checked={state.val}
+                  onChange={(e) => !readOnly && state.set(e.target.checked)}
+                  className="w-4 h-4 rounded text-primary"
+                />
+                <span className="text-sm text-gray-700">{event.name}</span>
+              </label>
+            );
+          })}
         </div>
       </div>
 
@@ -474,28 +490,47 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
             )}
 
             {/* Event responses — read from localGuest so they update after save */}
-            {localGuest && (localGuest.invitedToCeremony || localGuest.invitedToReception || localGuest.invitedToAfterparty) && (
+            {localGuest && (localGuest.invitedToCeremony || localGuest.invitedToReception || localGuest.invitedToAfterparty || localGuest.invitedToRehearsalDinner) && (
               <div className="mb-4">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Event responses</p>
                 <div className="rounded-lg border border-gray-100 overflow-hidden">
-                  {[
-                    { label: "Ceremony",          invited: localGuest.invitedToCeremony,   attending: localGuest.attendingCeremony,   maybe: localGuest.attendingCeremonyMaybe },
-                    { label: "Wedding reception", invited: localGuest.invitedToReception,  attending: localGuest.attendingReception,  maybe: localGuest.attendingReceptionMaybe },
-                    { label: "Afterparty",        invited: localGuest.invitedToAfterparty, attending: localGuest.attendingAfterparty, maybe: localGuest.attendingAfterpartyMaybe },
-                  ].filter(e => e.invited).map(({ label, attending, maybe }, i, arr) => (
-                    <div
-                      key={label}
-                      className={`flex items-center justify-between px-3 py-2 text-sm bg-gray-50 ${
-                        i < arr.length - 1 ? "border-b border-gray-100" : ""
-                      }`}
-                    >
-                      <span className="text-gray-600">{label}</span>
-                      {attending === true  && <span className="text-green-600 font-medium">✓ Attending</span>}
-                      {attending === false && <span className="text-red-600 font-medium">✗ Not attending</span>}
-                      {attending === null && maybe && <span className="text-amber-600 font-medium">? Maybe</span>}
-                      {attending === null && !maybe && <span className="text-gray-400">— Not responded</span>}
-                    </div>
-                  ))}
+                  {events.map((event, i, arr) => {
+                    const invitedMap: Record<string, boolean> = {
+                      ceremony: !!localGuest.invitedToCeremony,
+                      meal: !!localGuest.invitedToReception,
+                      eveningParty: !!localGuest.invitedToAfterparty,
+                      rehearsalDinner: !!localGuest.invitedToRehearsalDinner,
+                    };
+                    const attendingMap: Record<string, boolean | null> = {
+                      ceremony: localGuest.attendingCeremony,
+                      meal: localGuest.attendingReception,
+                      eveningParty: localGuest.attendingAfterparty,
+                      rehearsalDinner: localGuest.attendingRehearsalDinner,
+                    };
+                    const maybeMap: Record<string, boolean> = {
+                      ceremony: localGuest.attendingCeremonyMaybe,
+                      meal: localGuest.attendingReceptionMaybe,
+                      eveningParty: localGuest.attendingAfterpartyMaybe,
+                      rehearsalDinner: localGuest.attendingRehearsalDinnerMaybe,
+                    };
+                    if (!invitedMap[event.key]) return null;
+                    const attending = attendingMap[event.key];
+                    const maybe = maybeMap[event.key];
+                    return (
+                      <div
+                        key={event.key}
+                        className={`flex items-center justify-between px-3 py-2 text-sm bg-gray-50 ${
+                          i < arr.length - 1 ? "border-b border-gray-100" : ""
+                        }`}
+                      >
+                        <span className="text-gray-600">{event.name}</span>
+                        {attending === true  && <span className="text-green-600 font-medium">✓ Attending</span>}
+                        {attending === false && <span className="text-red-600 font-medium">✗ Not attending</span>}
+                        {attending === null && maybe && <span className="text-amber-600 font-medium">? Maybe</span>}
+                        {attending === null && !maybe && <span className="text-gray-400">— Not responded</span>}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

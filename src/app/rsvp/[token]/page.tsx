@@ -26,7 +26,20 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
       }),
       tx.wedding.findUnique({
         where: { id: weddingId },
-        select: { coupleName: true, weddingDate: true, venueName: true, themeHue: true },
+        select: {
+          coupleName: true,
+          weddingDate: true,
+          venueName: true,
+          themeHue: true,
+          ceremonyEnabled: true,
+          ceremonyName: true,
+          mealEnabled: true,
+          mealName: true,
+          eveningPartyEnabled: true,
+          eveningPartyName: true,
+          rehearsalDinnerEnabled: true,
+          rehearsalDinnerName: true,
+        },
       }),
     ])
   );
@@ -41,6 +54,17 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
     : null;
 
   const themeHue = wedding?.themeHue ?? 330;
+
+  const eventNames = {
+    ceremonyEnabled: wedding?.ceremonyEnabled ?? true,
+    ceremonyName: wedding?.ceremonyName ?? "Ceremony",
+    mealEnabled: wedding?.mealEnabled ?? true,
+    mealName: wedding?.mealName ?? "Wedding Breakfast",
+    eveningPartyEnabled: wedding?.eveningPartyEnabled ?? true,
+    eveningPartyName: wedding?.eveningPartyName ?? "Evening Reception",
+    rehearsalDinnerEnabled: wedding?.rehearsalDinnerEnabled ?? false,
+    rehearsalDinnerName: wedding?.rehearsalDinnerName ?? "Rehearsal Dinner",
+  };
 
   return (
     <>
@@ -77,16 +101,20 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
               invitedToCeremony: guest.invitedToCeremony,
               invitedToReception: guest.invitedToReception,
               invitedToAfterparty: guest.invitedToAfterparty,
+              invitedToRehearsalDinner: guest.invitedToRehearsalDinner,
               attendingCeremony: guest.attendingCeremony,
               attendingReception: guest.attendingReception,
               attendingAfterparty: guest.attendingAfterparty,
+              attendingRehearsalDinner: guest.attendingRehearsalDinner,
               attendingCeremonyMaybe: guest.attendingCeremonyMaybe,
               attendingReceptionMaybe: guest.attendingReceptionMaybe,
               attendingAfterpartyMaybe: guest.attendingAfterpartyMaybe,
+              attendingRehearsalDinnerMaybe: guest.attendingRehearsalDinnerMaybe,
               mealChoice: guest.mealChoice,
               dietaryNotes: guest.dietaryNotes,
             }}
             mealOptions={mealOptions}
+            eventNames={eventNames}
           />
         </div>
       </div>

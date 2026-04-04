@@ -59,12 +59,15 @@ export async function GET(
         invitedToCeremony: true,
         invitedToReception: true,
         invitedToAfterparty: true,
+        invitedToRehearsalDinner: true,
         attendingCeremony: true,
         attendingReception: true,
         attendingAfterparty: true,
+        attendingRehearsalDinner: true,
         attendingCeremonyMaybe: true,
         attendingReceptionMaybe: true,
         attendingAfterpartyMaybe: true,
+        attendingRehearsalDinnerMaybe: true,
         mealChoice: true,
         dietaryNotes: true,
       },
@@ -124,6 +127,7 @@ export async function POST(
       attendingCeremony: ceremonyCh,
       attendingReception: receptionCh,
       attendingAfterparty: afterpartyCh,
+      attendingRehearsalDinner: rehearsalDinnerCh,
       mealChoice,
       dietaryNotes,
     } = body;
@@ -131,6 +135,7 @@ export async function POST(
     const ceremony = guest.invitedToCeremony ? toFields(ceremonyCh) : { attending: null as boolean | null, maybe: false };
     const reception = guest.invitedToReception ? toFields(receptionCh) : { attending: null as boolean | null, maybe: false };
     const afterparty = guest.invitedToAfterparty ? toFields(afterpartyCh) : { attending: null as boolean | null, maybe: false };
+    const rehearsalDinner = guest.invitedToRehearsalDinner ? toFields(rehearsalDinnerCh) : { attending: null as boolean | null, maybe: false };
 
     // Validate mealChoice references an active meal option for this wedding (if provided)
     if (mealChoice && mealChoice.trim()) {
@@ -148,12 +153,15 @@ export async function POST(
       guest.invitedToCeremony,
       guest.invitedToReception,
       guest.invitedToAfterparty,
+      guest.invitedToRehearsalDinner,
       ceremony.attending,
       reception.attending,
       afterparty.attending,
+      rehearsalDinner.attending,
       ceremony.maybe,
       reception.maybe,
-      afterparty.maybe
+      afterparty.maybe,
+      rehearsalDinner.maybe
     );
 
     // Validate dietary notes length
@@ -174,6 +182,8 @@ export async function POST(
         attendingReceptionMaybe: reception.maybe,
         attendingAfterparty: afterparty.attending,
         attendingAfterpartyMaybe: afterparty.maybe,
+        attendingRehearsalDinner: rehearsalDinner.attending,
+        attendingRehearsalDinnerMaybe: rehearsalDinner.maybe,
         mealChoice: mealChoice?.trim() || null,
         dietaryNotes: dietaryNotes?.trim() || null,
       },

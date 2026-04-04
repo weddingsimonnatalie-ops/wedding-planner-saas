@@ -15,6 +15,7 @@ import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { SwipeableRow } from "@/components/ui/SwipeableRow";
+import { getEvents, getEventBadgeLetter } from "@/lib/eventNames";
 
 interface Guest {
   id: string;
@@ -28,12 +29,15 @@ interface Guest {
   invitedToCeremony: boolean;
   invitedToReception: boolean;
   invitedToAfterparty: boolean;
+  invitedToRehearsalDinner: boolean;
   attendingCeremony: boolean | null;
   attendingReception: boolean | null;
   attendingAfterparty: boolean | null;
+  attendingRehearsalDinner: boolean | null;
   attendingCeremonyMaybe: boolean;
   attendingReceptionMaybe: boolean;
   attendingAfterpartyMaybe: boolean;
+  attendingRehearsalDinnerMaybe: boolean;
   mealChoice: string | null;
   table: { id: string; name: string } | null;
   unsubscribedAt: string | Date | null;
@@ -93,7 +97,8 @@ interface EmailDialogState {
 export function GuestList({ guests, groups, mealOptions, tables, totalGuests, stats, hasFilters, currentFilters }: Props) {
   const router = useRouter();
   const perms = usePermissions();
-  const { subscriptionStatus } = useWedding();
+  const { subscriptionStatus, eventNames } = useWedding();
+  const events = getEvents(eventNames, true); // Include disabled events for filter options
   const canSendEmail = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
   const emailBlockReason = getEmailBlockReason(subscriptionStatus);
   const [isPending, startTransition] = useTransition();
@@ -182,17 +187,14 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
 
   const filters = currentFilters;
 
-  const EVENT_LABELS: Record<string, string> = {
-    invited_ceremony:         "Invited to Ceremony",
-    invited_reception:        "Invited to Reception",
-    invited_afterparty:       "Invited to Afterparty",
-    attending_ceremony:       "Attending Ceremony",
-    attending_reception:      "Attending Reception",
-    attending_afterparty:     "Attending Afterparty",
-    not_attending_ceremony:   "Not attending Ceremony",
-    not_attending_reception:  "Not attending Reception",
-    not_attending_afterparty: "Not attending Afterparty",
-  };
+  // Build dynamic event labels from configuration
+  const EVENT_LABELS: Record<string, string> = {};
+  events.forEach((event) => {
+    const dbField = event.key === "meal" ? "reception" : event.key === "eveningParty" ? "afterparty" : event.key;
+    EVENT_LABELS[`invited_${dbField}`] = `Invited to ${event.name}`;
+    EVENT_LABELS[`attending_${dbField}`] = `Attending ${event.name}`;
+    EVENT_LABELS[`not_attending_${dbField}`] = `Not attending ${event.name}`;
+  });
 
   const activeFilterCount = [filters.status, filters.group, filters.tableAssigned || filters.tableId, filters.event, filters.meal, filters.dietary].filter(Boolean).length;
   const hasActiveFilters = activeFilterCount > 0 || !!filters.search;
@@ -771,19 +773,34 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                 >
                   <option value="">All events</option>
                   <optgroup label="─────────────────────────">
-                    <option value="invited_ceremony">Invited to Ceremony</option>
-                    <option value="invited_reception">Invited to Reception</option>
-                    <option value="invited_afterparty">Invited to Afterparty</option>
+                    {events.filter(e => e.enabled).map((event) => {
+                      const dbField = event.key === "meal" ? "reception" : event.key === "eveningParty" ? "afterparty" : event.key;
+                      return (
+                        <option key={`invited_${dbField}`} value={`invited_${dbField}`}>
+                          Invited to {event.name}
+                        </option>
+                      );
+                    })}
                   </optgroup>
                   <optgroup label="─────────────────────────">
-                    <option value="attending_ceremony">Attending Ceremony</option>
-                    <option value="attending_reception">Attending Reception</option>
-                    <option value="attending_afterparty">Attending Afterparty</option>
+                    {events.filter(e => e.enabled).map((event) => {
+                      const dbField = event.key === "meal" ? "reception" : event.key === "eveningParty" ? "afterparty" : event.key;
+                      return (
+                        <option key={`attending_${dbField}`} value={`attending_${dbField}`}>
+                          Attending {event.name}
+                        </option>
+                      );
+                    })}
                   </optgroup>
                   <optgroup label="─────────────────────────">
-                    <option value="not_attending_ceremony">Not attending Ceremony</option>
-                    <option value="not_attending_reception">Not attending Reception</option>
-                    <option value="not_attending_afterparty">Not attending Afterparty</option>
+                    {events.filter(e => e.enabled).map((event) => {
+                      const dbField = event.key === "meal" ? "reception" : event.key === "eveningParty" ? "afterparty" : event.key;
+                      return (
+                        <option key={`not_attending_${dbField}`} value={`not_attending_${dbField}`}>
+                          Not attending {event.name}
+                        </option>
+                      );
+                    })}
                   </optgroup>
                 </select>
               </div>
@@ -1112,24 +1129,44 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                     </div>
                     <div className="flex items-center gap-1.5 mt-1 text-xs text-gray-500 ml-6">
                       <RsvpStatusBadge status={g.rsvpStatus} short />
-                      {[
-                        { key: "C", invited: g.invitedToCeremony,   attending: g.attendingCeremony,   maybe: g.attendingCeremonyMaybe },
-                        { key: "R", invited: g.invitedToReception,  attending: g.attendingReception,  maybe: g.attendingReceptionMaybe },
-                        { key: "A", invited: g.invitedToAfterparty, attending: g.attendingAfterparty, maybe: g.attendingAfterpartyMaybe },
-                      ].map(({ key, invited, attending, maybe }) => (
-                        <span
-                          key={key}
-                          className={`inline-flex items-center justify-center w-4 h-4 rounded text-[10px] font-bold ${
-                            !invited ? "opacity-0" :
-                            attending === true  ? "bg-green-100 text-green-700" :
-                            attending === false ? "bg-red-100 text-red-600" :
-                            maybe               ? "bg-amber-100 text-amber-700" :
-                            "bg-gray-100 text-gray-400"
-                          }`}
-                        >
-                          {key}
-                        </span>
-                      ))}
+                      {events.filter(e => e.enabled).map((event) => {
+                        const invitedMap: Record<string, boolean> = {
+                          ceremony: !!g.invitedToCeremony,
+                          meal: !!g.invitedToReception,
+                          eveningParty: !!g.invitedToAfterparty,
+                          rehearsalDinner: !!g.invitedToRehearsalDinner,
+                        };
+                        const attendingMap: Record<string, boolean | null> = {
+                          ceremony: g.attendingCeremony,
+                          meal: g.attendingReception,
+                          eveningParty: g.attendingAfterparty,
+                          rehearsalDinner: g.attendingRehearsalDinner,
+                        };
+                        const maybeMap: Record<string, boolean> = {
+                          ceremony: g.attendingCeremonyMaybe,
+                          meal: g.attendingReceptionMaybe,
+                          eveningParty: g.attendingAfterpartyMaybe,
+                          rehearsalDinner: g.attendingRehearsalDinnerMaybe,
+                        };
+                        const invited = invitedMap[event.key];
+                        const attending = attendingMap[event.key];
+                        const maybe = maybeMap[event.key];
+                        if (!invited) return null;
+                        return (
+                          <span
+                            key={event.key}
+                            title={event.name}
+                            className={`inline-flex items-center justify-center w-4 h-4 rounded text-[10px] font-bold ${
+                              attending === true  ? "bg-green-100 text-green-700" :
+                              attending === false ? "bg-red-100 text-red-600" :
+                              maybe               ? "bg-amber-100 text-amber-700" :
+                              "bg-gray-100 text-gray-400"
+                            }`}
+                          >
+                            {getEventBadgeLetter(event.name)}
+                          </span>
+                        );
+                      })}
                       {g.unsubscribedAt && (
                         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px] shrink-0">
                           <XCircle className="w-3 h-3" />
@@ -1212,30 +1249,49 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                     <td className="px-4 py-3 text-gray-600">{g.groupName ?? <span className="text-gray-300">—</span>}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
-                        {[
-                          { key: "C", label: "Ceremony",   invited: g.invitedToCeremony,   attending: g.attendingCeremony,   maybe: g.attendingCeremonyMaybe },
-                          { key: "R", label: "Reception",  invited: g.invitedToReception,  attending: g.attendingReception,  maybe: g.attendingReceptionMaybe },
-                          { key: "A", label: "Afterparty", invited: g.invitedToAfterparty, attending: g.attendingAfterparty, maybe: g.attendingAfterpartyMaybe },
-                        ].map(({ key, label, invited, attending, maybe }) => (
-                          <span
-                            key={key}
-                            title={!invited ? undefined :
-                              attending === true  ? `${label}: attending` :
-                              attending === false ? `${label}: not attending` :
-                              maybe               ? `${label}: maybe` :
-                              `${label}: no answer yet`
-                            }
-                            className={`inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold ${
-                              !invited ? "opacity-0 pointer-events-none" :
-                              attending === true  ? "bg-green-100 text-green-700" :
-                              attending === false ? "bg-red-100 text-red-600" :
-                              maybe               ? "bg-amber-100 text-amber-700" :
-                              "bg-gray-100 text-gray-400"
-                            }`}
-                          >
-                            {key}
-                          </span>
-                        ))}
+                        {events.filter(e => e.enabled).map((event) => {
+                          const invitedMap: Record<string, boolean> = {
+                            ceremony: !!g.invitedToCeremony,
+                            meal: !!g.invitedToReception,
+                            eveningParty: !!g.invitedToAfterparty,
+                            rehearsalDinner: !!g.invitedToRehearsalDinner,
+                          };
+                          const attendingMap: Record<string, boolean | null> = {
+                            ceremony: g.attendingCeremony,
+                            meal: g.attendingReception,
+                            eveningParty: g.attendingAfterparty,
+                            rehearsalDinner: g.attendingRehearsalDinner,
+                          };
+                          const maybeMap: Record<string, boolean> = {
+                            ceremony: g.attendingCeremonyMaybe,
+                            meal: g.attendingReceptionMaybe,
+                            eveningParty: g.attendingAfterpartyMaybe,
+                            rehearsalDinner: g.attendingRehearsalDinnerMaybe,
+                          };
+                          const invited = invitedMap[event.key];
+                          const attending = attendingMap[event.key];
+                          const maybe = maybeMap[event.key];
+                          if (!invited) return null;
+                          return (
+                            <span
+                              key={event.key}
+                              title={
+                                attending === true  ? `${event.name}: attending` :
+                                attending === false ? `${event.name}: not attending` :
+                                maybe               ? `${event.name}: maybe` :
+                                `${event.name}: no answer yet`
+                              }
+                              className={`inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold ${
+                                attending === true  ? "bg-green-100 text-green-700" :
+                                attending === false ? "bg-red-100 text-red-600" :
+                                maybe               ? "bg-amber-100 text-amber-700" :
+                                "bg-gray-100 text-gray-400"
+                              }`}
+                            >
+                              {getEventBadgeLetter(event.name)}
+                            </span>
+                          );
+                        })}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -1300,7 +1356,14 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
             </table>
             <div className="px-4 py-2 border-t border-gray-100 bg-gray-50 text-xs text-gray-400">
               Showing {guests.length} guest{guests.length !== 1 ? "s" : ""}
-              {" · C = Ceremony, R = Reception, A = Afterparty · Green = attending, Red = not attending, Grey = no answer"}
+              {" · "}
+              {events.filter(e => e.enabled).map((event, i, arr) => (
+                <span key={event.key}>
+                  {getEventBadgeLetter(event.name)} = {event.name}
+                  {i < arr.length - 1 && ", "}
+                </span>
+              ))}
+              {" · Green = attending, Red = not attending, Grey = no answer"}
             </div>
           </div>
         </div>

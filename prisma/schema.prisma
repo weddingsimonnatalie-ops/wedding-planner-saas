@@ -108,6 +108,16 @@ model Wedding {
   trialEndsAt          DateTime?
   gracePeriodEndsAt    DateTime?
 
+  // Event name configuration
+  ceremonyEnabled        Boolean @default(true)
+  ceremonyName           String  @default("Ceremony")
+  mealEnabled            Boolean @default(true)
+  mealName               String  @default("Wedding Breakfast")
+  eveningPartyEnabled    Boolean @default(true)
+  eveningPartyName       String  @default("Evening Reception")
+  rehearsalDinnerEnabled Boolean @default(false)
+  rehearsalDinnerName    String  @default("Rehearsal Dinner")
+
   // Data retention
   cancelledAt          DateTime?
   deleteScheduledAt    DateTime?
@@ -203,15 +213,18 @@ model Guest {
   rsvpStatus      RsvpStatus @default(PENDING)
   rsvpRespondedAt DateTime?
 
-  invitedToCeremony        Boolean  @default(true)
-  invitedToReception       Boolean  @default(true)
-  invitedToAfterparty      Boolean  @default(false)
-  attendingCeremony        Boolean?
-  attendingReception       Boolean?
-  attendingAfterparty      Boolean?
-  attendingCeremonyMaybe   Boolean  @default(false)
-  attendingReceptionMaybe  Boolean  @default(false)
-  attendingAfterpartyMaybe Boolean  @default(false)
+  invitedToCeremony          Boolean  @default(true)
+  invitedToReception         Boolean  @default(true)
+  invitedToAfterparty        Boolean  @default(false)
+  invitedToRehearsalDinner   Boolean  @default(false)
+  attendingCeremony          Boolean?
+  attendingReception         Boolean?
+  attendingAfterparty        Boolean?
+  attendingRehearsalDinner   Boolean?
+  attendingCeremonyMaybe     Boolean  @default(false)
+  attendingReceptionMaybe    Boolean  @default(false)
+  attendingAfterpartyMaybe   Boolean  @default(false)
+  attendingRehearsalDinnerMaybe Boolean @default(false)
 
   mealChoice   String?
   dietaryNotes String?

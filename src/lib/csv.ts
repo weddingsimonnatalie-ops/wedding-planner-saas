@@ -8,6 +8,7 @@ export interface CsvGuestRow {
   invitedToCeremony: boolean;
   invitedToReception: boolean;
   invitedToAfterparty: boolean;
+  invitedToRehearsalDinner: boolean;
   notes?: string;
 }
 
@@ -54,6 +55,7 @@ export function parseGuestCsv(content: string): CsvParseResult {
         invitedToCeremony: true,
         invitedToReception: true,
         invitedToAfterparty: false,
+        invitedToRehearsalDinner: false,
         _error: "First name and last name are required",
         _line: lineNum,
       });
@@ -70,6 +72,7 @@ export function parseGuestCsv(content: string): CsvParseResult {
       invitedToCeremony: parseBool(vals[col("ceremony")] ?? vals[col("invited to ceremony")], true),
       invitedToReception: parseBool(vals[col("reception")] ?? vals[col("invited to reception")], true),
       invitedToAfterparty: parseBool(vals[col("afterparty")] ?? vals[col("invited to afterparty")], false),
+      invitedToRehearsalDinner: parseBool(vals[col("rehearsal dinner")] ?? vals[col("rehearsal")], false),
       notes: vals[col("notes")]?.trim() || undefined,
       _line: lineNum,
     });
@@ -104,7 +107,7 @@ function splitCsvLine(line: string): string[] {
 }
 
 export const CSV_TEMPLATE_HEADERS =
-  "First Name,Last Name,Email,Phone,Group Name,Is Child,Ceremony,Reception,Afterparty,Notes\n";
+  "First Name,Last Name,Email,Phone,Group Name,Is Child,Ceremony,Reception,Afterparty,Rehearsal Dinner,Notes\n";
 
 export function guestsToCsv(
   guests: {
@@ -117,6 +120,7 @@ export function guestsToCsv(
     invitedToCeremony: boolean;
     invitedToReception: boolean;
     invitedToAfterparty: boolean;
+    invitedToRehearsalDinner: boolean;
     rsvpStatus: string;
     mealChoice?: string | null;
     dietaryNotes?: string | null;
@@ -125,7 +129,7 @@ export function guestsToCsv(
   }[]
 ): string {
   const header =
-    "First Name,Last Name,Email,Phone,Group Name,Is Child,Ceremony,Reception,Afterparty,RSVP Status,Meal Choice,Dietary Notes,Table,Notes";
+    "First Name,Last Name,Email,Phone,Group Name,Is Child,Ceremony,Reception,Afterparty,Rehearsal Dinner,RSVP Status,Meal Choice,Dietary Notes,Table,Notes";
   const rows = guests.map((g) =>
     [
       g.firstName,
@@ -137,6 +141,7 @@ export function guestsToCsv(
       g.invitedToCeremony ? "y" : "n",
       g.invitedToReception ? "y" : "n",
       g.invitedToAfterparty ? "y" : "n",
+      g.invitedToRehearsalDinner ? "y" : "n",
       g.rsvpStatus,
       g.mealChoice ?? "",
       g.dietaryNotes ?? "",

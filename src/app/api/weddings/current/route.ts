@@ -48,6 +48,15 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       themeHue,
       currencySymbol,
       totalBudget,
+      // Event name configuration
+      ceremonyEnabled,
+      ceremonyName,
+      mealEnabled,
+      mealName,
+      eveningPartyEnabled,
+      eveningPartyName,
+      rehearsalDinnerEnabled,
+      rehearsalDinnerName,
     } = body;
 
     const errors = validateFields([
@@ -58,6 +67,41 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     ]);
     if (errors.length > 0) {
       return NextResponse.json({ error: errors[0] }, { status: 400 });
+    }
+
+    // Validate that at least one event is enabled
+    if (
+      ceremonyEnabled !== undefined ||
+      mealEnabled !== undefined ||
+      eveningPartyEnabled !== undefined ||
+      rehearsalDinnerEnabled !== undefined
+    ) {
+      // Get current values for events not being updated
+      const currentWedding = await withTenantContext(weddingId, (tx) =>
+        tx.wedding.findUnique({
+          where: { id: weddingId },
+          select: {
+            ceremonyEnabled: true,
+            mealEnabled: true,
+            eveningPartyEnabled: true,
+            rehearsalDinnerEnabled: true,
+          },
+        })
+      );
+
+      const finalCeremonyEnabled = ceremonyEnabled !== undefined ? Boolean(ceremonyEnabled) : currentWedding?.ceremonyEnabled ?? true;
+      const finalMealEnabled = mealEnabled !== undefined ? Boolean(mealEnabled) : currentWedding?.mealEnabled ?? true;
+      const finalEveningPartyEnabled = eveningPartyEnabled !== undefined ? Boolean(eveningPartyEnabled) : currentWedding?.eveningPartyEnabled ?? true;
+      const finalRehearsalDinnerEnabled = rehearsalDinnerEnabled !== undefined ? Boolean(rehearsalDinnerEnabled) : currentWedding?.rehearsalDinnerEnabled ?? false;
+
+      const enabledCount = [finalCeremonyEnabled, finalMealEnabled, finalEveningPartyEnabled, finalRehearsalDinnerEnabled].filter(Boolean).length;
+
+      if (enabledCount < 1) {
+        return NextResponse.json(
+          { error: "At least one event must be enabled" },
+          { status: 400 }
+        );
+      }
     }
 
     const wedding = await withTenantContext(weddingId, (tx) =>
@@ -83,6 +127,23 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
             : {}),
           ...(totalBudget !== undefined
             ? { totalBudget: totalBudget !== null ? Math.max(0, Number(totalBudget)) : null }
+            : {}),
+          // Event name configuration
+          ...(ceremonyEnabled !== undefined ? { ceremonyEnabled: Boolean(ceremonyEnabled) } : {}),
+          ...(ceremonyName !== undefined
+            ? { ceremonyName: String(ceremonyName).trim().slice(0, 50) || "Ceremony" }
+            : {}),
+          ...(mealEnabled !== undefined ? { mealEnabled: Boolean(mealEnabled) } : {}),
+          ...(mealName !== undefined
+            ? { mealName: String(mealName).trim().slice(0, 50) || "Wedding Breakfast" }
+            : {}),
+          ...(eveningPartyEnabled !== undefined ? { eveningPartyEnabled: Boolean(eveningPartyEnabled) } : {}),
+          ...(eveningPartyName !== undefined
+            ? { eveningPartyName: String(eveningPartyName).trim().slice(0, 50) || "Evening Reception" }
+            : {}),
+          ...(rehearsalDinnerEnabled !== undefined ? { rehearsalDinnerEnabled: Boolean(rehearsalDinnerEnabled) } : {}),
+          ...(rehearsalDinnerName !== undefined
+            ? { rehearsalDinnerName: String(rehearsalDinnerName).trim().slice(0, 50) || "Rehearsal Dinner" }
             : {}),
         },
       })

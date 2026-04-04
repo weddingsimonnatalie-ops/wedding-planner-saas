@@ -16,6 +16,15 @@ interface WeddingConfig {
   themeHue: number;
   currencySymbol: string;
   totalBudget?: number | null;
+  // Event name configuration
+  ceremonyEnabled: boolean;
+  ceremonyName: string;
+  mealEnabled: boolean;
+  mealName: string;
+  eveningPartyEnabled: boolean;
+  eveningPartyName: string;
+  rehearsalDinnerEnabled: boolean;
+  rehearsalDinnerName: string;
 }
 import { UsersManager } from "./UsersManager";
 import { MealOptionsList } from "./MealOptionsList";
@@ -24,6 +33,7 @@ import { NotificationsForm } from "./NotificationsForm";
 import { SessionTimeoutSettings } from "./SessionTimeoutSettings";
 import { ThemeColorPicker } from "./ThemeColorPicker";
 import { CurrencySymbolPicker } from "./CurrencySymbolPicker";
+import { EventNamesSettings } from "./EventNamesSettings";
 import { TwoFactorSettings } from "./TwoFactorSettings";
 import { TrustedDevicesList } from "./TrustedDevicesList";
 import { WeddingConfigForm } from "@/components/wedding-config-form";
@@ -138,6 +148,25 @@ export function SettingsClient({
               Choose the symbol shown next to monetary amounts throughout the planner.
             </p>
             <CurrencySymbolPicker initialSymbol={config?.currencySymbol ?? "£"} />
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-base font-medium text-gray-900 mb-1">Event Names</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Customise the names of events shown on RSVP forms and guest lists.
+            </p>
+            <EventNamesSettings
+              initialConfig={{
+                ceremonyEnabled: config?.ceremonyEnabled ?? true,
+                ceremonyName: config?.ceremonyName ?? "Ceremony",
+                mealEnabled: config?.mealEnabled ?? true,
+                mealName: config?.mealName ?? "Wedding Breakfast",
+                eveningPartyEnabled: config?.eveningPartyEnabled ?? true,
+                eveningPartyName: config?.eveningPartyName ?? "Evening Reception",
+                rehearsalDinnerEnabled: config?.rehearsalDinnerEnabled ?? false,
+                rehearsalDinnerName: config?.rehearsalDinnerName ?? "Rehearsal Dinner",
+              }}
+            />
           </div>
         </div>
       )}

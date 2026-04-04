@@ -3,11 +3,23 @@
 import { createContext, useContext } from "react";
 import type { UserRole, SubStatus } from "@prisma/client";
 
+export type EventNamesConfig = {
+  ceremonyEnabled: boolean;
+  ceremonyName: string;
+  mealEnabled: boolean;
+  mealName: string;
+  eveningPartyEnabled: boolean;
+  eveningPartyName: string;
+  rehearsalDinnerEnabled: boolean;
+  rehearsalDinnerName: string;
+};
+
 type WeddingContextValue = {
   weddingId: string;
   role: UserRole;
   subscriptionStatus: SubStatus;
   currencySymbol: string;
+  eventNames: EventNamesConfig;
 };
 
 const WeddingContext = createContext<WeddingContextValue | null>(null);
@@ -17,16 +29,18 @@ export function WeddingProvider({
   role,
   subscriptionStatus,
   currencySymbol,
+  eventNames,
   children,
 }: {
   weddingId: string;
   role: UserRole;
   subscriptionStatus: SubStatus;
   currencySymbol: string;
+  eventNames: EventNamesConfig;
   children: React.ReactNode;
 }) {
   return (
-    <WeddingContext.Provider value={{ weddingId, role, subscriptionStatus, currencySymbol }}>
+    <WeddingContext.Provider value={{ weddingId, role, subscriptionStatus, currencySymbol, eventNames }}>
       {children}
     </WeddingContext.Provider>
   );
@@ -36,7 +50,22 @@ export function useWedding(): WeddingContextValue {
   const ctx = useContext(WeddingContext);
   if (!ctx) {
     // Fallback for components rendered outside the dashboard layout
-    return { weddingId: "", role: "VIEWER", subscriptionStatus: "TRIALING", currencySymbol: "£" };
+    return {
+      weddingId: "",
+      role: "VIEWER",
+      subscriptionStatus: "TRIALING",
+      currencySymbol: "£",
+      eventNames: {
+        ceremonyEnabled: true,
+        ceremonyName: "Ceremony",
+        mealEnabled: true,
+        mealName: "Wedding Breakfast",
+        eveningPartyEnabled: true,
+        eveningPartyName: "Evening Reception",
+        rehearsalDinnerEnabled: false,
+        rehearsalDinnerName: "Rehearsal Dinner",
+      },
+    };
   }
   return ctx;
 }

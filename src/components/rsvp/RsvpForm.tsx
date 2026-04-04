@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle, Heart, XCircle, HelpCircle } from "lucide-react";
+import { getEvents } from "@/lib/eventNames";
 
 type EventChoice = "yes" | "no" | "maybe";
 
@@ -9,6 +10,17 @@ interface MealOption {
   id: string;
   name: string;
   course: string | null;
+}
+
+interface EventNamesConfig {
+  ceremonyEnabled: boolean;
+  ceremonyName: string;
+  mealEnabled: boolean;
+  mealName: string;
+  eveningPartyEnabled: boolean;
+  eveningPartyName: string;
+  rehearsalDinnerEnabled: boolean;
+  rehearsalDinnerName: string;
 }
 
 interface GuestRsvpData {
@@ -19,12 +31,15 @@ interface GuestRsvpData {
   invitedToCeremony: boolean;
   invitedToReception: boolean;
   invitedToAfterparty: boolean;
+  invitedToRehearsalDinner: boolean;
   attendingCeremony: boolean | null;
   attendingReception: boolean | null;
   attendingAfterparty: boolean | null;
+  attendingRehearsalDinner: boolean | null;
   attendingCeremonyMaybe: boolean;
   attendingReceptionMaybe: boolean;
   attendingAfterpartyMaybe: boolean;
+  attendingRehearsalDinnerMaybe: boolean;
   mealChoice: string | null;
   dietaryNotes: string | null;
 }
@@ -33,6 +48,7 @@ interface SubmittedSnapshot {
   ceremonyCh: EventChoice | null;
   receptionCh: EventChoice | null;
   afterpartyCh: EventChoice | null;
+  rehearsalDinnerCh: EventChoice | null;
   mealChoice: string | null;
 }
 
@@ -40,6 +56,7 @@ interface Props {
   token: string;
   guest: GuestRsvpData;
   mealOptions: MealOption[];
+  eventNames: EventNamesConfig;
 }
 
 function deriveChoice(attending: boolean | null, maybe: boolean): EventChoice | null {
@@ -49,7 +66,8 @@ function deriveChoice(attending: boolean | null, maybe: boolean): EventChoice | 
   return null;
 }
 
-export function RsvpForm({ token, guest, mealOptions }: Props) {
+export function RsvpForm({ token, guest, mealOptions, eventNames }: Props) {
+  const events = getEvents(eventNames);
   const alreadyResponded = guest.rsvpStatus !== "PENDING" && guest.rsvpRespondedAt;
 
   const [ceremonyCh, setCeremonyCh] = useState<EventChoice>(
@@ -60,6 +78,9 @@ export function RsvpForm({ token, guest, mealOptions }: Props) {
   );
   const [afterpartyCh, setAfterpartyCh] = useState<EventChoice>(
     deriveChoice(guest.attendingAfterparty, guest.attendingAfterpartyMaybe) ?? "yes"
+  );
+  const [rehearsalDinnerCh, setRehearsalDinnerCh] = useState<EventChoice>(
+    deriveChoice(guest.attendingRehearsalDinner, guest.attendingRehearsalDinnerMaybe) ?? "yes"
   );
   const [mealChoice, setMealChoice] = useState(guest.mealChoice ?? "");
   const [dietaryNotes, setDietaryNotes] = useState(guest.dietaryNotes ?? "");
@@ -80,6 +101,7 @@ export function RsvpForm({ token, guest, mealOptions }: Props) {
           ceremonyCh:   guest.invitedToCeremony   ? (deriveChoice(guest.attendingCeremony,   guest.attendingCeremonyMaybe)   ?? "yes") : null,
           receptionCh:  guest.invitedToReception  ? (deriveChoice(guest.attendingReception,  guest.attendingReceptionMaybe)  ?? "yes") : null,
           afterpartyCh: guest.invitedToAfterparty ? (deriveChoice(guest.attendingAfterparty, guest.attendingAfterpartyMaybe) ?? "yes") : null,
+          rehearsalDinnerCh: guest.invitedToRehearsalDinner ? (deriveChoice(guest.attendingRehearsalDinner, guest.attendingRehearsalDinnerMaybe) ?? "yes") : null,
           mealChoice: guest.mealChoice,
         };
     return (
@@ -89,6 +111,7 @@ export function RsvpForm({ token, guest, mealOptions }: Props) {
         guest={guest}
         snap={snap}
         mealOptions={mealOptions}
+        eventNames={eventNames}
         onChangeResponse={() => { setEditing(true); setSubmitted(false); }}
       />
     );
@@ -103,6 +126,7 @@ export function RsvpForm({ token, guest, mealOptions }: Props) {
       attendingCeremony:   guest.invitedToCeremony   ? ceremonyCh   : undefined,
       attendingReception:  guest.invitedToReception  ? receptionCh  : undefined,
       attendingAfterparty: guest.invitedToAfterparty ? afterpartyCh : undefined,
+      attendingRehearsalDinner: guest.invitedToRehearsalDinner ? rehearsalDinnerCh : undefined,
       mealChoice: mealChoice || null,
       dietaryNotes: dietaryNotes || null,
     };
@@ -122,6 +146,7 @@ export function RsvpForm({ token, guest, mealOptions }: Props) {
         ceremonyCh:   guest.invitedToCeremony   ? ceremonyCh   : null,
         receptionCh:  guest.invitedToReception  ? receptionCh  : null,
         afterpartyCh: guest.invitedToAfterparty ? afterpartyCh : null,
+        rehearsalDinnerCh: guest.invitedToRehearsalDinner ? rehearsalDinnerCh : null,
         mealChoice: mealChoice || null,
       });
       setSubmitted(true);
@@ -130,32 +155,31 @@ export function RsvpForm({ token, guest, mealOptions }: Props) {
     }
   }
 
+  // Map event keys to state and setters
+  const eventStateMap: Record<string, { val: EventChoice; set: (v: EventChoice) => void; invited: boolean }> = {
+    ceremony: { val: ceremonyCh, set: setCeremonyCh, invited: guest.invitedToCeremony },
+    meal: { val: receptionCh, set: setReceptionCh, invited: guest.invitedToReception },
+    eveningParty: { val: afterpartyCh, set: setAfterpartyCh, invited: guest.invitedToAfterparty },
+    rehearsalDinner: { val: rehearsalDinnerCh, set: setRehearsalDinnerCh, invited: guest.invitedToRehearsalDinner },
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Per-event attendance */}
-      {guest.invitedToCeremony && (
-        <EventToggle
-          label="Ceremony"
-          value={ceremonyCh}
-          onChange={setCeremonyCh}
-        />
-      )}
-      {guest.invitedToReception && (
-        <EventToggle
-          label="Wedding reception"
-          value={receptionCh}
-          onChange={setReceptionCh}
-        />
-      )}
-      {guest.invitedToAfterparty && (
-        <EventToggle
-          label="Afterparty"
-          value={afterpartyCh}
-          onChange={setAfterpartyCh}
-        />
-      )}
+      {events.map((event) => {
+        const state = eventStateMap[event.key];
+        if (!state || !state.invited) return null;
+        return (
+          <EventToggle
+            key={event.key}
+            label={event.name}
+            value={state.val}
+            onChange={state.set}
+          />
+        );
+      })}
 
-      {/* Meal choice (only if invited to reception) */}
+      {/* Meal choice (only if invited to the meal event) */}
       {guest.invitedToReception && mealOptions.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Meal choice</label>
@@ -211,6 +235,7 @@ function ConfirmationScreen({
   guest,
   snap,
   mealOptions,
+  eventNames,
   onChangeResponse,
 }: {
   status: string;
@@ -218,12 +243,15 @@ function ConfirmationScreen({
   guest: GuestRsvpData;
   snap: SubmittedSnapshot;
   mealOptions: MealOption[];
+  eventNames: EventNamesConfig;
   onChangeResponse: () => void;
 }) {
+  const eventsConfig = getEvents(eventNames);
   const events = [
-    { label: "Ceremony",          invited: guest.invitedToCeremony,   choice: snap.ceremonyCh   },
-    { label: "Wedding reception", invited: guest.invitedToReception,  choice: snap.receptionCh  },
-    { label: "Afterparty",        invited: guest.invitedToAfterparty, choice: snap.afterpartyCh },
+    { key: "ceremony" as const, label: eventNames.ceremonyName, invited: guest.invitedToCeremony, choice: snap.ceremonyCh },
+    { key: "meal" as const, label: eventNames.mealName, invited: guest.invitedToReception, choice: snap.receptionCh },
+    { key: "eveningParty" as const, label: eventNames.eveningPartyName, invited: guest.invitedToAfterparty, choice: snap.afterpartyCh },
+    { key: "rehearsalDinner" as const, label: eventNames.rehearsalDinnerName, invited: guest.invitedToRehearsalDinner, choice: snap.rehearsalDinnerCh },
   ].filter(e => e.invited);
 
   const attendingReception = snap.receptionCh === "yes";

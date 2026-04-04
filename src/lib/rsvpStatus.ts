@@ -21,12 +21,15 @@ export function calculateRsvpStatus(
   invitedToCeremony: boolean,
   invitedToReception: boolean,
   invitedToAfterparty: boolean,
+  invitedToRehearsalDinner: boolean,
   attendingCeremony: boolean | null,
   attendingReception: boolean | null,
   attendingAfterparty: boolean | null,
+  attendingRehearsalDinner: boolean | null,
   attendingCeremonyMaybe = false,
   attendingReceptionMaybe = false,
   attendingAfterpartyMaybe = false,
+  attendingRehearsalDinnerMaybe = false,
 ): string {
   type State = "yes" | "no" | "maybe" | "unanswered";
 
@@ -38,9 +41,10 @@ export function calculateRsvpStatus(
   }
 
   const states: State[] = [];
-  if (invitedToCeremony)   states.push(classify(attendingCeremony,   attendingCeremonyMaybe));
-  if (invitedToReception)  states.push(classify(attendingReception,  attendingReceptionMaybe));
-  if (invitedToAfterparty) states.push(classify(attendingAfterparty, attendingAfterpartyMaybe));
+  if (invitedToCeremony)        states.push(classify(attendingCeremony,   attendingCeremonyMaybe));
+  if (invitedToReception)       states.push(classify(attendingReception,  attendingReceptionMaybe));
+  if (invitedToAfterparty)      states.push(classify(attendingAfterparty, attendingAfterpartyMaybe));
+  if (invitedToRehearsalDinner) states.push(classify(attendingRehearsalDinner, attendingRehearsalDinnerMaybe));
 
   if (states.length === 0)                     return "PENDING";
   if (states.every(s => s === "unanswered"))   return "PENDING";

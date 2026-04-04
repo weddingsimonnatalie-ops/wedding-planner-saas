@@ -6,7 +6,7 @@ import { LayoutShell } from "@/components/LayoutShell";
 import { InactivityTimer } from "@/components/auth/InactivityTimer";
 import { RefreshProvider } from "@/context/RefreshContext";
 import { FormDirtyProvider } from "@/context/FormDirtyContext";
-import { WeddingProvider } from "@/context/WeddingContext";
+import { WeddingProvider, type EventNamesConfig } from "@/context/WeddingContext";
 import { GracePeriodBanner } from "@/components/billing/GracePeriodBanner";
 import { prisma } from "@/lib/prisma";
 
@@ -26,7 +26,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
       : Promise.resolve(0),
     prisma.wedding.findUnique({
       where: { id: ctx.weddingId },
-      select: { subscriptionStatus: true, gracePeriodEndsAt: true, themeHue: true, currencySymbol: true },
+      select: {
+        subscriptionStatus: true,
+        gracePeriodEndsAt: true,
+        themeHue: true,
+        currencySymbol: true,
+        ceremonyEnabled: true,
+        ceremonyName: true,
+        mealEnabled: true,
+        mealName: true,
+        eveningPartyEnabled: true,
+        eveningPartyName: true,
+        rehearsalDinnerEnabled: true,
+        rehearsalDinnerName: true,
+      },
     }),
   ]);
 
@@ -53,10 +66,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const themeHue = weddingBilling?.themeHue ?? 330;
   const currencySymbol = weddingBilling?.currencySymbol ?? "£";
 
+  const eventNames: EventNamesConfig = {
+    ceremonyEnabled: weddingBilling?.ceremonyEnabled ?? true,
+    ceremonyName: weddingBilling?.ceremonyName ?? "Ceremony",
+    mealEnabled: weddingBilling?.mealEnabled ?? true,
+    mealName: weddingBilling?.mealName ?? "Wedding Breakfast",
+    eveningPartyEnabled: weddingBilling?.eveningPartyEnabled ?? true,
+    eveningPartyName: weddingBilling?.eveningPartyName ?? "Evening Reception",
+    rehearsalDinnerEnabled: weddingBilling?.rehearsalDinnerEnabled ?? false,
+    rehearsalDinnerName: weddingBilling?.rehearsalDinnerName ?? "Rehearsal Dinner",
+  };
+
   return (
     <>
     <style dangerouslySetInnerHTML={{ __html: `:root { --primary: ${themeHue} 60% 55%; --ring: ${themeHue} 60% 55%; }` }} />
-    <WeddingProvider weddingId={ctx.weddingId} role={ctx.role} subscriptionStatus={weddingBilling?.subscriptionStatus ?? "TRIALING"} currencySymbol={currencySymbol}>
+    <WeddingProvider weddingId={ctx.weddingId} role={ctx.role} subscriptionStatus={weddingBilling?.subscriptionStatus ?? "TRIALING"} currencySymbol={currencySymbol} eventNames={eventNames}>
       <RefreshProvider>
         <FormDirtyProvider>
           {weddingBilling && (

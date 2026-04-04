@@ -42,12 +42,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         event === "invited_ceremony"   ? { invitedToCeremony: true }
         : event === "invited_reception"  ? { invitedToReception: true }
         : event === "invited_afterparty" ? { invitedToAfterparty: true }
+        : event === "invited_rehearsal_dinner" ? { invitedToRehearsalDinner: true }
         : event === "attending_ceremony"  ? { invitedToCeremony: true,  OR: [{ attendingCeremony: true },  { attendingCeremony: null,  rsvpStatus: overrideStatuses }] }
         : event === "attending_reception" ? { invitedToReception: true, OR: [{ attendingReception: true }, { attendingReception: null, rsvpStatus: overrideStatuses }] }
         : event === "attending_afterparty"? { invitedToAfterparty: true,OR: [{ attendingAfterparty: true },{ attendingAfterparty: null,rsvpStatus: overrideStatuses }] }
+        : event === "attending_rehearsal_dinner"? { invitedToRehearsalDinner: true,OR: [{ attendingRehearsalDinner: true },{ attendingRehearsalDinner: null,rsvpStatus: overrideStatuses }] }
         : event === "not_attending_ceremony"   ? { invitedToCeremony: true,  attendingCeremony: false }
         : event === "not_attending_reception"  ? { invitedToReception: true, attendingReception: false }
         : event === "not_attending_afterparty" ? { invitedToAfterparty: true,attendingAfterparty: false }
+        : event === "not_attending_rehearsal_dinner" ? { invitedToRehearsalDinner: true,attendingRehearsalDinner: false }
         : {};
 
     const where: Record<string, unknown> = {
@@ -87,12 +90,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
             invitedToCeremony: true,
             invitedToReception: true,
             invitedToAfterparty: true,
+            invitedToRehearsalDinner: true,
             attendingCeremony: true,
             attendingReception: true,
             attendingAfterparty: true,
+            attendingRehearsalDinner: true,
             attendingCeremonyMaybe: true,
             attendingReceptionMaybe: true,
             attendingAfterpartyMaybe: true,
+            attendingRehearsalDinnerMaybe: true,
             mealChoice: true,
             dietaryNotes: true,
             seatNumber: true,
@@ -142,6 +148,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         invitedToCeremony,
         invitedToReception,
         invitedToAfterparty,
+        invitedToRehearsalDinner,
         notes,
     } = body;
 
@@ -185,6 +192,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             invitedToCeremony: invitedToCeremony !== false,
             invitedToReception: invitedToReception !== false,
             invitedToAfterparty: Boolean(invitedToAfterparty),
+            invitedToRehearsalDinner: Boolean(invitedToRehearsalDinner),
             notes: notes?.trim() || null,
           },
       });
