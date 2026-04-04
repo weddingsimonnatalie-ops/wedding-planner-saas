@@ -18,6 +18,7 @@ const publicPaths = [
   "/api/inngest",
   "/api/invites/accept",
   "/api/auth/session-check",
+  "/api/internal",
 ];
 
 // Paths that need auth but not a wedding context (wedding selection / setup)
@@ -94,6 +95,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!login|rsvp|unsubscribe|api/auth|api/register|api/rsvp|api/health|api/webhooks|api/inngest|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|rsvp|unsubscribe|api/auth|api/register|api/rsvp|api/health|api/webhooks|api/inngest|api/internal|_next/static|_next/image|favicon.ico).*)",
   ],
 };
