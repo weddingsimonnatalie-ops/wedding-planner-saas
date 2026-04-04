@@ -16,8 +16,8 @@ import { checkRateLimit, extractIp } from "@/lib/rate-limit";
 export async function GET(req: NextRequest): Promise<NextResponse> {
   // Rate limit by IP — 10 requests per minute
   const ip = extractIp(req);
-  const { allowed } = await checkRateLimit(`internal-health:${ip}`, 10, 60_000);
-  if (!allowed) {
+  const { limited } = await checkRateLimit(`internal-health:${ip}`, 10, 60_000);
+  if (limited) {
     return NextResponse.json({ ok: false, error: "Rate limit exceeded" }, { status: 429 });
   }
 
