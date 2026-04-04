@@ -211,25 +211,37 @@ export async function PATCH(
       if (rsvpStatus !== undefined && rsvpStatus !== "PARTIAL" && current) {
         if (rsvpStatus === "ACCEPTED") {
             attendingOverride = {
-              attendingCeremony:        current.invitedToCeremony        ? true  : null,
-              attendingReception:       current.invitedToReception       ? true  : null,
-              attendingAfterparty:      current.invitedToAfterparty      ? true  : null,
-              attendingRehearsalDinner: current.invitedToRehearsalDinner ? true  : null,
+              attendingCeremony:             current.invitedToCeremony        ? true  : null,
+              attendingCeremonyMaybe:        false,
+              attendingReception:            current.invitedToReception       ? true  : null,
+              attendingReceptionMaybe:       false,
+              attendingAfterparty:           current.invitedToAfterparty      ? true  : null,
+              attendingAfterpartyMaybe:      false,
+              attendingRehearsalDinner:      current.invitedToRehearsalDinner ? true  : null,
+              attendingRehearsalDinnerMaybe: false,
             };
         } else if (rsvpStatus === "DECLINED") {
             attendingOverride = {
-              attendingCeremony:        current.invitedToCeremony        ? false : null,
-              attendingReception:       current.invitedToReception       ? false : null,
-              attendingAfterparty:      current.invitedToAfterparty      ? false : null,
-              attendingRehearsalDinner: current.invitedToRehearsalDinner ? false : null,
+              attendingCeremony:             current.invitedToCeremony        ? false : null,
+              attendingCeremonyMaybe:        false,
+              attendingReception:            current.invitedToReception       ? false : null,
+              attendingReceptionMaybe:       false,
+              attendingAfterparty:           current.invitedToAfterparty      ? false : null,
+              attendingAfterpartyMaybe:      false,
+              attendingRehearsalDinner:      current.invitedToRehearsalDinner ? false : null,
+              attendingRehearsalDinnerMaybe: false,
             };
         } else {
-            // PENDING or MAYBE — clear all attending fields
+            // PENDING or MAYBE — clear all attending and maybe fields
             attendingOverride = {
-              attendingCeremony:        null,
-              attendingReception:       null,
-              attendingAfterparty:      null,
-              attendingRehearsalDinner: null,
+              attendingCeremony:             null,
+              attendingCeremonyMaybe:        false,
+              attendingReception:            null,
+              attendingReceptionMaybe:       false,
+              attendingAfterparty:           null,
+              attendingAfterpartyMaybe:      false,
+              attendingRehearsalDinner:      null,
+              attendingRehearsalDinnerMaybe: false,
             };
         }
       }
