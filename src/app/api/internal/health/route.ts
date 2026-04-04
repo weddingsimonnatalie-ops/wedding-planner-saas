@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, extractIp } from "@/lib/rate-limit";
 
 /**
  * GET /api/internal/health
@@ -9,25 +10,24 @@ import { NextRequest, NextResponse } from "next/server";
  * ADMIN_INTERNAL_SECRET are correctly configured.
  *
  * Returns 200 { ok: true } if the Bearer token matches.
- * Returns 401 if the token is missing or wrong.
- * Returns 503 if ADMIN_INTERNAL_SECRET is not set on this app.
+ * Returns 401 for missing/wrong token (deliberately no detail on misconfiguration).
+ * Returns 429 if the IP is hammering the endpoint.
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const secret = process.env.ADMIN_INTERNAL_SECRET;
-  if (!secret) {
-    return NextResponse.json(
-      { ok: false, error: "ADMIN_INTERNAL_SECRET is not configured on the SaaS app" },
-      { status: 503 }
-    );
+  // Rate limit by IP — 10 requests per minute
+  const ip = extractIp(req);
+  const { allowed } = await checkRateLimit(`internal-health:${ip}`, 10, 60_000);
+  if (!allowed) {
+    return NextResponse.json({ ok: false, error: "Rate limit exceeded" }, { status: 429 });
   }
 
+  const secret = process.env.ADMIN_INTERNAL_SECRET;
   const authHeader = req.headers.get("authorization");
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token || token !== secret) {
-    return NextResponse.json(
-      { ok: false, error: "Unauthorized — ADMIN_INTERNAL_SECRET does not match" },
-      { status: 401 }
-    );
+
+  // Always check auth first — never leak whether the secret is configured
+  if (!secret || !token || token !== secret) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
   return NextResponse.json({ ok: true });
