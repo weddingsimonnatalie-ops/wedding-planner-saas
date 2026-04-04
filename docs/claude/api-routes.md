@@ -68,6 +68,16 @@ POST       /api/billing/sync            — Manually sync Stripe subscription da
 POST       /api/billing/checkout        — Create Stripe checkout session for users without subscription; ADMIN only; returns { checkoutUrl }
 GET        /api/billing/portal          — Stripe billing portal redirect; ADMIN only
 GET/POST   /api/guests                  — Guest list + create; optional pagination: ?skip=0&take=100 (max 500)
+POST       /api/register               — Public registration endpoint; checks AppConfig.registrationsEnabled before creating account; returns 403 if disabled
+```
+
+### Internal API (admin console only)
+
+These routes are protected by a Bearer token (`ADMIN_INTERNAL_SECRET`) and bypass the user auth middleware. They are **not** accessible to normal users.
+
+```
+POST /api/internal/cancel-subscription — Cancel a Stripe subscription by ID; called by admin console (no Stripe SDK in admin); body: { stripeSubscriptionId }; returns { ok: true }
+GET  /api/internal/health              — Connectivity + secret check for admin console; rate limited 10 req/min per IP; returns { ok: true } or 401
 ```
 
 ---
