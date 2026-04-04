@@ -57,11 +57,13 @@ export async function PUT(
     invitedToCeremony,
     invitedToReception,
     invitedToAfterparty,
+    invitedToRehearsalDinner,
     notes,
     rsvpStatus,
     attendingCeremony,
     attendingReception,
     attendingAfterparty,
+    attendingRehearsalDinner,
     mealChoice,
     dietaryNotes,
     } = body;
@@ -87,20 +89,23 @@ export async function PUT(
     const invCeremony   = invitedToCeremony !== false;
     const invReception  = invitedToReception !== false;
     const invAfterparty = Boolean(invitedToAfterparty);
+    const invRehearsalDinner = Boolean(invitedToRehearsalDinner);
 
     // If the guest has answered at least one invited event, auto-calculate status.
     // Otherwise fall back to the manually selected status (allows admin to set MAYBE/PENDING).
     const hasAnyAnswer =
     (invCeremony   && attendingCeremony   !== undefined && attendingCeremony   !== null) ||
     (invReception  && attendingReception  !== undefined && attendingReception  !== null) ||
-    (invAfterparty && attendingAfterparty !== undefined && attendingAfterparty !== null);
+    (invAfterparty && attendingAfterparty !== undefined && attendingAfterparty !== null) ||
+    (invRehearsalDinner && attendingRehearsalDinner !== undefined && attendingRehearsalDinner !== null);
 
     const computedStatus = hasAnyAnswer
     ? calculateRsvpStatus(
-          invCeremony, invReception, invAfterparty,
+          invCeremony, invReception, invAfterparty, invRehearsalDinner,
           attendingCeremony   ?? null,
           attendingReception  ?? null,
           attendingAfterparty ?? null,
+          attendingRehearsalDinner ?? null,
         )
     : (rsvpStatus as RsvpStatus | undefined);
 
@@ -141,11 +146,13 @@ export async function PUT(
             invitedToCeremony:   invCeremony,
             invitedToReception:  invReception,
             invitedToAfterparty: invAfterparty,
+            invitedToRehearsalDinner: invRehearsalDinner,
             notes: notes?.trim() || null,
             ...(computedStatus !== undefined ? { rsvpStatus: computedStatus as RsvpStatus } : {}),
             ...(attendingCeremony   !== undefined ? { attendingCeremony,   attendingCeremonyMaybe:   false } : {}),
             ...(attendingReception  !== undefined ? { attendingReception,  attendingReceptionMaybe:  false } : {}),
             ...(attendingAfterparty !== undefined ? { attendingAfterparty, attendingAfterpartyMaybe: false } : {}),
+            ...(attendingRehearsalDinner !== undefined ? { attendingRehearsalDinner, attendingRehearsalDinnerMaybe: false } : {}),
             ...(mealChoice   !== undefined ? { mealChoice: mealChoice || null }             : {}),
             ...(dietaryNotes !== undefined ? { dietaryNotes: dietaryNotes?.trim() || null } : {}),
         },
@@ -195,7 +202,7 @@ export async function PATCH(
       const current = needsFetch
         ? await tx.guest.findUnique({
               where: { id, weddingId },
-              select: { invitedToCeremony: true, invitedToReception: true, invitedToAfterparty: true, tableId: true },
+              select: { invitedToCeremony: true, invitedToReception: true, invitedToAfterparty: true, invitedToRehearsalDinner: true, tableId: true },
             })
         : null;
 
@@ -204,22 +211,25 @@ export async function PATCH(
       if (rsvpStatus !== undefined && rsvpStatus !== "PARTIAL" && current) {
         if (rsvpStatus === "ACCEPTED") {
             attendingOverride = {
-              attendingCeremony:   current.invitedToCeremony   ? true  : null,
-              attendingReception:  current.invitedToReception  ? true  : null,
-              attendingAfterparty: current.invitedToAfterparty ? true  : null,
+              attendingCeremony:        current.invitedToCeremony        ? true  : null,
+              attendingReception:       current.invitedToReception       ? true  : null,
+              attendingAfterparty:      current.invitedToAfterparty      ? true  : null,
+              attendingRehearsalDinner: current.invitedToRehearsalDinner ? true  : null,
             };
         } else if (rsvpStatus === "DECLINED") {
             attendingOverride = {
-              attendingCeremony:   current.invitedToCeremony   ? false : null,
-              attendingReception:  current.invitedToReception  ? false : null,
-              attendingAfterparty: current.invitedToAfterparty ? false : null,
+              attendingCeremony:        current.invitedToCeremony        ? false : null,
+              attendingReception:       current.invitedToReception       ? false : null,
+              attendingAfterparty:      current.invitedToAfterparty      ? false : null,
+              attendingRehearsalDinner: current.invitedToRehearsalDinner ? false : null,
             };
         } else {
             // PENDING or MAYBE — clear all attending fields
             attendingOverride = {
-              attendingCeremony:   null,
-              attendingReception:  null,
-              attendingAfterparty: null,
+              attendingCeremony:        null,
+              attendingReception:       null,
+              attendingAfterparty:      null,
+              attendingRehearsalDinner: null,
             };
         }
       }
