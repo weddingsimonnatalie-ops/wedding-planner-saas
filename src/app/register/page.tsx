@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import RegisterClient from "./RegisterClient";
 
-// Server component - checks PayPal config and registration status
+export const dynamic = "force-dynamic";
+
 export default async function RegisterPage() {
   const paypalConfigured = !!(
     process.env.PAYPAL_CLIENT_ID &&
