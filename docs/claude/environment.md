@@ -63,3 +63,9 @@ All variables are in `.env` and passed to the `app` container via `docker-compos
 **SMTP notes**: If `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS` are all blank, the email library returns `ok: true` but logs to console — the app does not error on missing SMTP config. This is useful during development.
 
 **Rate limiting notes**: All rate limit settings have sensible defaults and are optional. The email rate limit applies per authenticated user (for RSVP email sending and payment reminders). The RSVP rate limit has two layers: per-IP (prevents scraping) and per-token (prevents enumeration). For multi-instance deployments, set `REDIS_URL` to share rate limit state across instances.
+
+## Admin Console Integration
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ADMIN_INTERNAL_SECRET` | Yes (if admin console is deployed) | Shared secret for admin console → SaaS internal API calls (e.g. Stripe subscription cancellation). Must match the `ADMIN_INTERNAL_SECRET` set in the admin console. Generate with `openssl rand -base64 32`. Used as a Bearer token on `POST /api/internal/cancel-subscription`. |
