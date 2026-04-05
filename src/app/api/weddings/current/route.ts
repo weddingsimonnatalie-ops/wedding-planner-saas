@@ -40,8 +40,6 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     const {
       coupleName,
       weddingDate,
-      venueName,
-      venueAddress,
       reminderEmail,
       sessionTimeout,
       sessionWarningTime,
@@ -65,8 +63,6 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
 
     const errors = validateFields([
       { value: coupleName, field: "coupleName" },
-      { value: venueName, field: "venueName" },
-      { value: venueAddress, field: "venueAddress" },
       { value: reminderEmail, field: "email" },
     ]);
     if (errors.length > 0) {
@@ -116,9 +112,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
           ...(weddingDate !== undefined
             ? { weddingDate: weddingDate ? new Date(weddingDate) : null }
             : {}),
-          ...(venueName !== undefined ? { venueName: venueName?.trim() || null } : {}),
-          ...(venueAddress !== undefined ? { venueAddress: venueAddress?.trim() || null } : {}),
-          ...(reminderEmail !== undefined ? { reminderEmail: reminderEmail?.trim() || null } : {}),
+...(reminderEmail !== undefined ? { reminderEmail: reminderEmail?.trim() || null } : {}),
           ...(sessionTimeout !== undefined ? { sessionTimeout: Number(sessionTimeout) } : {}),
           ...(sessionWarningTime !== undefined
             ? { sessionWarningTime: Number(sessionWarningTime) }

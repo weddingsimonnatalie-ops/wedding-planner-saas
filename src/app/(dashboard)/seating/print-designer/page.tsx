@@ -12,7 +12,7 @@ export default async function PrintDesignerPage() {
     Promise.all([
       tx.wedding.findUnique({
         where: { id: weddingId },
-        select: { coupleName: true, weddingDate: true, venueName: true },
+        select: { coupleName: true, weddingDate: true },
       }),
       tx.table.findMany({
         where: { weddingId },
@@ -61,7 +61,6 @@ export default async function PrintDesignerPage() {
             ? {
                 coupleName: wedding.coupleName,
                 weddingDate: wedding.weddingDate,
-                venueName: wedding.venueName,
               }
             : null
         }

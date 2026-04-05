@@ -29,7 +29,6 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
         select: {
           coupleName: true,
           weddingDate: true,
-          venueName: true,
           themeHue: true,
           ceremonyEnabled: true,
           ceremonyName: true,
@@ -88,9 +87,6 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
           </h1>
           {weddingDate && (
             <p className="text-sm text-gray-500 mt-1">{weddingDate}</p>
-          )}
-          {wedding?.venueName && (
-            <p className="text-sm text-gray-400">{wedding.venueName}</p>
           )}
         </div>
 

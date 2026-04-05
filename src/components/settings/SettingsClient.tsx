@@ -8,8 +8,6 @@ import { UserRole, MealOption } from "@prisma/client";
 interface WeddingConfig {
   coupleName: string;
   weddingDate: Date | null;
-  venueName: string | null;
-  venueAddress: string | null;
   reminderEmail: string | null;
   sessionTimeout: number;
   sessionWarningTime: number;

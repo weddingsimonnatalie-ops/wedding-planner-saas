@@ -18,8 +18,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     select: {
       coupleName: true,
       weddingDate: true,
-      venueName: true,
-      venueAddress: true,
       reminderEmail: true,
     },
   });

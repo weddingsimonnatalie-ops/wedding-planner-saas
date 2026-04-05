@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Heart, Calendar, MapPin, Users, Banknote } from "lucide-react";
+import { Heart, Calendar, Users, Banknote } from "lucide-react";
 
 const CURRENCY_SYMBOLS = [
   { symbol: "£", label: "GBP" },
@@ -19,8 +19,6 @@ function OnboardingWeddingContent() {
   const searchParams = useSearchParams();
   const [coupleName, setCoupleName] = useState("");
   const [weddingDate, setWeddingDate] = useState("");
-  const [venueName, setVenueName] = useState("");
-  const [venueAddress, setVenueAddress] = useState("");
   const [currencySymbol, setCurrencySymbol] = useState("£");
   const [customCurrency, setCustomCurrency] = useState("");
   const [loading, setLoading] = useState(false);
@@ -64,8 +62,6 @@ function OnboardingWeddingContent() {
         if (data.weddingDate) {
           setWeddingDate(new Date(data.weddingDate).toISOString().split("T")[0]);
         }
-        if (data.venueName) setVenueName(data.venueName);
-        if (data.venueAddress) setVenueAddress(data.venueAddress);
         if (data.currencySymbol) {
           const isCommon = CURRENCY_SYMBOLS.some(c => c.symbol === data.currencySymbol);
           if (isCommon) {
@@ -97,8 +93,6 @@ function OnboardingWeddingContent() {
         body: JSON.stringify({
           coupleName: coupleName.trim(),
           weddingDate: weddingDate || null,
-          venueName: venueName.trim() || null,
-          venueAddress: venueAddress.trim() || null,
           currencySymbol: currencySymbol || "£",
         }),
       });
@@ -174,35 +168,6 @@ function OnboardingWeddingContent() {
                 value={weddingDate}
                 onChange={(e) => setWeddingDate(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5" />
-                  Venue name
-                </span>
-              </label>
-              <input
-                type="text"
-                value={venueName}
-                onChange={(e) => setVenueName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                placeholder="The Grand Hotel"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Venue address
-              </label>
-              <input
-                type="text"
-                value={venueAddress}
-                onChange={(e) => setVenueAddress(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                placeholder="123 High Street, London"
               />
             </div>
 

@@ -70,12 +70,10 @@ export const LENGTH_LIMITS = {
   // Identifiers
   groupName: 100,
   coupleName: 100,
-  venueName: 255,
 
   // Long text
   notes: 5000,
   dietaryNotes: 1000,
-  venueAddress: 5000,
   description: 1000,
   appointmentNotes: 1000,
   taskNotes: 5000,

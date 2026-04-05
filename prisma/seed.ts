@@ -15,9 +15,7 @@ async function main() {
       data: {
         coupleName: "Simon & Natalie",
         weddingDate: new Date("2026-09-06"),
-        venueName: "Stubton Hall",
-        venueAddress: "Stubton, Newark NG23 5DA",
-        subscriptionStatus: "ACTIVE",
+subscriptionStatus: "ACTIVE",
         currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
       },
     });

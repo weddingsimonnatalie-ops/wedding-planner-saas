@@ -7,7 +7,6 @@ interface PrintDesignerProps {
   weddingConfig: {
     coupleName: string | null;
     weddingDate: Date | null;
-    venueName: string | null;
   } | null;
   tables: TableBlockData[];
 }
@@ -210,7 +209,7 @@ export function PrintDesigner({ weddingConfig, tables }: PrintDesignerProps) {
 <body>
   <div class="header">
     <div class="couple-name">${weddingConfig?.coupleName || "Wedding Seating"}</div>
-    ${formattedDate ? `<div class="event-info">${formattedDate}${weddingConfig?.venueName ? ` · ${weddingConfig.venueName}` : ""}</div>` : ""}
+    ${formattedDate ? `<div class="event-info">${formattedDate}</div>` : ""}
   </div>
 
   <div class="tables-grid">
@@ -399,7 +398,6 @@ export function PrintDesigner({ weddingConfig, tables }: PrintDesignerProps) {
                   month: "long",
                   year: "numeric",
                 })}
-                {weddingConfig.venueName && ` · ${weddingConfig.venueName}`}
               </div>
             )}
           </div>

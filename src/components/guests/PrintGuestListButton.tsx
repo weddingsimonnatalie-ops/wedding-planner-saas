@@ -27,8 +27,6 @@ interface Guest {
 interface WeddingConfig {
   coupleName: string;
   weddingDate: string | null;
-  venueName: string | null;
-  venueAddress: string | null;
 }
 
 interface MealOption {
@@ -126,8 +124,7 @@ function generateFullGuestListHtml(
   }
 
   const dateStr = formatWeddingDate(config.weddingDate);
-  const venueStr = config.venueName ?? "";
-  const subtitle = [dateStr, venueStr].filter(Boolean).join(" — ");
+  const subtitle = dateStr;
 
   return `<!DOCTYPE html>
 <html lang="en">

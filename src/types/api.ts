@@ -267,8 +267,6 @@ export interface WeddingConfigResponse {
   id: number;
   coupleName: string;
   weddingDate: Date | null;
-  venueName: string | null;
-  venueAddress: string | null;
   reminderEmail: string | null;
   ceremonyEnabled: boolean;
   ceremonyName: string;

@@ -6,8 +6,6 @@ import { useWedding } from "@/context/WeddingContext";
 interface WeddingConfigLike {
   coupleName: string;
   weddingDate: Date | null;
-  venueName: string | null;
-  venueAddress: string | null;
   totalBudget?: number | null;
 }
 
@@ -24,10 +22,6 @@ export function WeddingConfigForm({ config }: WeddingConfigFormProps) {
     config?.weddingDate
       ? new Date(config.weddingDate).toISOString().split("T")[0]
       : ""
-  );
-  const [venueName, setVenueName] = useState(config?.venueName ?? "");
-  const [venueAddress, setVenueAddress] = useState(
-    config?.venueAddress ?? ""
   );
   const [totalBudget, setTotalBudget] = useState(
     config?.totalBudget != null ? String(config.totalBudget) : ""
@@ -48,8 +42,6 @@ export function WeddingConfigForm({ config }: WeddingConfigFormProps) {
       body: JSON.stringify({
         coupleName,
         weddingDate: weddingDate || null,
-        venueName: venueName || null,
-        venueAddress: venueAddress || null,
         totalBudget: totalBudget !== "" ? parseFloat(totalBudget) : null,
       }),
     });
@@ -88,32 +80,6 @@ export function WeddingConfigForm({ config }: WeddingConfigFormProps) {
           value={weddingDate}
           onChange={(e) => setWeddingDate(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Venue name
-        </label>
-        <input
-          type="text"
-          value={venueName}
-          onChange={(e) => setVenueName(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-          placeholder="The Grand Hall"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Venue address
-        </label>
-        <textarea
-          value={venueAddress}
-          onChange={(e) => setVenueAddress(e.target.value)}
-          rows={2}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-          placeholder="123 Main Street, London"
         />
       </div>
 

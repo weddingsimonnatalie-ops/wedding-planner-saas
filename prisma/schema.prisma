@@ -86,8 +86,6 @@ model Wedding {
   id                   String          @id @default(cuid())
   coupleName           String          @default("Our Wedding")
   weddingDate          DateTime?
-  venueName            String?
-  venueAddress         String?
   reminderEmail        String?
   sessionTimeout       Int             @default(30)
   sessionWarningTime   Int             @default(5)

@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     const [weddingConfig, tables, mealOptions] = await withTenantContext(weddingId, (tx) =>
       Promise.all([
-        tx.wedding.findUnique({ where: { id: weddingId }, select: { coupleName: true, weddingDate: true, venueName: true } }),
+        tx.wedding.findUnique({ where: { id: weddingId }, select: { coupleName: true, weddingDate: true } }),
         tx.table.findMany({
           where: {
             weddingId,
@@ -55,7 +55,6 @@ export async function GET(req: NextRequest) {
           ? {
               coupleName: weddingConfig.coupleName,
               weddingDate: weddingConfig.weddingDate,
-              venueName: weddingConfig.venueName,
             }
           : null,
         tables: tables.map((t) => ({

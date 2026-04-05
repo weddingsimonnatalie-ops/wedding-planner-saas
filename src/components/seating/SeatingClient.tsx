@@ -96,7 +96,7 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
     const res = await fetchApi("/api/seating/print-data");
     const data = await res.json();
     const cfg = data.weddingConfig;
-    const subtitle = [cfg?.coupleName, cfg?.venueName].filter(Boolean).join(" · ");
+    const subtitle = cfg?.coupleName ?? "";
     const sections = (data.tables ?? []).map((t: any) => {
       const rows = (t.guests ?? []).map((g: any) => {
         const seat = g.seatNumber != null ? ` — Seat ${g.seatNumber}` : "";
