@@ -1,40 +1,34 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
-import { requireAdmin } from "@/lib/api-auth";
-import { withTenantContext } from "@/lib/tenant";
+import { requireAdmin, requireRole } from "@/lib/api-auth";
 import { apiJson } from "@/lib/api-response";
 import { validateFields } from "@/lib/validation";
 import { getCached, invalidateCache } from "@/lib/cache";
-import { verifyWeddingCookieId, COOKIE_NAME } from "@/lib/wedding-cookie";
-
+import { withTenantContext } from "@/lib/tenant";
 import { handleDbError } from "@/lib/db-error";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const cookieValue = req.cookies.get(COOKIE_NAME)?.value;
-    if (!cookieValue) return NextResponse.json({ error: "No wedding context" }, { status: 401 });
-    const weddingId = await verifyWeddingCookieId(cookieValue);
-    if (!weddingId) return NextResponse.json({ error: "Invalid wedding context" }, { status: 401 });
+    const auth = await requireRole(["ADMIN", "VIEWER", "RSVP_MANAGER"], req);
+    if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const categories = await getCached(
-      `${weddingId}:appointment-categories`,
+      `${weddingId}:planning-categories`,
       300_000,
       () => withTenantContext(weddingId, (tx) =>
-        tx.appointmentCategory.findMany({ where: { weddingId }, orderBy: { sortOrder: "asc" } })
+        tx.planningCategory.findMany({
+          where: { weddingId },
+          orderBy: { sortOrder: "asc" },
+        })
       )
     );
 
     return apiJson(categories);
-
   } catch (error) {
     return handleDbError(error);
   }
-
 }
 
 export async function POST(req: NextRequest) {
@@ -44,11 +38,11 @@ export async function POST(req: NextRequest) {
     const { weddingId } = auth;
 
     const data = await req.json();
+
     if (!data.name?.trim()) {
-        return NextResponse.json({ error: "Name is required" }, { status: 400 });
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
-    // Validate field lengths
     const errors = validateFields([
       { value: data.name, field: "categoryName", required: true },
     ]);
@@ -57,27 +51,28 @@ export async function POST(req: NextRequest) {
     }
 
     const category = await withTenantContext(weddingId, async (tx) => {
-      const maxOrder = await tx.appointmentCategory.aggregate({
+      const maxOrder = await tx.planningCategory.aggregate({
         where: { weddingId },
         _max: { sortOrder: true },
       });
       const nextOrder = (maxOrder._max.sortOrder ?? -10) + 10;
 
-      return tx.appointmentCategory.create({
+      return tx.planningCategory.create({
         data: {
           weddingId,
           name: data.name.trim(),
           colour: data.colour ?? "#6366f1",
           sortOrder: data.sortOrder ?? nextOrder,
+          ...(data.allocatedAmount !== undefined && data.allocatedAmount !== null && data.allocatedAmount !== ""
+            ? { allocatedAmount: parseFloat(data.allocatedAmount) }
+            : {}),
         },
       });
     });
 
-    await invalidateCache(`${weddingId}:appointment-categories`);
+    await invalidateCache(`${weddingId}:planning-categories`);
     return NextResponse.json(category, { status: 201 });
-
   } catch (error) {
     return handleDbError(error);
   }
-
 }

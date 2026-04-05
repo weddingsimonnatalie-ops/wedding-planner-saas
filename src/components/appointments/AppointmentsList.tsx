@@ -151,7 +151,7 @@ export function AppointmentsList() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    fetchApi("/api/appointment-categories")
+    fetchApi("/api/planning-categories")
       .then(r => r.json())
       .then((data: ApptCategory[]) => setApptCategories(data))
       .catch(() => {});

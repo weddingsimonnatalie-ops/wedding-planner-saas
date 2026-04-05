@@ -57,7 +57,7 @@ export function SupplierModal({ onClose }: Props) {
   useFormDirtyRegistration("supplier-modal", "New Supplier", isDirty);
 
   useEffect(() => {
-    fetchApi("/api/supplier-categories")
+    fetchApi("/api/planning-categories")
       .then(r => r.json())
       .then((data: SupplierCategory[]) => {
         setCategories(data);

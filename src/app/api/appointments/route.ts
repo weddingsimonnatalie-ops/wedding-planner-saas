@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     if (categoryId !== undefined && categoryId !== null) {
         const category = await withTenantContext(weddingId, (tx) =>
-          tx.appointmentCategory.findUnique({ where: { id: categoryId, weddingId } })
+          tx.planningCategory.findFirst({ where: { id: categoryId, weddingId } })
         );
         if (!category) return NextResponse.json({ error: "Invalid categoryId" }, { status: 400 });
     }

@@ -192,27 +192,11 @@ export function SettingsClient({
       {tab === "categories" && (
         <div className="space-y-6">
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Supplier Categories</h2>
+            <h2 className="text-base font-medium text-gray-900 mb-1">Planning Categories</h2>
             <p className="text-sm text-gray-500 mb-4">
-              Categories for organising your suppliers.
+              Shared categories for organising your suppliers, appointments, and tasks.
             </p>
-            <CategoriesManager entityType="supplier" apiBase="/api/supplier-categories" />
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Appointment Categories</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Categories for organising your appointments.
-            </p>
-            <CategoriesManager entityType="appointment" apiBase="/api/appointment-categories" />
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Task Categories</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Categories for organising your tasks.
-            </p>
-            <CategoriesManager entityType="task" apiBase="/api/task-categories" />
+            <CategoriesManager entityType="planning" apiBase="/api/planning-categories" />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">

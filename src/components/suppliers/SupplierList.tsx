@@ -57,7 +57,7 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
   }, [initialSuppliers]);
 
   useEffect(() => {
-    fetchApi("/api/supplier-categories")
+    fetchApi("/api/planning-categories")
       .then(r => r.json())
       .then((data: SupplierCategory[]) => setCategories(data))
       .catch(() => {

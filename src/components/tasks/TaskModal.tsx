@@ -126,7 +126,7 @@ export function TaskModal({ initial, prefillSupplierId, prefillSupplierName, onS
   useFormDirtyRegistration(formId, formName, isDirty);
 
   useEffect(() => {
-    fetchApi("/api/task-categories")
+    fetchApi("/api/planning-categories")
       .then(r => r.json())
       .then((data: TaskCategory[]) => setCategories(data.filter(c => c.isActive)))
       .catch(() => {});

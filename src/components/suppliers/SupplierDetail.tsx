@@ -199,7 +199,7 @@ export function SupplierDetail({ initialSupplier }: { initialSupplier: SupplierD
 
   // Load supplier categories
   useEffect(() => {
-    fetchApi("/api/supplier-categories")
+    fetchApi("/api/planning-categories")
       .then(r => r.json())
       .then((data: SupplierCategory[]) => setCategories(data))
       .catch(() => {});

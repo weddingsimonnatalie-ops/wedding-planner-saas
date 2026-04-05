@@ -23,7 +23,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   });
 
   const data = await withTenantContext(weddingId, async (tx) => {
-    const [guests, suppliers, payments, appointments, tasks, mealOptions, supplierCategories, appointmentCategories, taskCategories] =
+    const [guests, suppliers, payments, appointments, tasks, mealOptions, planningCategories] =
       await Promise.all([
         tx.guest.findMany({
           where: { weddingId },
@@ -73,15 +73,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           where: { weddingId },
           orderBy: { sortOrder: "asc" },
         }),
-        tx.supplierCategory.findMany({
-          where: { weddingId },
-          orderBy: { sortOrder: "asc" },
-        }),
-        tx.appointmentCategory.findMany({
-          where: { weddingId },
-          orderBy: { sortOrder: "asc" },
-        }),
-        tx.taskCategory.findMany({
+        tx.planningCategory.findMany({
           where: { weddingId },
           orderBy: { sortOrder: "asc" },
         }),
@@ -94,9 +86,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       appointments,
       tasks,
       mealOptions,
-      supplierCategories,
-      appointmentCategories,
-      taskCategories,
+      planningCategories,
     };
   });
 
@@ -188,18 +178,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         description: m.description,
         isActive: m.isActive,
       })),
-      supplierCategories: data.supplierCategories.map((c) => ({
-        name: c.name,
-        colour: c.colour,
-      })),
-      appointmentCategories: data.appointmentCategories.map((c) => ({
-        name: c.name,
-        colour: c.colour,
-      })),
-      taskCategories: data.taskCategories.map((c) => ({
+      planningCategories: data.planningCategories.map((c) => ({
         name: c.name,
         colour: c.colour,
         isActive: c.isActive,
+        allocatedAmount: c.allocatedAmount,
       })),
     },
     null,

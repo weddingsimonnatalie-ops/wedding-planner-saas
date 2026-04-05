@@ -102,64 +102,37 @@ subscriptionStatus: "ACTIVE",
   // -------------------------------------------------------------------------
   const weddingId = wedding.id;
 
-  // SupplierCategory
-  const supplierCatCount = await prisma.supplierCategory.count({ where: { weddingId } });
-  if (supplierCatCount === 0) {
+  // PlanningCategory — shared across suppliers, appointments, and tasks
+  const planningCatCount = await prisma.planningCategory.count({ where: { weddingId } });
+  if (planningCatCount === 0) {
     const cats = [
-      "Venue","Catering","Photography","Videography","Florist",
-      "Music / DJ","Cake","Dress / Attire","Transport",
-      "Stationery","Hair & Makeup","Jewellery","Accommodation","Other",
+      { name: "Venue",            colour: "#14b8a6" },
+      { name: "Catering",         colour: "#f59e0b" },
+      { name: "Photography",      colour: "#3b82f6" },
+      { name: "Videography",      colour: "#6366f1" },
+      { name: "Florist",          colour: "#22c55e" },
+      { name: "Music / DJ",       colour: "#a855f7" },
+      { name: "Cake",             colour: "#ec4899" },
+      { name: "Dress / Attire",   colour: "#ec4899" },
+      { name: "Transport",        colour: "#06b6d4" },
+      { name: "Stationery",       colour: "#f97316" },
+      { name: "Hair & Makeup",    colour: "#ec4899" },
+      { name: "Jewellery",        colour: "#eab308" },
+      { name: "Accommodation",    colour: "#64748b" },
+      { name: "Fitting",          colour: "#ec4899" },
+      { name: "Tasting",          colour: "#f59e0b" },
+      { name: "Rehearsal",        colour: "#3b82f6" },
+      { name: "Consultation",     colour: "#a855f7" },
+      { name: "Admin",            colour: "#64748b" },
+      { name: "Honeymoon",        colour: "#6366f1" },
+      { name: "Other",            colour: "#6b7280" },
     ];
     for (let i = 0; i < cats.length; i++) {
-      await prisma.supplierCategory.create({
-        data: { weddingId, name: cats[i], sortOrder: i * 10, colour: "#6366f1" },
-      });
-    }
-    console.log("Seeded supplier categories");
-  }
-
-  // AppointmentCategory
-  const apptCatCount = await prisma.appointmentCategory.count({ where: { weddingId } });
-  if (apptCatCount === 0) {
-    const cats = [
-      { name: "Fitting", colour: "#ec4899" },
-      { name: "Tasting", colour: "#f59e0b" },
-      { name: "Rehearsal", colour: "#3b82f6" },
-      { name: "Consultation", colour: "#a855f7" },
-      { name: "Viewing", colour: "#14b8a6" },
-      { name: "Ceremony Practice", colour: "#6366f1" },
-      { name: "Other", colour: "#6b7280" },
-    ];
-    for (let i = 0; i < cats.length; i++) {
-      await prisma.appointmentCategory.create({
+      await prisma.planningCategory.create({
         data: { weddingId, ...cats[i], sortOrder: i * 10 },
       });
     }
-    console.log("Seeded appointment categories");
-  }
-
-  // TaskCategory
-  const taskCatCount = await prisma.taskCategory.count({ where: { weddingId } });
-  if (taskCatCount === 0) {
-    const cats = [
-      { name: "Admin",       colour: "#64748b" },
-      { name: "Venue",       colour: "#14b8a6" },
-      { name: "Catering",    colour: "#f59e0b" },
-      { name: "Attire",      colour: "#ec4899" },
-      { name: "Flowers",     colour: "#22c55e" },
-      { name: "Photography", colour: "#3b82f6" },
-      { name: "Music",       colour: "#a855f7" },
-      { name: "Stationery",  colour: "#f97316" },
-      { name: "Transport",   colour: "#06b6d4" },
-      { name: "Honeymoon",   colour: "#6366f1" },
-      { name: "Other",       colour: "#6b7280" },
-    ];
-    for (let i = 0; i < cats.length; i++) {
-      await prisma.taskCategory.create({
-        data: { weddingId, ...cats[i], sortOrder: i * 10 },
-      });
-    }
-    console.log("Seeded task categories");
+    console.log("Seeded planning categories");
   }
 
   console.log("==> Seed complete.");

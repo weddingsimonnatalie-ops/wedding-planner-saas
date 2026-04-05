@@ -3,7 +3,6 @@ import { requireAdmin } from "@/lib/api-auth";
 import { validateFields } from "@/lib/validation";
 import { invalidateCache } from "@/lib/cache";
 import { withTenantContext } from "@/lib/tenant";
-
 import { handleDbError } from "@/lib/db-error";
 
 type Params = { params: Promise<{ id: string }> };
@@ -17,7 +16,6 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
     const data = await req.json();
 
-    // Validate field lengths
     if (data.name !== undefined) {
       const errors = validateFields([
         { value: data.name, field: "categoryName", required: true },
@@ -28,7 +26,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     }
 
     const category = await withTenantContext(weddingId, (tx) =>
-      tx.supplierCategory.update({
+      tx.planningCategory.update({
         where: { id, weddingId },
         data: {
           ...(data.name !== undefined ? { name: data.name.trim() } : {}),
@@ -42,13 +40,11 @@ export async function PUT(req: NextRequest, { params }: Params) {
       })
     );
 
-    await invalidateCache(`${weddingId}:supplier-categories`);
+    await invalidateCache(`${weddingId}:planning-categories`);
     return NextResponse.json(category);
-
   } catch (error) {
     return handleDbError(error);
   }
-
 }
 
 export async function DELETE(req: NextRequest, { params }: Params) {
@@ -61,31 +57,43 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     const { searchParams } = new URL(req.url);
     const force = searchParams.get("force") === "true";
 
-    const count = await withTenantContext(weddingId, (tx) =>
-      tx.supplier.count({ where: { categoryId: id, weddingId } })
+    const category = await withTenantContext(weddingId, (tx) =>
+      tx.planningCategory.findFirst({ where: { id, weddingId } })
     );
+    if (!category) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const [supplierCount, appointmentCount, taskCount] = await withTenantContext(weddingId, (tx) =>
+      Promise.all([
+        tx.supplier.count({ where: { categoryId: id, weddingId } }),
+        tx.appointment.count({ where: { categoryId: id, weddingId } }),
+        tx.task.count({ where: { categoryId: id, weddingId } }),
+      ])
+    );
+    const count = supplierCount + appointmentCount + taskCount;
+
     if (count > 0 && !force) {
-        return NextResponse.json(
-          { error: `${count} supplier${count === 1 ? "" : "s"} use this category`, count },
-          { status: 409 }
-        );
+      return NextResponse.json(
+        { error: `${count} item${count === 1 ? "" : "s"} use this category`, count },
+        { status: 409 }
+      );
     }
 
     await withTenantContext(weddingId, async (tx) => {
       if (force && count > 0) {
-        await tx.supplier.updateMany({
-          where: { categoryId: id, weddingId },
-          data: { categoryId: null },
-        });
+        await Promise.all([
+          supplierCount > 0 && tx.supplier.updateMany({ where: { categoryId: id, weddingId }, data: { categoryId: null } }),
+          appointmentCount > 0 && tx.appointment.updateMany({ where: { categoryId: id, weddingId }, data: { categoryId: null } }),
+          taskCount > 0 && tx.task.updateMany({ where: { categoryId: id, weddingId }, data: { categoryId: null } }),
+        ]);
       }
-      await tx.supplierCategory.delete({ where: { id, weddingId } });
+      await tx.planningCategory.delete({ where: { id, weddingId } });
     });
 
-    await invalidateCache(`${weddingId}:supplier-categories`);
+    await invalidateCache(`${weddingId}:planning-categories`);
     return NextResponse.json({ ok: true });
-
   } catch (error) {
     return handleDbError(error);
   }
-
 }

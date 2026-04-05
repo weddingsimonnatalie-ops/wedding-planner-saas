@@ -22,7 +22,7 @@ interface Category {
 }
 
 interface Props {
-  entityType: "supplier" | "appointment" | "task" | "timeline";
+  entityType: "planning" | "timeline";
   apiBase: string;
 }
 
@@ -50,7 +50,7 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; count: number } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const entityLabel = entityType === "supplier" ? "supplier" : entityType === "appointment" ? "appointment" : entityType === "task" ? "task" : "event";
+  const entityLabel = entityType === "timeline" ? "event" : "item";
 
   function showToast(msg: string, ok = true) {
     setToast({ msg, ok });
@@ -89,7 +89,7 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
   async function handleSaveRow(id: string) {
     setSaving(s => ({ ...s, [id]: true }));
     const body: Record<string, unknown> = { name: editName[id], colour: editColour[id] };
-    if (entityType === "supplier") {
+    if (entityType === "planning") {
       body.allocatedAmount = editAllocated[id] === "" ? null : parseFloat(editAllocated[id]) || null;
     }
     const res = await fetch(`${apiBase}/${id}`, {
@@ -180,7 +180,7 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
     if (!newName.trim()) return;
     setAdding(true);
     const body: Record<string, unknown> = { name: newName.trim(), colour: newColour };
-    if (entityType === "supplier") {
+    if (entityType === "planning") {
       body.allocatedAmount = newAllocated === "" ? null : parseFloat(newAllocated) || null;
     }
     const res = await fetch(apiBase, {
@@ -227,7 +227,7 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
           const isDirty =
             editName[cat.id] !== cat.name ||
             editColour[cat.id] !== cat.colour ||
-            (entityType === "supplier" && (editAllocated[cat.id] ?? "") !== (cat.allocatedAmount != null ? String(cat.allocatedAmount) : ""));
+            (entityType === "planning" && (editAllocated[cat.id] ?? "") !== (cat.allocatedAmount != null ? String(cat.allocatedAmount) : ""));
 
           return (
             <div key={cat.id} className="flex items-center gap-2 py-1.5 border-b border-gray-100 last:border-0">
@@ -292,7 +292,7 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
               />
 
               {/* Budget allocation (supplier only) */}
-              {entityType === "supplier" && (
+              {entityType === "planning" && (
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <span className="text-xs text-gray-400">{currencySymbol}</span>
                   <input
@@ -374,7 +374,7 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
               className="flex-1 min-w-[160px] px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-primary"
             />
             {/* Budget allocation (supplier only) */}
-            {entityType === "supplier" && (
+            {entityType === "planning" && (
               <div className="flex items-center gap-1">
                 <span className="text-xs text-gray-400">{currencySymbol}</span>
                 <input

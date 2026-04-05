@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       });
 
       // Get all supplier categories with allocated amounts
-      const categories = await tx.supplierCategory.findMany({
+      const categories = await tx.planningCategory.findMany({
         where: { weddingId, isActive: true },
         orderBy: { sortOrder: "asc" },
         select: {

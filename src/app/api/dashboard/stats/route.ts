@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
           take: 5,
         }),
         // Budget categories with allocated amounts and paid totals
-        tx.supplierCategory.findMany({
+        tx.planningCategory.findMany({
           where: { weddingId, isActive: true },
           orderBy: { sortOrder: "asc" },
           select: {

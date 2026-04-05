@@ -20,7 +20,7 @@ export async function PUT(req: NextRequest) {
     await withTenantContext(weddingId, (tx) =>
       Promise.all(
         ids.map((id: string, index: number) =>
-          tx.taskCategory.update({
+          tx.planningCategory.update({
             where: { id, weddingId },
             data: { sortOrder: index * 10 },
           })
@@ -28,9 +28,8 @@ export async function PUT(req: NextRequest) {
       )
     );
 
-    await invalidateCache(`${weddingId}:task-categories`);
+    await invalidateCache(`${weddingId}:planning-categories`);
     return NextResponse.json({ ok: true });
-
   } catch (error) {
     return handleDbError(error);
   }

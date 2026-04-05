@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
     const [category, user, supplier] = await withTenantContext(weddingId, (tx) =>
       Promise.all([
         categoryId !== undefined && categoryId !== null
-          ? tx.taskCategory.findUnique({ where: { id: categoryId, weddingId } })
+          ? tx.planningCategory.findFirst({ where: { id: categoryId, weddingId } })
           : null,
         assignedToId !== undefined && assignedToId !== null
           ? prisma.user.findUnique({ where: { id: assignedToId } })

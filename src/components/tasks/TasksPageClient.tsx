@@ -398,7 +398,7 @@ export function TasksPageClient() {
 
   useEffect(() => {
     fetchApi("/api/users").then(r => r.ok ? r.json() : []).then(setUsers).catch(() => {});
-    fetchApi("/api/task-categories").then(r => r.ok ? r.json() : []).then(setCategories).catch(() => {});
+    fetchApi("/api/planning-categories").then(r => r.ok ? r.json() : []).then(setCategories).catch(() => {});
     fetchApi("/api/suppliers").then(r => r.ok ? r.json() : []).then(setSuppliers).catch(() => {});
   }, []);
 

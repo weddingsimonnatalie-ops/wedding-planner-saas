@@ -79,21 +79,26 @@ export interface GuestListResponse extends PaginationMeta {
 }
 
 // =============================================================================
-// SUPPLIER TYPES
+// PLANNING CATEGORY TYPES
 // =============================================================================
 
-export interface SupplierCategoryResponse {
+export interface PlanningCategoryResponse {
   id: string;
   name: string;
   colour: string;
   sortOrder: number;
   isActive: boolean;
+  allocatedAmount?: number | null;
 }
+
+// =============================================================================
+// SUPPLIER TYPES
+// =============================================================================
 
 export interface SupplierResponse {
   id: string;
   categoryId: string | null;
-  category: SupplierCategoryResponse | null;
+  category: PlanningCategoryResponse | null;
   name: string;
   contactName: string | null;
   email: string | null;
@@ -142,19 +147,11 @@ export interface PaymentListResponse extends PaginationMeta {
 // APPOINTMENT TYPES
 // =============================================================================
 
-export interface AppointmentCategoryResponse {
-  id: string;
-  name: string;
-  colour: string;
-  sortOrder: number;
-  isActive: boolean;
-}
-
 export interface AppointmentResponse {
   id: string;
   title: string;
   categoryId: string | null;
-  category: AppointmentCategoryResponse | null;
+  category: PlanningCategoryResponse | null;
   date: Date;
   location: string | null;
   notes: string | null;
@@ -169,14 +166,6 @@ export interface AppointmentResponse {
 // TASK TYPES
 // =============================================================================
 
-export interface TaskCategoryResponse {
-  id: string;
-  name: string;
-  colour: string;
-  sortOrder: number;
-  isActive: boolean;
-}
-
 export interface TaskResponse {
   id: string;
   title: string;
@@ -186,7 +175,7 @@ export interface TaskResponse {
   completedAt: Date | null;
   isCompleted: boolean;
   categoryId: string | null;
-  category: TaskCategoryResponse | null;
+  category: PlanningCategoryResponse | null;
   assignedToId: string | null;
   assignedTo: { id: string; name: string | null; email: string; role: UserRole } | null;
   supplierId: string | null;

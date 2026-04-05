@@ -138,9 +138,7 @@ model Wedding {
   appointments          Appointment[]
   tasks                 Task[]
   mealOptions           MealOption[]
-  supplierCategories    SupplierCategory[]
-  appointmentCategories AppointmentCategory[]
-  taskCategories        TaskCategory[]
+  planningCategories    PlanningCategory[]
   attachments           Attachment[]
   timelineEvents        TimelineEvent[]
   timelineCategories    TimelineCategory[]
@@ -344,17 +342,19 @@ model RoomElement {
 
 // --- SUPPLIER CATEGORIES ---
 
-model SupplierCategory {
-  id               String     @id @default(cuid())
-  weddingId        String
-  wedding          Wedding    @relation(fields: [weddingId], references: [id], onDelete: Cascade)
-  name             String
-  allocatedAmount  Float?     // Budget allocation for this category
-  colour           String     @default("#6366f1")
-  sortOrder        Int        @default(0)
-  isActive         Boolean    @default(true)
-  suppliers        Supplier[]
-  createdAt        DateTime   @default(now())
+model PlanningCategory {
+  id              String        @id @default(cuid())
+  weddingId       String
+  wedding         Wedding       @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  name            String
+  colour          String        @default("#6366f1")
+  sortOrder       Int           @default(0)
+  isActive        Boolean       @default(true)
+  allocatedAmount Float?
+  suppliers       Supplier[]
+  appointments    Appointment[]
+  tasks           Task[]
+  createdAt       DateTime      @default(now())
 
   @@index([weddingId])
 }
@@ -366,7 +366,7 @@ model Supplier {
   weddingId        String
   wedding          Wedding           @relation(fields: [weddingId], references: [id], onDelete: Cascade)
   categoryId       String?
-  category         SupplierCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  category         PlanningCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   name             String
   contactName      String?
   email            String?
@@ -389,22 +389,6 @@ model Supplier {
   @@index([weddingId])
 }
 
-// --- APPOINTMENT CATEGORIES ---
-
-model AppointmentCategory {
-  id           String        @id @default(cuid())
-  weddingId    String
-  wedding      Wedding       @relation(fields: [weddingId], references: [id], onDelete: Cascade)
-  name         String
-  colour       String        @default("#6366f1")
-  sortOrder    Int           @default(0)
-  isActive     Boolean       @default(true)
-  appointments Appointment[]
-  createdAt    DateTime      @default(now())
-
-  @@index([weddingId])
-}
-
 // --- APPOINTMENTS ---
 
 model Appointment {
@@ -413,7 +397,7 @@ model Appointment {
   wedding      Wedding              @relation(fields: [weddingId], references: [id], onDelete: Cascade)
   title        String
   categoryId   String?
-  category     AppointmentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  category     PlanningCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   date         DateTime
   location     String?
   notes        String?
@@ -494,20 +478,6 @@ enum RecurringInterval {
   MONTHLY
 }
 
-model TaskCategory {
-  id        String   @id @default(cuid())
-  weddingId String
-  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
-  name      String
-  colour    String   @default("#6366f1")
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  tasks     Task[]
-  createdAt DateTime @default(now())
-
-  @@index([weddingId])
-}
-
 model Task {
   id          String       @id @default(cuid())
   weddingId   String
@@ -520,7 +490,7 @@ model Task {
   isCompleted Boolean      @default(false)
 
   categoryId String?
-  category   TaskCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  category   PlanningCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   assignedToId String?
   assignedTo   User?   @relation(fields: [assignedToId], references: [id], onDelete: SetNull)

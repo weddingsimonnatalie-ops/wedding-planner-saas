@@ -102,7 +102,7 @@ export function AppointmentModal({ initial, prefillSupplierId, onSave, onClose }
       .then((data: Supplier[]) => setSuppliers(data))
       .catch(() => {});
 
-    fetchApi("/api/appointment-categories")
+    fetchApi("/api/planning-categories")
       .then(r => r.json())
       .then((data: AppointmentCategory[]) => {
         setApptCategories(data);
