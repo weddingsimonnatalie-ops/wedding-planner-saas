@@ -120,28 +120,24 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
       <div className="divide-y divide-gray-100">
         {eventRows.map((row) => (
           <div key={row.key} className="py-4 first:pt-0 last:pb-0">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-1">
-                  <span className="font-medium text-gray-900">{row.label}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleToggle(row.key, row.enabledField)}
-                    disabled={saving === row.enabledField}
-                    className={`text-xs px-2 py-0.5 rounded-full border transition-colors flex-shrink-0 ${
-                      events[row.key].enabled
-                        ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                        : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100"
-                    } disabled:opacity-50`}
-                    title={events[row.key].enabled ? "Click to hide" : "Click to show"}
-                  >
-                    {events[row.key].enabled ? "Shown" : "Hidden"}
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500">{row.description}</p>
-              </div>
-
-              <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="font-medium text-gray-900">{row.label}</span>
+              <button
+                type="button"
+                onClick={() => handleToggle(row.key, row.enabledField)}
+                disabled={saving === row.enabledField}
+                className={`text-xs px-2 py-0.5 rounded-full border transition-colors flex-shrink-0 ${
+                  events[row.key].enabled
+                    ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                    : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100"
+                } disabled:opacity-50`}
+                title={events[row.key].enabled ? "Click to hide" : "Click to show"}
+              >
+                {events[row.key].enabled ? "Shown" : "Hidden"}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">{row.description}</p>
+            <div className="space-y-2">
                 <input
                   type="text"
                   maxLength={50}
@@ -158,8 +154,8 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
                     }
                   }}
                   disabled={saving === row.nameField}
-                  className="w-48 h-9 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
-                  placeholder={row.label}
+                  className="w-full h-9 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
+                  placeholder="Event name"
                 />
                 <input
                   type="text"
@@ -173,10 +169,9 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
                     }
                   }}
                   disabled={saving === row.locationField}
-                  className="w-48 h-9 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
+                  className="w-full h-9 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
                   placeholder="Location (optional)"
                 />
-              </div>
             </div>
           </div>
         ))}

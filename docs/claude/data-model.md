@@ -29,7 +29,7 @@ Stores authentication credentials. Key fields:
 
 ## WeddingConfig
 
-Singleton (`id = 1`). Couple name, date, venue name/address. `themeHue Int @default(330)` — HSL hue (0–359) for the app colour theme; default 330 = blush pink. The hue is injected as `--primary` and `--ring` CSS variables in the dashboard layout and public RSVP page. All Tailwind `bg-primary`, `text-primary`, `border-primary` classes respond to this variable automatically. Emails use `hslToHex(themeHue, 60, 55)` since email clients don't support CSS variables.
+Singleton (`id = 1`). Couple name, date. `themeHue Int @default(330)` — HSL hue (0–359) for the app colour theme; default 330 = blush pink. The hue is injected as `--primary` and `--ring` CSS variables in the dashboard layout and public RSVP page. All Tailwind `bg-primary`, `text-primary`, `border-primary` classes respond to this variable automatically. Emails use `hslToHex(themeHue, 60, 55)` since email clients don't support CSS variables.
 
 **Configurable event names + locations** (on `Wedding` model, not a separate table):
 - `ceremonyEnabled Boolean @default(true)` / `ceremonyName String @default("Ceremony")` / `ceremonyLocation String?`

@@ -167,7 +167,7 @@ Three roles defined in the `UserRole` Prisma enum:
 ## Public RSVP (`/rsvp/[token]`)
 
 - No login required, accessed via unique token
-- Shows couple name, date, venue at top
+- Shows couple name and date at top
 - Per-event **Yes / Maybe / No** three-button toggle (only for enabled events the guest is invited to; event names use the wedding's configured labels)
   - Event location shown as small grey text under the event name when set (e.g. "St Mary's Church, London")
   - Yes → `attendingX=true, attendingXMaybe=false`
@@ -385,7 +385,7 @@ Three roles defined in the `UserRole` Prisma enum:
 ## Settings
 
 Organized into 4 tabs accessible to ADMIN only:
-- **General tab**: Wedding Details (couple name, date, venue), Notifications (reminder email), Session Timeout (inactivity timeout + warning time), Wedding Colour Theme (palette picker), **Event Names** (enable/disable + rename each of the 4 events: Ceremony, Wedding Breakfast, Evening Reception, Rehearsal Dinner)
+- **General tab**: Wedding Details (couple name, date), Notifications (reminder email), Session Timeout (inactivity timeout + warning time), Wedding Colour Theme (palette picker), **Event Names + Locations** (enable/disable + rename + per-event location for all 4 events)
 - **Meals tab**: Meal Options — add/edit/deactivate meal choices
 - **Categories tab**: Supplier Categories, Appointment Categories, Task Categories, Timeline Categories — each with add/edit/delete/reorder
 - **Users tab**: User Management (inline) + link to Security page
