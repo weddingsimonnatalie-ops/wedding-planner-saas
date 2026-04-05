@@ -69,9 +69,13 @@ Seating planner. One Room per app (auto-created on first visit). Tables have sha
 RoomElements are decorative (Stage, Bar, etc.) with `width`/`height` and:
 - `locked` (`Boolean`) — prevents moving/resizing
 
-## Supplier / SupplierCategory
+## PlanningCategory
 
-Suppliers have status (ENQUIRY/QUOTED/BOOKED/COMPLETE/CANCELLED), contract value, and optional category. Categories have name, colour, sort order.
+A single shared category pool used by Suppliers, Appointments, and Tasks. Fields: name, colour, sortOrder, isActive, allocatedAmount (optional, used for budget tracking). Managed from Settings → Categories as a single flat list. Deleting a category with items assigned returns 409 (force=true to nullify and delete).
+
+## Supplier
+
+Suppliers have status (ENQUIRY/QUOTED/BOOKED/COMPLETE/CANCELLED), contract value, and optional `categoryId` FK to `PlanningCategory`.
 
 ## Payment
 
@@ -81,24 +85,22 @@ Belongs to Supplier. Has label, amount, dueDate, paidDate, status (PENDING/PAID/
 
 Belongs to Supplier. `storedAs` is the UUID-renamed filename on disk. `filename` is the original display name. Optional `paymentId` links to a Payment for receipt attachments (shown in both supplier attachments list and payment detail).
 
-## Appointment / AppointmentCategory
+## Appointment
 
-Appointments have date, location, notes, optional supplier link, optional reminderDays. `reminderSent` prevents double-sending.
+Appointments have date, location, notes, optional supplier link, optional reminderDays, optional `categoryId` FK to `PlanningCategory`. `reminderSent` prevents double-sending.
 
-## Task / TaskCategory
+## Task
 
 Tasks track wedding to-do items. Key fields:
 - `title` — required
 - `priority` — `HIGH | MEDIUM | LOW`
 - `dueDate` — optional; drives grouping (Overdue / Due this week / Upcoming / No date)
 - `isCompleted` / `completedAt` — completion state
-- `categoryId` — optional FK to `TaskCategory`
+- `categoryId` — optional FK to `PlanningCategory`
 - `assignedToId` — optional FK to `User`
 - `supplierId` — optional FK to `Supplier`
 - `isRecurring` / `recurringInterval` (`DAILY | WEEKLY | FORTNIGHTLY | MONTHLY`) / `recurringEndDate` — recurring config
 - When a recurring task is completed, the API creates the next occurrence automatically (if before `recurringEndDate`)
-
-`TaskCategory` has name (unique), colour, sortOrder, isActive.
 
 ## TimelineEvent / TimelineCategory
 

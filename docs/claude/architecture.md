@@ -174,9 +174,7 @@ export function invalidateCache(key: string): void;
 **Cached endpoints** (5-minute TTL):
 - `/api/settings` — wedding config (`wedding-config`)
 - `/api/meal-options` — meal options list (`meal-options`)
-- `/api/supplier-categories` — supplier categories (`supplier-categories`)
-- `/api/appointment-categories` — appointment categories (`appointment-categories`)
-- `/api/task-categories` — task categories (`task-categories`)
+- `/api/planning-categories` — shared planning categories for suppliers, appointments, tasks (`${weddingId}:planning-categories`)
 
 **Invalidation**: Each category's mutation routes (POST, PUT, DELETE) call `invalidateCache()` with the appropriate key.
 

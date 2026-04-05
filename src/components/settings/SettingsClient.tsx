@@ -94,8 +94,8 @@ export function SettingsClient({
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "general", label: "General" },
-    { id: "meals", label: "Meals" },
     { id: "categories", label: "Categories" },
+    { id: "meals", label: "Meals" },
     { id: "users", label: "Users" },
     { id: "security", label: "Security" },
     { id: "billing", label: "Billing" },
@@ -129,6 +129,29 @@ export function SettingsClient({
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-base font-medium text-gray-900 mb-1">Event Names</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Customise the names of events shown on RSVP forms and guest lists.
+            </p>
+            <EventNamesSettings
+              initialConfig={{
+                ceremonyEnabled: config?.ceremonyEnabled ?? true,
+                ceremonyName: config?.ceremonyName ?? "Ceremony",
+                ceremonyLocation: config?.ceremonyLocation,
+                mealEnabled: config?.mealEnabled ?? true,
+                mealName: config?.mealName ?? "Wedding Breakfast",
+                mealLocation: config?.mealLocation,
+                eveningPartyEnabled: config?.eveningPartyEnabled ?? true,
+                eveningPartyName: config?.eveningPartyName ?? "Evening Reception",
+                eveningPartyLocation: config?.eveningPartyLocation,
+                rehearsalDinnerEnabled: config?.rehearsalDinnerEnabled ?? false,
+                rehearsalDinnerName: config?.rehearsalDinnerName ?? "Rehearsal Dinner",
+                rehearsalDinnerLocation: config?.rehearsalDinnerLocation,
+              }}
+            />
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-base font-medium text-gray-900 mb-1">Notifications</h2>
             <p className="text-sm text-gray-500 mb-4">
               Configure where reminder emails are delivered.
@@ -152,28 +175,6 @@ export function SettingsClient({
             <CurrencySymbolPicker initialSymbol={config?.currencySymbol ?? "£"} />
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Event Names</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Customise the names of events shown on RSVP forms and guest lists.
-            </p>
-            <EventNamesSettings
-              initialConfig={{
-                ceremonyEnabled: config?.ceremonyEnabled ?? true,
-                ceremonyName: config?.ceremonyName ?? "Ceremony",
-                ceremonyLocation: config?.ceremonyLocation,
-                mealEnabled: config?.mealEnabled ?? true,
-                mealName: config?.mealName ?? "Wedding Breakfast",
-                mealLocation: config?.mealLocation,
-                eveningPartyEnabled: config?.eveningPartyEnabled ?? true,
-                eveningPartyName: config?.eveningPartyName ?? "Evening Reception",
-                eveningPartyLocation: config?.eveningPartyLocation,
-                rehearsalDinnerEnabled: config?.rehearsalDinnerEnabled ?? false,
-                rehearsalDinnerName: config?.rehearsalDinnerName ?? "Rehearsal Dinner",
-                rehearsalDinnerLocation: config?.rehearsalDinnerLocation,
-              }}
-            />
-          </div>
         </div>
       )}
 

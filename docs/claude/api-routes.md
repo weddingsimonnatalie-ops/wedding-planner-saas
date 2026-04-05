@@ -28,8 +28,9 @@ GET/POST   /api/appointments            — Appointments (ADMIN + VIEWER only)
 GET/PUT/DELETE /api/appointments/[id]   — (ADMIN + VIEWER only)
 GET        /api/appointments/count      — Upcoming appointments in next 7 days for sidebar badge (ADMIN + VIEWER)
 GET        /api/appointments/check-reminders — Manual trigger (used by daemon)
-GET/POST   /api/supplier-categories     — CRUD + reorder
-GET/POST   /api/appointment-categories  — CRUD + reorder
+GET/POST   /api/planning-categories     — Shared category list for suppliers, appointments and tasks; GET returns all, POST creates; cache key: `${weddingId}:planning-categories`
+PUT/DELETE /api/planning-categories/[id] — Update/delete; DELETE returns 409 with count if items use it (force=true to nullify and delete)
+PUT        /api/planning-categories/reorder — Reorder (ADMIN)
 GET/POST   /api/meal-options            — Meal options
 GET/PUT/DELETE /api/meal-options/[id]
 GET        /api/dashboard/stats         — All dashboard data in one call
@@ -56,8 +57,6 @@ GET/POST   /api/tasks                   — Task list (filters: completed, prior
 GET        /api/tasks/count             — Lightweight task count for sidebar badge (overdue + due this week); returns `{ count: number }`; ADMIN + VIEWER only
 GET/PUT/DELETE /api/tasks/[id]          — Task detail; PUT requires ADMIN
 PATCH      /api/tasks/[id]/complete     — Toggle complete (ADMIN + RSVP_MANAGER); creates next recurrence for recurring tasks
-GET/POST   /api/task-categories         — Task category list + create (ADMIN)
-PUT/DELETE /api/task-categories/[id]    — Update/delete category; DELETE returns 409 if tasks use it (force=true to nullify and delete)
 GET/POST   /api/timeline                — Timeline events list (sorted by startTime) + create (ADMIN)
 GET/PUT/DELETE /api/timeline/[id]       — Timeline event detail; PUT/DELETE requires ADMIN
 GET/POST   /api/timeline-categories     — Timeline category list + create (ADMIN)
