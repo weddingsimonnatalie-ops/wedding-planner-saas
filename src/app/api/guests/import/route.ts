@@ -44,6 +44,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             invitedToCeremony: true,
             invitedToReception: true,
             invitedToAfterparty: true,
+            invitedToRehearsalDinner: true,
             notes: true,
           },
       })
@@ -81,6 +82,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       invitedToCeremony: boolean;
       invitedToReception: boolean;
       invitedToAfterparty: boolean;
+      invitedToRehearsalDinner: boolean;
       notes: string | null;
     }> = [];
 
@@ -94,6 +96,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         invitedToCeremony: boolean;
         invitedToReception: boolean;
         invitedToAfterparty: boolean;
+        invitedToRehearsalDinner: boolean;
         notes?: string;
       };
     }> = [];
@@ -126,6 +129,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           invitedToCeremony: row.invitedToCeremony,
           invitedToReception: row.invitedToReception,
           invitedToAfterparty: row.invitedToAfterparty,
+          invitedToRehearsalDinner: row.invitedToRehearsalDinner,
           notes: row.notes ?? null,
         };
 
@@ -145,6 +149,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                 invitedToCeremony: row.invitedToCeremony,
                 invitedToReception: row.invitedToReception,
                 invitedToAfterparty: row.invitedToAfterparty,
+                invitedToRehearsalDinner: row.invitedToRehearsalDinner,
                 ...(row.notes ? { notes: row.notes } : {}),
               },
             });

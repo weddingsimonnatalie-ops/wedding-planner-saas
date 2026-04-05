@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { X, Upload, CheckCircle, AlertCircle, AlertTriangle } from "lucide-react";
 
 type DupAction = "skip" | "update" | "create";
@@ -17,6 +17,7 @@ interface ExistingGuest {
   invitedToCeremony: boolean;
   invitedToReception: boolean;
   invitedToAfterparty: boolean;
+  invitedToRehearsalDinner: boolean;
   notes: string | null;
 }
 
@@ -31,6 +32,7 @@ interface PreviewRow {
   invitedToCeremony: boolean;
   invitedToReception: boolean;
   invitedToAfterparty: boolean;
+  invitedToRehearsalDinner: boolean;
   notes?: string;
   isDuplicate: boolean;
   existingGuest: ExistingGuest | null;
@@ -49,16 +51,17 @@ interface Props {
   onImported: () => void;
 }
 
-function eventLabel(c: boolean, r: boolean, a: boolean) {
+function eventLabel(c: boolean, r: boolean, a: boolean, rd: boolean) {
   const parts = [];
   if (c) parts.push("C");
   if (r) parts.push("R");
   if (a) parts.push("A");
+  if (rd) parts.push("RD");
   return parts.join(", ") || "—";
 }
 
 export function CsvImportModal({ onClose, onImported }: Props) {
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [csvText, setCsvText] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewRow[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -70,6 +73,7 @@ export function CsvImportModal({ onClose, onImported }: Props) {
     setPreview(null);
     setResult(null);
     setDupActions({});
+    setCsvText(null);
     setLoading(true);
 
     const csv = await file.text();
@@ -89,6 +93,7 @@ export function CsvImportModal({ onClose, onImported }: Props) {
       }
       setDupActions(initial);
       setPreview(data.preview);
+      setCsvText(csv);
     } catch {
       setError("Failed to parse CSV");
     } finally {
@@ -97,11 +102,11 @@ export function CsvImportModal({ onClose, onImported }: Props) {
   }
 
   async function handleConfirm() {
-    if (!fileRef.current?.files?.[0]) return;
+    if (!csvText) return;
     setLoading(true);
     setError("");
 
-    const csv = await fileRef.current.files[0].text();
+    const csv = csvText;
 
     try {
       const res = await fetch("/api/guests/import", {
@@ -155,7 +160,6 @@ export function CsvImportModal({ onClose, onImported }: Props) {
                 <Upload className="w-8 h-8 text-gray-300 mb-2" />
                 <span className="text-sm text-gray-500">Click to choose a CSV file</span>
                 <input
-                  ref={fileRef}
                   type="file"
                   accept=".csv,text/csv"
                   className="hidden"
@@ -215,7 +219,7 @@ export function CsvImportModal({ onClose, onImported }: Props) {
                             <td className="px-3 py-2 text-gray-500">{row.email ?? "—"}</td>
                             <td className="px-3 py-2 text-gray-500">{row.groupName ?? "—"}</td>
                             <td className="px-3 py-2 text-gray-500">
-                              {eventLabel(row.invitedToCeremony, row.invitedToReception, row.invitedToAfterparty)}
+                              {eventLabel(row.invitedToCeremony, row.invitedToReception, row.invitedToAfterparty, row.invitedToRehearsalDinner)}
                             </td>
                           </tr>
                         ))}
@@ -264,7 +268,7 @@ export function CsvImportModal({ onClose, onImported }: Props) {
                             {row.phone && <p className="text-xs text-gray-500">{row.phone}</p>}
                             {row.groupName && <p className="text-xs text-gray-500">{row.groupName}</p>}
                             <p className="text-xs text-gray-500 mt-1">
-                              Events: {eventLabel(row.invitedToCeremony, row.invitedToReception, row.invitedToAfterparty)}
+                              Events: {eventLabel(row.invitedToCeremony, row.invitedToReception, row.invitedToAfterparty, row.invitedToRehearsalDinner)}
                             </p>
                             {row.notes && <p className="text-xs text-gray-400 mt-1 italic">{row.notes}</p>}
                           </div>
@@ -285,6 +289,7 @@ export function CsvImportModal({ onClose, onImported }: Props) {
                                     row.existingGuest.invitedToCeremony,
                                     row.existingGuest.invitedToReception,
                                     row.existingGuest.invitedToAfterparty,
+                                    row.existingGuest.invitedToRehearsalDinner,
                                   )}
                                 </p>
                                 <p className="text-xs mt-1">
