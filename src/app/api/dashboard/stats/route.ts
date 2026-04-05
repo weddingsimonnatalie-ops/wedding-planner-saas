@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
       totalGuests,
       receptionEligible,
       assignedGuests,
+      dietaryCount,
       mealGroupBy,
       mealOptions,
       upcomingPayments,
@@ -63,6 +64,9 @@ export async function GET(req: NextRequest) {
             tableId: { not: null },
             NOT: { AND: [{ attendingReception: false }, { rsvpStatus: { notIn: ["DECLINED"] } }] },
           },
+        }),
+        tx.guest.count({
+          where: { weddingId, dietaryNotes: { not: null }, AND: [{ dietaryNotes: { not: "" } }] },
         }),
         tx.guest.groupBy({
           by: ["mealChoice"],
@@ -186,6 +190,7 @@ export async function GET(req: NextRequest) {
           partial:  rsvpMap["PARTIAL"]  ?? 0,
           declined: rsvpMap["DECLINED"] ?? 0,
           pending:  rsvpMap["PENDING"]  ?? 0,
+          dietary: dietaryCount,
           receptionEligible,
           assigned: assignedGuests,
         },
