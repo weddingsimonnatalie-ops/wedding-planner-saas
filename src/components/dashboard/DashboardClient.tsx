@@ -174,18 +174,12 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
         {/* Guest donut */}
         <div className={`${showFinance ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-xl border border-gray-200 p-5`}>
           <SectionHeader title="Guest summary" href="/guests" />
-          <div className="flex flex-col sm:flex-row items-center gap-6 mt-4">
-            <DonutChart
-              segments={[
-                { label: "Accepted", value: stats.guests.accepted, color: "#22c55e" },
-                { label: "Partial",  value: stats.guests.partial,  color: "#f97316" },
-                { label: "Declined", value: stats.guests.declined, color: "#ef4444" },
-                { label: "Pending",  value: stats.guests.pending,  color: "#f59e0b" },
-                { label: "Maybe",    value: stats.guests.maybe,    color: "#94a3b8" },
-              ]}
-              total={stats.guests.total}
-            />
-            <div className="flex flex-col gap-2 text-sm min-w-0">
+          <div className="mt-4">
+            <p className="text-2xl font-bold text-gray-900 mb-4">
+              {stats.guests.total}{" "}
+              <span className="text-sm font-normal text-gray-400">guests</span>
+            </p>
+            <div className="space-y-2.5">
               {[
                 { label: "Accepted", value: stats.guests.accepted, color: "bg-green-500" },
                 { label: "Partial",  value: stats.guests.partial,  color: "bg-orange-400" },
@@ -193,18 +187,24 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
                 { label: "Pending",  value: stats.guests.pending,  color: "bg-amber-400" },
                 { label: "Maybe",    value: stats.guests.maybe,    color: "bg-slate-300" },
               ].map(({ label, value, color }) => (
-                <div key={label} className="flex items-center gap-2">
-                  <span className={`w-3 h-3 rounded-full shrink-0 ${color}`} />
-                  <span className="text-gray-600 w-16">{label}</span>
-                  <span className="font-semibold text-gray-900">{value}</span>
+                <div key={label} className="flex items-center gap-3">
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${color}`} />
+                  <span className="text-xs text-gray-500 w-14 shrink-0">{label}</span>
+                  <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${color}`}
+                      style={{ width: stats.guests.total > 0 ? `${(value / stats.guests.total) * 100}%` : "0%" }}
+                    />
+                  </div>
+                  <span className="text-xs font-semibold text-gray-900 w-6 text-right tabular-nums">{value}</span>
                 </div>
               ))}
-              {stats.guests.total === 0 && (
-                <Link href="/guests" className="text-xs text-primary hover:underline mt-1">
-                  Add your first guest →
-                </Link>
-              )}
             </div>
+            {stats.guests.total === 0 && (
+              <Link href="/guests" className="text-xs text-primary hover:underline mt-3 block">
+                Add your first guest →
+              </Link>
+            )}
           </div>
         </div>
 
@@ -684,50 +684,6 @@ function MealBars({ meals }: { meals: { name: string; count: number }[] }) {
 }
 
 // ── Donut chart (pure SVG) ────────────────────────────────────────────────────
-
-function DonutChart({
-  segments,
-  total,
-}: {
-  segments: { label: string; value: number; color: string }[];
-  total: number;
-}) {
-  const r = 52;
-  const cx = 68;
-  const cy = 68;
-  const circum = 2 * Math.PI * r;
-
-  let cumulative = 0;
-
-  return (
-    <svg width={136} height={136} className="shrink-0" aria-label="Guest RSVP breakdown">
-      {/* Track */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f3f4f6" strokeWidth={20} />
-      {total > 0 && segments.map((seg, i) => {
-        if (seg.value === 0) return null;
-        const pct = seg.value / total;
-        const dashLen = pct * circum;
-        const dashOffset = -(cumulative * circum);
-        cumulative += pct;
-        return (
-          <circle
-            key={i}
-            cx={cx} cy={cy} r={r}
-            fill="none"
-            stroke={seg.color}
-            strokeWidth={20}
-            strokeDasharray={`${dashLen} ${circum}`}
-            strokeDashoffset={dashOffset}
-            transform={`rotate(-90 ${cx} ${cy})`}
-          />
-        );
-      })}
-      {/* Center */}
-      <text x={cx} y={cy - 5} textAnchor="middle" fill="#111827" fontSize="24" fontWeight="700">{total}</text>
-      <text x={cx} y={cy + 13} textAnchor="middle" fill="#9ca3af" fontSize="11">guests</text>
-    </svg>
-  );
-}
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
