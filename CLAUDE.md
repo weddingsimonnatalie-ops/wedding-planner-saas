@@ -54,7 +54,7 @@ docker compose logs -f app
 docker compose down
 ```
 
-The app runs on port **3000**. Access at `http://<host-ip>:3000` locally or via Cloudflare Tunnel publicly.
+The app runs on port **3001**. Access at `http://<host-ip>:3001` locally or via Cloudflare Tunnel publicly.
 
 ---
 
@@ -189,6 +189,7 @@ The admin console shares this app's PostgreSQL database and S3 bucket, but conne
 
 <!-- Load when debugging config or adding environment variables: -->
 <!-- @import docs/claude/environment.md -->
+@import docs/claude/environment.md
 
 <!-- Load when doing ops/infra/deployment work: -->
 @import docs/claude/deployment.md

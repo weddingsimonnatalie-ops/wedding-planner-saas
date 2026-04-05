@@ -6,18 +6,23 @@ export interface EventConfig {
   key: string;
   enabled: boolean;
   name: string;
+  location: string | null;
   dbField: string; // e.g., "ceremony", "reception", "afterparty", "rehearsalDinner"
 }
 
 export interface WeddingEventConfig {
   ceremonyEnabled: boolean;
   ceremonyName: string;
+  ceremonyLocation?: string | null;
   mealEnabled: boolean;
   mealName: string;
+  mealLocation?: string | null;
   eveningPartyEnabled: boolean;
   eveningPartyName: string;
+  eveningPartyLocation?: string | null;
   rehearsalDinnerEnabled: boolean;
   rehearsalDinnerName: string;
+  rehearsalDinnerLocation?: string | null;
 }
 
 /**
@@ -30,24 +35,28 @@ export function getEvents(wedding: WeddingEventConfig, includeDisabled = false):
       key: "rehearsalDinner",
       enabled: wedding.rehearsalDinnerEnabled,
       name: wedding.rehearsalDinnerName || "Rehearsal Dinner",
+      location: wedding.rehearsalDinnerLocation ?? null,
       dbField: "rehearsalDinner",
     },
     {
       key: "ceremony",
       enabled: wedding.ceremonyEnabled,
       name: wedding.ceremonyName || "Ceremony",
+      location: wedding.ceremonyLocation ?? null,
       dbField: "ceremony",
     },
     {
       key: "meal",
       enabled: wedding.mealEnabled,
       name: wedding.mealName || "Wedding Breakfast",
+      location: wedding.mealLocation ?? null,
       dbField: "reception", // Maps to invitedToReception in Guest model
     },
     {
       key: "eveningParty",
       enabled: wedding.eveningPartyEnabled,
       name: wedding.eveningPartyName || "Evening Reception",
+      location: wedding.eveningPartyLocation ?? null,
       dbField: "afterparty", // Maps to invitedToAfterparty in Guest model
     },
   ];

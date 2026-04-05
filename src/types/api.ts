@@ -270,6 +270,18 @@ export interface WeddingConfigResponse {
   venueName: string | null;
   venueAddress: string | null;
   reminderEmail: string | null;
+  ceremonyEnabled: boolean;
+  ceremonyName: string;
+  ceremonyLocation: string | null;
+  mealEnabled: boolean;
+  mealName: string;
+  mealLocation: string | null;
+  eveningPartyEnabled: boolean;
+  eveningPartyName: string;
+  eveningPartyLocation: string | null;
+  rehearsalDinnerEnabled: boolean;
+  rehearsalDinnerName: string;
+  rehearsalDinnerLocation: string | null;
 }
 
 // =============================================================================

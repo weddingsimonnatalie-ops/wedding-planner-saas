@@ -111,12 +111,16 @@ model Wedding {
   // Event name configuration
   ceremonyEnabled        Boolean @default(true)
   ceremonyName           String  @default("Ceremony")
+  ceremonyLocation       String?
   mealEnabled            Boolean @default(true)
   mealName               String  @default("Wedding Breakfast")
+  mealLocation           String?
   eveningPartyEnabled    Boolean @default(true)
   eveningPartyName       String  @default("Evening Reception")
+  eveningPartyLocation   String?
   rehearsalDinnerEnabled Boolean @default(false)
   rehearsalDinnerName    String  @default("Rehearsal Dinner")
+  rehearsalDinnerLocation String?
 
   // Data retention
   cancelledAt          DateTime?

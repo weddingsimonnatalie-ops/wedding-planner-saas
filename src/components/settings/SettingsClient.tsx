@@ -19,12 +19,16 @@ interface WeddingConfig {
   // Event name configuration
   ceremonyEnabled: boolean;
   ceremonyName: string;
+  ceremonyLocation?: string | null;
   mealEnabled: boolean;
   mealName: string;
+  mealLocation?: string | null;
   eveningPartyEnabled: boolean;
   eveningPartyName: string;
+  eveningPartyLocation?: string | null;
   rehearsalDinnerEnabled: boolean;
   rehearsalDinnerName: string;
+  rehearsalDinnerLocation?: string | null;
 }
 import { UsersManager } from "./UsersManager";
 import { MealOptionsList } from "./MealOptionsList";
@@ -159,12 +163,16 @@ export function SettingsClient({
               initialConfig={{
                 ceremonyEnabled: config?.ceremonyEnabled ?? true,
                 ceremonyName: config?.ceremonyName ?? "Ceremony",
+                ceremonyLocation: config?.ceremonyLocation,
                 mealEnabled: config?.mealEnabled ?? true,
                 mealName: config?.mealName ?? "Wedding Breakfast",
+                mealLocation: config?.mealLocation,
                 eveningPartyEnabled: config?.eveningPartyEnabled ?? true,
                 eveningPartyName: config?.eveningPartyName ?? "Evening Reception",
+                eveningPartyLocation: config?.eveningPartyLocation,
                 rehearsalDinnerEnabled: config?.rehearsalDinnerEnabled ?? false,
                 rehearsalDinnerName: config?.rehearsalDinnerName ?? "Rehearsal Dinner",
+                rehearsalDinnerLocation: config?.rehearsalDinnerLocation,
               }}
             />
           </div>

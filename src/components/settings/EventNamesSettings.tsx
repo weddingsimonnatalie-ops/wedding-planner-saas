@@ -6,21 +6,25 @@ interface EventNamesSettingsProps {
   initialConfig: {
     ceremonyEnabled: boolean;
     ceremonyName: string;
+    ceremonyLocation?: string | null;
     mealEnabled: boolean;
     mealName: string;
+    mealLocation?: string | null;
     eveningPartyEnabled: boolean;
     eveningPartyName: string;
+    eveningPartyLocation?: string | null;
     rehearsalDinnerEnabled: boolean;
     rehearsalDinnerName: string;
+    rehearsalDinnerLocation?: string | null;
   };
 }
 
 export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
   const [events, setEvents] = useState({
-    ceremony: { enabled: initialConfig.ceremonyEnabled, name: initialConfig.ceremonyName },
-    meal: { enabled: initialConfig.mealEnabled, name: initialConfig.mealName },
-    eveningParty: { enabled: initialConfig.eveningPartyEnabled, name: initialConfig.eveningPartyName },
-    rehearsalDinner: { enabled: initialConfig.rehearsalDinnerEnabled, name: initialConfig.rehearsalDinnerName },
+    ceremony: { enabled: initialConfig.ceremonyEnabled, name: initialConfig.ceremonyName, location: initialConfig.ceremonyLocation ?? "" },
+    meal: { enabled: initialConfig.mealEnabled, name: initialConfig.mealName, location: initialConfig.mealLocation ?? "" },
+    eveningParty: { enabled: initialConfig.eveningPartyEnabled, name: initialConfig.eveningPartyName, location: initialConfig.eveningPartyLocation ?? "" },
+    rehearsalDinner: { enabled: initialConfig.rehearsalDinnerEnabled, name: initialConfig.rehearsalDinnerName, location: initialConfig.rehearsalDinnerLocation ?? "" },
   });
   const [saving, setSaving] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -69,7 +73,7 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
     saveField(enabledField, newValue);
   }
 
-  function updateEvent(eventKey: keyof typeof events, field: "enabled" | "name", value: boolean | string) {
+  function updateEvent(eventKey: keyof typeof events, field: "enabled" | "name" | "location", value: boolean | string) {
     setEvents((prev) => ({
       ...prev,
       [eventKey]: { ...prev[eventKey], [field]: value },
@@ -82,6 +86,7 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
       label: "Rehearsal Dinner",
       enabledField: "rehearsalDinnerEnabled" as const,
       nameField: "rehearsalDinnerName" as const,
+      locationField: "rehearsalDinnerLocation" as const,
       description: "Optional pre-wedding dinner (common in US)",
     },
     {
@@ -89,6 +94,7 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
       label: "Ceremony",
       enabledField: "ceremonyEnabled" as const,
       nameField: "ceremonyName" as const,
+      locationField: "ceremonyLocation" as const,
       description: "The main ceremony event",
     },
     {
@@ -96,6 +102,7 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
       label: "Meal (Wedding Breakfast)",
       enabledField: "mealEnabled" as const,
       nameField: "mealName" as const,
+      locationField: "mealLocation" as const,
       description: "The first meal after the ceremony",
     },
     {
@@ -103,6 +110,7 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
       label: "Evening Party (Reception)",
       enabledField: "eveningPartyEnabled" as const,
       nameField: "eveningPartyName" as const,
+      locationField: "eveningPartyLocation" as const,
       description: "The evening celebration",
     },
   ];
@@ -133,7 +141,7 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
                 <p className="text-xs text-gray-500">{row.description}</p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col items-end gap-2">
                 <input
                   type="text"
                   maxLength={50}
@@ -152,6 +160,21 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
                   disabled={saving === row.nameField}
                   className="w-48 h-9 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
                   placeholder={row.label}
+                />
+                <input
+                  type="text"
+                  maxLength={200}
+                  value={events[row.key].location}
+                  onChange={(e) => updateEvent(row.key, "location", e.target.value)}
+                  onBlur={() => saveField(row.locationField, events[row.key].location.trim())}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                  disabled={saving === row.locationField}
+                  className="w-48 h-9 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
+                  placeholder="Location (optional)"
                 />
               </div>
             </div>

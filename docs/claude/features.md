@@ -85,7 +85,7 @@ Three roles defined in the `UserRole` Prisma enum:
 - **Header row**: title + "Add guest" button (editors only); rendered in `GuestList.tsx`
 - **Stats bar**: displayed below the header, shows total/accepted/partial/declined/pending/maybe/unassigned; uses filtered counts when filters are active
 - Full list with filter by RSVP status, group name (including "— No group —" for guests with no group, sent as `?group=none`), table-assigned status
-- Per-guest coloured event indicator squares (C/R/A, green=attending, red=declined, grey=no answer) — all 3 positions always rendered; non-invited events use `opacity-0 pointer-events-none` to preserve column alignment
+- Per-guest coloured event indicator badges (first letter of each event name, e.g. R/C/W/E) — only enabled + invited events shown; green=attending, red=declined, amber=maybe, grey=no answer yet
 - Pencil icon next to RSVP status badge when status has been manually overridden by admin (detected via `calculateRsvpStatus()` comparison)
 - RSVP link with clipboard copy (HTTP fallback for non-secure contexts)
 - CSV import with duplicate detection (see below) and export
@@ -150,9 +150,9 @@ Three roles defined in the `UserRole` Prisma enum:
 - **Save behaviour**: "Save changes" stays on the page — it does not navigate away. After a successful PUT, the form immediately refetches fresh data from `GET /api/guests/:id` (with `cache: "no-store"`) and updates all form state via `syncFromFresh()`. A "Changes saved" banner appears briefly. `router.refresh()` is also called to keep the RSC cache consistent.
 - **Unsubscribed banner**: if `unsubscribedAt` is set, shows grey banner above form: "This guest has unsubscribed from emails. They will not receive reminder emails. You can still contact them directly if needed." Resend button is disabled.
 - RSVP & Meal section:
-  - Read-only event responses (Ceremony / Reception / Afterparty) — reads from `localGuest` state (updated after each save), not from the initial server-rendered prop
+  - Read-only event responses (all enabled events the guest is invited to) — reads from `localGuest` state (updated after each save), not from the initial server-rendered prop
   - Auto-calculated overall RSVP status badge (green/amber/orange/red/grey)
-  - "Override ▾" dropdown — saves immediately via PATCH, then refetches and syncs all state; no form submit required
+  - "Override ▾" dropdown — saves immediately via PATCH, then refetches and syncs all state; no form submit required. Sets `attendingX` AND clears `attendingXMaybe` for all 4 events so badges and status calculation are always consistent after override.
   - **Admin override indicator**: if stored `rsvpStatus` differs from what `calculateRsvpStatus()` would compute, an amber "Manually set" warning with triangle icon appears next to the badge — derived from `localGuest` state so updates immediately after override or save
   - "Resend RSVP email" ghost button (with confirm dialog) — disabled if guest has unsubscribed
 - Meal & Dietary section (two-column: meal choice dropdown + dietary notes textarea)
@@ -168,11 +168,12 @@ Three roles defined in the `UserRole` Prisma enum:
 
 - No login required, accessed via unique token
 - Shows couple name, date, venue at top
-- Per-event **Yes / Maybe / No** three-button toggle (only for events guest is invited to)
+- Per-event **Yes / Maybe / No** three-button toggle (only for enabled events the guest is invited to; event names use the wedding's configured labels)
+  - Event location shown as small grey text under the event name when set (e.g. "St Mary's Church, London")
   - Yes → `attendingX=true, attendingXMaybe=false`
   - Maybe → `attendingX=null, attendingXMaybe=true`
   - No → `attendingX=false, attendingXMaybe=false`
-- Meal choice dropdown (only if invited to reception, only if meal options configured)
+- Meal choice dropdown (only if invited to reception/meal event, only if meal options configured)
 - Dietary notes textarea
 - Five-state confirmation screen after submit:
   - **ACCEPTED** — green checkmark, "See you there, [Name]!"
@@ -384,10 +385,17 @@ Three roles defined in the `UserRole` Prisma enum:
 ## Settings
 
 Organized into 4 tabs accessible to ADMIN only:
-- **General tab**: Wedding Details (couple name, date, venue), Notifications (reminder email), Session Timeout (inactivity timeout + warning time), Wedding Colour Theme (palette picker)
+- **General tab**: Wedding Details (couple name, date, venue), Notifications (reminder email), Session Timeout (inactivity timeout + warning time), Wedding Colour Theme (palette picker), **Event Names** (enable/disable + rename each of the 4 events: Ceremony, Wedding Breakfast, Evening Reception, Rehearsal Dinner)
 - **Meals tab**: Meal Options — add/edit/deactivate meal choices
 - **Categories tab**: Supplier Categories, Appointment Categories, Task Categories, Timeline Categories — each with add/edit/delete/reorder
 - **Users tab**: User Management (inline) + link to Security page
+
+**Event Names + Locations** (Settings → General → Event Names):
+- Toggle each event on/off per wedding; rename to custom labels (e.g. "Rehearsal Dinner" → "Pre-Wedding Dinner")
+- Set a per-event location (optional, max 200 chars) — shown to guests on the RSVP form under the event name
+- Rehearsal Dinner is disabled by default; enabling it shows it throughout the app (guest list badges, RSVP form, guest edit form, CSV import/export)
+- Existing guests have `invitedToRehearsalDinner=false` by default — must be enabled per-guest after turning the event on
+- Component: `src/components/settings/EventNamesSettings.tsx`
 
 Other settings pages:
 - **Profile** (`/settings/profile`): change own display name and email

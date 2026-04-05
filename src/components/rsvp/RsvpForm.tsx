@@ -15,12 +15,16 @@ interface MealOption {
 interface EventNamesConfig {
   ceremonyEnabled: boolean;
   ceremonyName: string;
+  ceremonyLocation?: string | null;
   mealEnabled: boolean;
   mealName: string;
+  mealLocation?: string | null;
   eveningPartyEnabled: boolean;
   eveningPartyName: string;
+  eveningPartyLocation?: string | null;
   rehearsalDinnerEnabled: boolean;
   rehearsalDinnerName: string;
+  rehearsalDinnerLocation?: string | null;
 }
 
 interface GuestRsvpData {
@@ -173,6 +177,7 @@ export function RsvpForm({ token, guest, mealOptions, eventNames }: Props) {
           <EventToggle
             key={event.key}
             label={event.name}
+            location={event.location}
             value={state.val}
             onChange={state.set}
           />
@@ -364,10 +369,12 @@ function ConfirmationScreen({
 
 function EventToggle({
   label,
+  location,
   value,
   onChange,
 }: {
   label: string;
+  location?: string | null;
   value: EventChoice;
   onChange: (v: EventChoice) => void;
 }) {
@@ -379,7 +386,9 @@ function EventToggle({
 
   return (
     <div>
-      <p className="text-sm font-medium text-gray-700 mb-2">{label}</p>
+      <p className="text-sm font-medium text-gray-700 mb-0.5">{label}</p>
+      {location && <p className="text-xs text-gray-400 mb-2">{location}</p>}
+      {!location && <div className="mb-2" />}
       <div className="flex gap-2">
         {options.map(({ label: lbl, val }) => (
           <button

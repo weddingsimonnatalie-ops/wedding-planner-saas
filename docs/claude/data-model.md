@@ -31,14 +31,22 @@ Stores authentication credentials. Key fields:
 
 Singleton (`id = 1`). Couple name, date, venue name/address. `themeHue Int @default(330)` — HSL hue (0–359) for the app colour theme; default 330 = blush pink. The hue is injected as `--primary` and `--ring` CSS variables in the dashboard layout and public RSVP page. All Tailwind `bg-primary`, `text-primary`, `border-primary` classes respond to this variable automatically. Emails use `hslToHex(themeHue, 60, 55)` since email clients don't support CSS variables.
 
+**Configurable event names + locations** (on `Wedding` model, not a separate table):
+- `ceremonyEnabled Boolean @default(true)` / `ceremonyName String @default("Ceremony")` / `ceremonyLocation String?`
+- `mealEnabled Boolean @default(true)` / `mealName String @default("Wedding Breakfast")` / `mealLocation String?`
+- `eveningPartyEnabled Boolean @default(true)` / `eveningPartyName String @default("Evening Reception")` / `eveningPartyLocation String?`
+- `rehearsalDinnerEnabled Boolean @default(false)` / `rehearsalDinnerName String @default("Rehearsal Dinner")` / `rehearsalDinnerLocation String?`
+
+Use `getEvents(wedding)` from `src/lib/eventNames.ts` everywhere — never hardcode event names or assume exactly 3 events. The `meal` key maps to `reception` DB fields; `eveningParty` maps to `afterparty` DB fields. Each `EventConfig` returned by `getEvents()` includes a `location: string | null` field — show it on the RSVP form under the event name when set.
+
 ## Guest
 
 Core guest record. Key fields:
 - `rsvpToken` — unique, used as the public RSVP URL slug
 - `rsvpStatus` — `PENDING | ACCEPTED | PARTIAL | DECLINED | MAYBE`
-- `invitedToCeremony/Reception/Afterparty` — which events invited to
-- `attendingCeremony/Reception/Afterparty` — actual responses (nullable until answered)
-- `attendingCeremonyMaybe/ReceptionMaybe/AfterpartyMaybe` — maybe state per event (`BOOLEAN NOT NULL DEFAULT false`)
+- `invitedToCeremony/Reception/Afterparty/RehearsalDinner` — which events invited to (rehearsalDinner defaults false)
+- `attendingCeremony/Reception/Afterparty/RehearsalDinner` — actual responses (nullable until answered)
+- `attendingCeremonyMaybe/ReceptionMaybe/AfterpartyMaybe/RehearsalDinnerMaybe` — maybe state per event (`BOOLEAN NOT NULL DEFAULT false`)
 - `mealChoice` — foreign-key-like string referencing `MealOption.id`
 - `tableId` — nullable FK to `Table`
 - `seatNumber` — nullable `Int`; seat position at the assigned table (1..capacity)

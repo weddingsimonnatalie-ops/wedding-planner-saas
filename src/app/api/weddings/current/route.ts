@@ -51,12 +51,16 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       // Event name configuration
       ceremonyEnabled,
       ceremonyName,
+      ceremonyLocation,
       mealEnabled,
       mealName,
+      mealLocation,
       eveningPartyEnabled,
       eveningPartyName,
+      eveningPartyLocation,
       rehearsalDinnerEnabled,
       rehearsalDinnerName,
+      rehearsalDinnerLocation,
     } = body;
 
     const errors = validateFields([
@@ -133,17 +137,29 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
           ...(ceremonyName !== undefined
             ? { ceremonyName: String(ceremonyName).trim().slice(0, 50) || "Ceremony" }
             : {}),
+          ...(ceremonyLocation !== undefined
+            ? { ceremonyLocation: String(ceremonyLocation).trim().slice(0, 200) || null }
+            : {}),
           ...(mealEnabled !== undefined ? { mealEnabled: Boolean(mealEnabled) } : {}),
           ...(mealName !== undefined
             ? { mealName: String(mealName).trim().slice(0, 50) || "Wedding Breakfast" }
+            : {}),
+          ...(mealLocation !== undefined
+            ? { mealLocation: String(mealLocation).trim().slice(0, 200) || null }
             : {}),
           ...(eveningPartyEnabled !== undefined ? { eveningPartyEnabled: Boolean(eveningPartyEnabled) } : {}),
           ...(eveningPartyName !== undefined
             ? { eveningPartyName: String(eveningPartyName).trim().slice(0, 50) || "Evening Reception" }
             : {}),
+          ...(eveningPartyLocation !== undefined
+            ? { eveningPartyLocation: String(eveningPartyLocation).trim().slice(0, 200) || null }
+            : {}),
           ...(rehearsalDinnerEnabled !== undefined ? { rehearsalDinnerEnabled: Boolean(rehearsalDinnerEnabled) } : {}),
           ...(rehearsalDinnerName !== undefined
             ? { rehearsalDinnerName: String(rehearsalDinnerName).trim().slice(0, 50) || "Rehearsal Dinner" }
+            : {}),
+          ...(rehearsalDinnerLocation !== undefined
+            ? { rehearsalDinnerLocation: String(rehearsalDinnerLocation).trim().slice(0, 200) || null }
             : {}),
         },
       })

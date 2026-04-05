@@ -33,12 +33,16 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
           themeHue: true,
           ceremonyEnabled: true,
           ceremonyName: true,
+          ceremonyLocation: true,
           mealEnabled: true,
           mealName: true,
+          mealLocation: true,
           eveningPartyEnabled: true,
           eveningPartyName: true,
+          eveningPartyLocation: true,
           rehearsalDinnerEnabled: true,
           rehearsalDinnerName: true,
+          rehearsalDinnerLocation: true,
         },
       }),
     ])
@@ -58,12 +62,16 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
   const eventNames = {
     ceremonyEnabled: wedding?.ceremonyEnabled ?? true,
     ceremonyName: wedding?.ceremonyName ?? "Ceremony",
+    ceremonyLocation: wedding?.ceremonyLocation ?? null,
     mealEnabled: wedding?.mealEnabled ?? true,
     mealName: wedding?.mealName ?? "Wedding Breakfast",
+    mealLocation: wedding?.mealLocation ?? null,
     eveningPartyEnabled: wedding?.eveningPartyEnabled ?? true,
     eveningPartyName: wedding?.eveningPartyName ?? "Evening Reception",
+    eveningPartyLocation: wedding?.eveningPartyLocation ?? null,
     rehearsalDinnerEnabled: wedding?.rehearsalDinnerEnabled ?? false,
     rehearsalDinnerName: wedding?.rehearsalDinnerName ?? "Rehearsal Dinner",
+    rehearsalDinnerLocation: wedding?.rehearsalDinnerLocation ?? null,
   };
 
   return (
