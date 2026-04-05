@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, Heart, XCircle, HelpCircle } from "lucide-react";
+import { CheckCircle, Heart, XCircle } from "lucide-react";
 import { getEvents } from "@/lib/eventNames";
 
-type EventChoice = "yes" | "no" | "maybe";
+type EventChoice = "yes" | "no";
 
 interface MealOption {
   id: string;
@@ -40,10 +40,6 @@ interface GuestRsvpData {
   attendingReception: boolean | null;
   attendingAfterparty: boolean | null;
   attendingRehearsalDinner: boolean | null;
-  attendingCeremonyMaybe: boolean;
-  attendingReceptionMaybe: boolean;
-  attendingAfterpartyMaybe: boolean;
-  attendingRehearsalDinnerMaybe: boolean;
   mealChoice: string | null;
   dietaryNotes: string | null;
 }
@@ -63,10 +59,9 @@ interface Props {
   eventNames: EventNamesConfig;
 }
 
-function deriveChoice(attending: boolean | null, maybe: boolean): EventChoice | null {
+function deriveChoice(attending: boolean | null): EventChoice | null {
   if (attending === true)  return "yes";
   if (attending === false) return "no";
-  if (maybe)               return "maybe";
   return null;
 }
 
@@ -75,16 +70,16 @@ export function RsvpForm({ token, guest, mealOptions, eventNames }: Props) {
   const alreadyResponded = guest.rsvpStatus !== "PENDING" && guest.rsvpRespondedAt;
 
   const [ceremonyCh, setCeremonyCh] = useState<EventChoice>(
-    deriveChoice(guest.attendingCeremony, guest.attendingCeremonyMaybe) ?? "yes"
+    deriveChoice(guest.attendingCeremony) ?? "yes"
   );
   const [receptionCh, setReceptionCh] = useState<EventChoice>(
-    deriveChoice(guest.attendingReception, guest.attendingReceptionMaybe) ?? "yes"
+    deriveChoice(guest.attendingReception) ?? "yes"
   );
   const [afterpartyCh, setAfterpartyCh] = useState<EventChoice>(
-    deriveChoice(guest.attendingAfterparty, guest.attendingAfterpartyMaybe) ?? "yes"
+    deriveChoice(guest.attendingAfterparty) ?? "yes"
   );
   const [rehearsalDinnerCh, setRehearsalDinnerCh] = useState<EventChoice>(
-    deriveChoice(guest.attendingRehearsalDinner, guest.attendingRehearsalDinnerMaybe) ?? "yes"
+    deriveChoice(guest.attendingRehearsalDinner) ?? "yes"
   );
   const [mealChoice, setMealChoice] = useState(guest.mealChoice ?? "");
   const [dietaryNotes, setDietaryNotes] = useState(guest.dietaryNotes ?? "");
@@ -102,10 +97,10 @@ export function RsvpForm({ token, guest, mealOptions, eventNames }: Props) {
     const snap: SubmittedSnapshot = submitted && submittedSnapshot
       ? submittedSnapshot
       : {
-          ceremonyCh:   guest.invitedToCeremony   ? (deriveChoice(guest.attendingCeremony,   guest.attendingCeremonyMaybe)   ?? "yes") : null,
-          receptionCh:  guest.invitedToReception  ? (deriveChoice(guest.attendingReception,  guest.attendingReceptionMaybe)  ?? "yes") : null,
-          afterpartyCh: guest.invitedToAfterparty ? (deriveChoice(guest.attendingAfterparty, guest.attendingAfterpartyMaybe) ?? "yes") : null,
-          rehearsalDinnerCh: guest.invitedToRehearsalDinner ? (deriveChoice(guest.attendingRehearsalDinner, guest.attendingRehearsalDinnerMaybe) ?? "yes") : null,
+          ceremonyCh:   guest.invitedToCeremony   ? (deriveChoice(guest.attendingCeremony)   ?? "yes") : null,
+          receptionCh:  guest.invitedToReception  ? (deriveChoice(guest.attendingReception)  ?? "yes") : null,
+          afterpartyCh: guest.invitedToAfterparty ? (deriveChoice(guest.attendingAfterparty) ?? "yes") : null,
+          rehearsalDinnerCh: guest.invitedToRehearsalDinner ? (deriveChoice(guest.attendingRehearsalDinner) ?? "yes") : null,
           mealChoice: guest.mealChoice,
         };
     return (
@@ -281,23 +276,6 @@ function ConfirmationScreen({
     );
   }
 
-  if (status === "MAYBE") {
-    return (
-      <div className="text-center">
-        <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-3">
-          <HelpCircle className="w-8 h-8 text-amber-500" />
-        </div>
-        <p className="font-semibold text-gray-900 text-lg">Thanks for letting us know, {firstName}!</p>
-        <p className="text-sm text-gray-500 mt-1">
-          We'll keep you posted with any details you might need closer to the day.
-        </p>
-        <button onClick={onChangeResponse} className="mt-4 text-sm text-primary hover:underline min-h-[44px] px-4">
-          Change response
-        </button>
-      </div>
-    );
-  }
-
   if (status === "PARTIAL") {
     return (
       <div className="text-center">
@@ -313,10 +291,6 @@ function ConfirmationScreen({
               {choice === "yes" ? (
                 <span className="flex items-center gap-1 text-sm text-green-600 font-medium">
                   <CheckCircle className="w-4 h-4" /> See you there!
-                </span>
-              ) : choice === "maybe" ? (
-                <span className="flex items-center gap-1 text-sm text-amber-600 font-medium">
-                  <HelpCircle className="w-4 h-4" /> Maybe
                 </span>
               ) : (
                 <span className="flex items-center gap-1 text-sm text-red-500 font-medium">
@@ -379,8 +353,7 @@ function EventToggle({
   onChange: (v: EventChoice) => void;
 }) {
   const options: { label: string; val: EventChoice }[] = [
-    { label: "Yes, I'll be there", val: "yes" },
-    { label: "Maybe",              val: "maybe" },
+    { label: "Yes, I'll be there",   val: "yes" },
     { label: "Sorry, can't make it", val: "no" },
   ];
 
@@ -399,9 +372,7 @@ function EventToggle({
               value === val
                 ? val === "yes"
                   ? "border-green-500 bg-green-50 text-green-700"
-                  : val === "maybe"
-                    ? "border-amber-400 bg-amber-50 text-amber-700"
-                    : "border-red-400 bg-red-50 text-red-700"
+                  : "border-red-400 bg-red-50 text-red-700"
                 : "border-gray-200 text-gray-600 hover:border-gray-300"
             }`}
           >

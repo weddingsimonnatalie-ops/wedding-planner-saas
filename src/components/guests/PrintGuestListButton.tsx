@@ -39,7 +39,6 @@ const STATUS_COLORS: Record<string, string> = {
   PARTIAL: "#ea580c",
   DECLINED: "#dc2626",
   PENDING: "#d97706",
-  MAYBE: "#6b7280",
 };
 
 function formatWeddingDate(dateStr: string | null): string {
@@ -187,7 +186,6 @@ function generateRsvpSummaryHtml(guests: Guest[], config: WeddingConfig): string
     PARTIAL: guests.filter((g) => g.rsvpStatus === "PARTIAL").length,
     DECLINED: guests.filter((g) => g.rsvpStatus === "DECLINED").length,
     PENDING: guests.filter((g) => g.rsvpStatus === "PENDING").length,
-    MAYBE: guests.filter((g) => g.rsvpStatus === "MAYBE").length,
   };
 
   const ceremonyGuests = guests.filter((g) => g.invitedToCeremony);
@@ -266,7 +264,6 @@ function generateRsvpSummaryHtml(guests: Guest[], config: WeddingConfig): string
     ${row("Partial:", counts.PARTIAL, STATUS_COLORS.PARTIAL)}
     ${row("Declined:", counts.DECLINED, STATUS_COLORS.DECLINED)}
     ${row("Pending (still to respond):", counts.PENDING, STATUS_COLORS.PENDING)}
-    ${counts.MAYBE > 0 ? row("Maybe:", counts.MAYBE, STATUS_COLORS.MAYBE) : ""}
   </table>
 
   <hr class="divider">

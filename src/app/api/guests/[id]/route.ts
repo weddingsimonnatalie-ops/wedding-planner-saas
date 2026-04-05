@@ -149,10 +149,10 @@ export async function PUT(
             invitedToRehearsalDinner: invRehearsalDinner,
             notes: notes?.trim() || null,
             ...(computedStatus !== undefined ? { rsvpStatus: computedStatus as RsvpStatus } : {}),
-            ...(attendingCeremony   !== undefined ? { attendingCeremony,   attendingCeremonyMaybe:   false } : {}),
-            ...(attendingReception  !== undefined ? { attendingReception,  attendingReceptionMaybe:  false } : {}),
-            ...(attendingAfterparty !== undefined ? { attendingAfterparty, attendingAfterpartyMaybe: false } : {}),
-            ...(attendingRehearsalDinner !== undefined ? { attendingRehearsalDinner, attendingRehearsalDinnerMaybe: false } : {}),
+            ...(attendingCeremony        !== undefined ? { attendingCeremony }        : {}),
+            ...(attendingReception       !== undefined ? { attendingReception }       : {}),
+            ...(attendingAfterparty      !== undefined ? { attendingAfterparty }      : {}),
+            ...(attendingRehearsalDinner !== undefined ? { attendingRehearsalDinner } : {}),
             ...(mealChoice   !== undefined ? { mealChoice: mealChoice || null }             : {}),
             ...(dietaryNotes !== undefined ? { dietaryNotes: dietaryNotes?.trim() || null } : {}),
         },
@@ -211,37 +211,25 @@ export async function PATCH(
       if (rsvpStatus !== undefined && rsvpStatus !== "PARTIAL" && current) {
         if (rsvpStatus === "ACCEPTED") {
             attendingOverride = {
-              attendingCeremony:             current.invitedToCeremony        ? true  : null,
-              attendingCeremonyMaybe:        false,
-              attendingReception:            current.invitedToReception       ? true  : null,
-              attendingReceptionMaybe:       false,
-              attendingAfterparty:           current.invitedToAfterparty      ? true  : null,
-              attendingAfterpartyMaybe:      false,
-              attendingRehearsalDinner:      current.invitedToRehearsalDinner ? true  : null,
-              attendingRehearsalDinnerMaybe: false,
+              attendingCeremony:        current.invitedToCeremony        ? true  : null,
+              attendingReception:       current.invitedToReception       ? true  : null,
+              attendingAfterparty:      current.invitedToAfterparty      ? true  : null,
+              attendingRehearsalDinner: current.invitedToRehearsalDinner ? true  : null,
             };
         } else if (rsvpStatus === "DECLINED") {
             attendingOverride = {
-              attendingCeremony:             current.invitedToCeremony        ? false : null,
-              attendingCeremonyMaybe:        false,
-              attendingReception:            current.invitedToReception       ? false : null,
-              attendingReceptionMaybe:       false,
-              attendingAfterparty:           current.invitedToAfterparty      ? false : null,
-              attendingAfterpartyMaybe:      false,
-              attendingRehearsalDinner:      current.invitedToRehearsalDinner ? false : null,
-              attendingRehearsalDinnerMaybe: false,
+              attendingCeremony:        current.invitedToCeremony        ? false : null,
+              attendingReception:       current.invitedToReception       ? false : null,
+              attendingAfterparty:      current.invitedToAfterparty      ? false : null,
+              attendingRehearsalDinner: current.invitedToRehearsalDinner ? false : null,
             };
         } else {
-            // PENDING or MAYBE — clear all attending and maybe fields
+            // PENDING — clear all attending fields
             attendingOverride = {
-              attendingCeremony:             null,
-              attendingCeremonyMaybe:        false,
-              attendingReception:            null,
-              attendingReceptionMaybe:       false,
-              attendingAfterparty:           null,
-              attendingAfterpartyMaybe:      false,
-              attendingRehearsalDinner:      null,
-              attendingRehearsalDinnerMaybe: false,
+              attendingCeremony:        null,
+              attendingReception:       null,
+              attendingAfterparty:      null,
+              attendingRehearsalDinner: null,
             };
         }
       }

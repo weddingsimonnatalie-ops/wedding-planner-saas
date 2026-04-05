@@ -110,10 +110,6 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
               attendingReception: guest.attendingReception,
               attendingAfterparty: guest.attendingAfterparty,
               attendingRehearsalDinner: guest.attendingRehearsalDinner,
-              attendingCeremonyMaybe: guest.attendingCeremonyMaybe,
-              attendingReceptionMaybe: guest.attendingReceptionMaybe,
-              attendingAfterpartyMaybe: guest.attendingAfterpartyMaybe,
-              attendingRehearsalDinnerMaybe: guest.attendingRehearsalDinnerMaybe,
               mealChoice: guest.mealChoice,
               dietaryNotes: guest.dietaryNotes,
             }}

@@ -91,7 +91,6 @@ export default async function GuestsPage({ searchParams }: PageProps) {
     partial: allGuests.filter((g) => g.rsvpStatus === "PARTIAL").length,
     declined: allGuests.filter((g) => g.rsvpStatus === "DECLINED").length,
     pending: allGuests.filter((g) => g.rsvpStatus === "PENDING").length,
-    maybe: allGuests.filter((g) => g.rsvpStatus === "MAYBE").length,
     unassigned: allGuests.filter((g) => !g.tableId).length,
   };
 
@@ -103,7 +102,6 @@ export default async function GuestsPage({ searchParams }: PageProps) {
     partial: guests.filter((g) => g.rsvpStatus === "PARTIAL").length,
     declined: guests.filter((g) => g.rsvpStatus === "DECLINED").length,
     pending: guests.filter((g) => g.rsvpStatus === "PENDING").length,
-    maybe: guests.filter((g) => g.rsvpStatus === "MAYBE").length,
     unassigned: guests.filter((g) => !g.tableId).length,
   } : stats;
 

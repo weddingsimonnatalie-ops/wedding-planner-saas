@@ -186,7 +186,6 @@ export async function GET(req: NextRequest) {
           partial:  rsvpMap["PARTIAL"]  ?? 0,
           declined: rsvpMap["DECLINED"] ?? 0,
           pending:  rsvpMap["PENDING"]  ?? 0,
-          maybe:    rsvpMap["MAYBE"]    ?? 0,
           receptionEligible,
           assigned: assignedGuests,
         },

@@ -6,7 +6,6 @@ export const VALID_RSVP_STATUSES: RsvpStatus[] = [
   "ACCEPTED",
   "PARTIAL",
   "DECLINED",
-  "MAYBE",
 ];
 
 export function isValidRsvpStatus(

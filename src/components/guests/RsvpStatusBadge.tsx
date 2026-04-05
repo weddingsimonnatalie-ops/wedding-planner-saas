@@ -3,7 +3,6 @@ const STATUS_STYLES: Record<string, string> = {
   PARTIAL:  "bg-orange-100 text-orange-700",
   DECLINED: "bg-red-100 text-red-700",
   PENDING:  "bg-amber-100 text-amber-700",
-  MAYBE:    "bg-gray-100 text-gray-600",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -11,7 +10,6 @@ const STATUS_LABELS: Record<string, string> = {
   PARTIAL:  "Partial",
   DECLINED: "Declined",
   PENDING:  "Pending",
-  MAYBE:    "Maybe",
 };
 
 const STATUS_SHORT: Record<string, string> = {
@@ -19,7 +17,6 @@ const STATUS_SHORT: Record<string, string> = {
   PARTIAL:  "PAR",
   DECLINED: "DEC",
   PENDING:  "PEN",
-  MAYBE:    "MAY",
 };
 
 const STATUS_TITLES: Record<string, string> = {
@@ -27,7 +24,6 @@ const STATUS_TITLES: Record<string, string> = {
   PARTIAL:  "Attending some events",
   DECLINED: "Declined",
   PENDING:  "Pending",
-  MAYBE:    "Maybe",
 };
 
 export function RsvpStatusBadge({ status, short = false }: { status: string; short?: boolean }) {

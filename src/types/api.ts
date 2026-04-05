@@ -60,9 +60,6 @@ export interface GuestResponse {
   attendingCeremony: boolean | null;
   attendingReception: boolean | null;
   attendingAfterparty: boolean | null;
-  attendingCeremonyMaybe: boolean;
-  attendingReceptionMaybe: boolean;
-  attendingAfterpartyMaybe: boolean;
   mealChoice: string | null;
   dietaryNotes: string | null;
   tableId: string | null;
@@ -284,7 +281,6 @@ export interface DashboardStatsResponse {
     partial: number;
     declined: number;
     pending: number;
-    maybe: number;
     percentResponded: number;
   };
   seatingStats: {

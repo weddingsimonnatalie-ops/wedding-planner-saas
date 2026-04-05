@@ -29,10 +29,6 @@ interface Guest {
   attendingReception: boolean | null;
   attendingAfterparty: boolean | null;
   attendingRehearsalDinner: boolean | null;
-  attendingCeremonyMaybe: boolean;
-  attendingReceptionMaybe: boolean;
-  attendingAfterpartyMaybe: boolean;
-  attendingRehearsalDinnerMaybe: boolean;
   mealChoice: string | null;
   dietaryNotes: string | null;
   rsvpToken: string;
@@ -62,7 +58,7 @@ interface Props {
   readOnly?: boolean;
 }
 
-const ALL_STATUSES = ["PENDING", "ACCEPTED", "PARTIAL", "DECLINED", "MAYBE"] as const;
+const ALL_STATUSES = ["PENDING", "ACCEPTED", "PARTIAL", "DECLINED"] as const;
 
 export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnly = false }: Props) {
   const roCls = readOnly ? "bg-gray-50 cursor-not-allowed opacity-75" : "";
@@ -507,15 +503,8 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
                       eveningParty: localGuest.attendingAfterparty,
                       rehearsalDinner: localGuest.attendingRehearsalDinner,
                     };
-                    const maybeMap: Record<string, boolean> = {
-                      ceremony: localGuest.attendingCeremonyMaybe,
-                      meal: localGuest.attendingReceptionMaybe,
-                      eveningParty: localGuest.attendingAfterpartyMaybe,
-                      rehearsalDinner: localGuest.attendingRehearsalDinnerMaybe,
-                    };
                     if (!invitedMap[event.key]) return null;
                     const attending = attendingMap[event.key];
-                    const maybe = maybeMap[event.key];
                     return (
                       <div
                         key={event.key}
@@ -526,8 +515,7 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
                         <span className="text-gray-600">{event.name}</span>
                         {attending === true  && <span className="text-green-600 font-medium">✓ Attending</span>}
                         {attending === false && <span className="text-red-600 font-medium">✗ Not attending</span>}
-                        {attending === null && maybe && <span className="text-amber-600 font-medium">? Maybe</span>}
-                        {attending === null && !maybe && <span className="text-gray-400">— Not responded</span>}
+                        {attending === null  && <span className="text-gray-400">— Not responded</span>}
                       </div>
                     );
                   })}

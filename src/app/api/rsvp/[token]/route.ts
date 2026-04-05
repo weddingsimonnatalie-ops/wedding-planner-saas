@@ -9,13 +9,12 @@ import { checkRateLimit, extractIp, getRsvpRateLimit } from "@/lib/rate-limit";
 import { validateLength } from "@/lib/validation";
 import { withTenantContext } from "@/lib/tenant";
 
-type Choice = "yes" | "no" | "maybe";
+type Choice = "yes" | "no";
 
-function toFields(choice: Choice | undefined): { attending: boolean | null; maybe: boolean } {
-  if (choice === "yes") return { attending: true, maybe: false };
-  if (choice === "no") return { attending: false, maybe: false };
-  if (choice === "maybe") return { attending: null, maybe: true };
-  return { attending: null, maybe: false };
+function toAttending(choice: Choice | undefined): boolean | null {
+  if (choice === "yes") return true;
+  if (choice === "no")  return false;
+  return null;
 }
 
 // Public — no auth required
@@ -64,10 +63,6 @@ export async function GET(
         attendingReception: true,
         attendingAfterparty: true,
         attendingRehearsalDinner: true,
-        attendingCeremonyMaybe: true,
-        attendingReceptionMaybe: true,
-        attendingAfterpartyMaybe: true,
-        attendingRehearsalDinnerMaybe: true,
         mealChoice: true,
         dietaryNotes: true,
       },
@@ -132,10 +127,10 @@ export async function POST(
       dietaryNotes,
     } = body;
 
-    const ceremony = guest.invitedToCeremony ? toFields(ceremonyCh) : { attending: null as boolean | null, maybe: false };
-    const reception = guest.invitedToReception ? toFields(receptionCh) : { attending: null as boolean | null, maybe: false };
-    const afterparty = guest.invitedToAfterparty ? toFields(afterpartyCh) : { attending: null as boolean | null, maybe: false };
-    const rehearsalDinner = guest.invitedToRehearsalDinner ? toFields(rehearsalDinnerCh) : { attending: null as boolean | null, maybe: false };
+    const ceremony        = guest.invitedToCeremony        ? toAttending(ceremonyCh)        : null;
+    const reception       = guest.invitedToReception       ? toAttending(receptionCh)       : null;
+    const afterparty      = guest.invitedToAfterparty      ? toAttending(afterpartyCh)      : null;
+    const rehearsalDinner = guest.invitedToRehearsalDinner ? toAttending(rehearsalDinnerCh) : null;
 
     // Validate mealChoice references an active meal option for this wedding (if provided)
     if (mealChoice && mealChoice.trim()) {
@@ -154,14 +149,10 @@ export async function POST(
       guest.invitedToReception,
       guest.invitedToAfterparty,
       guest.invitedToRehearsalDinner,
-      ceremony.attending,
-      reception.attending,
-      afterparty.attending,
-      rehearsalDinner.attending,
-      ceremony.maybe,
-      reception.maybe,
-      afterparty.maybe,
-      rehearsalDinner.maybe
+      ceremony,
+      reception,
+      afterparty,
+      rehearsalDinner,
     );
 
     // Validate dietary notes length
@@ -176,14 +167,10 @@ export async function POST(
         rsvpStatus: rsvpStatus as any,
         isManualOverride: false,
         rsvpRespondedAt: new Date(),
-        attendingCeremony: ceremony.attending,
-        attendingCeremonyMaybe: ceremony.maybe,
-        attendingReception: reception.attending,
-        attendingReceptionMaybe: reception.maybe,
-        attendingAfterparty: afterparty.attending,
-        attendingAfterpartyMaybe: afterparty.maybe,
-        attendingRehearsalDinner: rehearsalDinner.attending,
-        attendingRehearsalDinnerMaybe: rehearsalDinner.maybe,
+        attendingCeremony:       ceremony,
+        attendingReception:      reception,
+        attendingAfterparty:     afterparty,
+        attendingRehearsalDinner: rehearsalDinner,
         mealChoice: mealChoice?.trim() || null,
         dietaryNotes: dietaryNotes?.trim() || null,
       },

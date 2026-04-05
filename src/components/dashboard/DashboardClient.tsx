@@ -15,7 +15,7 @@ import { UserRole } from "@prisma/client";
 
 interface DashStats {
   wedding: { coupleName: string; weddingDate: string | null };
-  guests: { total: number; accepted: number; partial: number; declined: number; pending: number; maybe: number; receptionEligible: number; assigned: number };
+  guests: { total: number; accepted: number; partial: number; declined: number; pending: number; receptionEligible: number; assigned: number };
   meals: { name: string; count: number }[];
   payments: {
     id: string; label: string; amount: number;
@@ -185,7 +185,6 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
                 { label: "Partial",  value: stats.guests.partial,  color: "bg-orange-400" },
                 { label: "Declined", value: stats.guests.declined, color: "bg-red-500" },
                 { label: "Pending",  value: stats.guests.pending,  color: "bg-amber-400" },
-                { label: "Maybe",    value: stats.guests.maybe,    color: "bg-slate-300" },
               ].map(({ label, value, color }) => (
                 <div key={label} className="flex items-center gap-3">
                   <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${color}`} />

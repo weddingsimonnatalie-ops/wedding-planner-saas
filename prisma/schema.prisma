@@ -221,10 +221,6 @@ model Guest {
   attendingReception         Boolean?
   attendingAfterparty        Boolean?
   attendingRehearsalDinner   Boolean?
-  attendingCeremonyMaybe     Boolean  @default(false)
-  attendingReceptionMaybe    Boolean  @default(false)
-  attendingAfterpartyMaybe   Boolean  @default(false)
-  attendingRehearsalDinnerMaybe Boolean @default(false)
 
   mealChoice   String?
   dietaryNotes String?
@@ -254,7 +250,6 @@ enum RsvpStatus {
   ACCEPTED
   PARTIAL
   DECLINED
-  MAYBE
 }
 
 model MealOption {

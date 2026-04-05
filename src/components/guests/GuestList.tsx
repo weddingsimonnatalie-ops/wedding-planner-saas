@@ -34,10 +34,6 @@ interface Guest {
   attendingReception: boolean | null;
   attendingAfterparty: boolean | null;
   attendingRehearsalDinner: boolean | null;
-  attendingCeremonyMaybe: boolean;
-  attendingReceptionMaybe: boolean;
-  attendingAfterpartyMaybe: boolean;
-  attendingRehearsalDinnerMaybe: boolean;
   mealChoice: string | null;
   table: { id: string; name: string } | null;
   unsubscribedAt: string | Date | null;
@@ -59,7 +55,6 @@ interface Stats {
   partial: number;
   declined: number;
   pending: number;
-  maybe: number;
   unassigned: number;
 }
 
@@ -505,7 +500,6 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
               { label: "Partial", value: stats.partial, color: "text-orange-500" },
               { label: "Declined", value: stats.declined, color: "text-red-600" },
               { label: "Pending", value: stats.pending, color: "text-amber-600" },
-              { label: "Maybe", value: stats.maybe, color: "text-gray-500" },
               { label: "Unassigned", value: stats.unassigned, color: "text-blue-600" },
             ].map(({ label, value, color }) => (
               <div key={label} className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2">
@@ -515,15 +509,14 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
             ))}
           </div>
         )}
-        {/* Desktop: 7-column card grid */}
-        <div className="hidden md:grid md:grid-cols-7 md:gap-3">
+        {/* Desktop: 6-column card grid */}
+        <div className="hidden md:grid md:grid-cols-6 md:gap-3">
           {[
             { label: hasFilters ? "Filtered" : "Total", value: stats.total, color: hasFilters ? "text-primary" : "text-gray-900" },
             { label: "Accepted", value: stats.accepted, color: "text-green-600" },
             { label: "Partial", value: stats.partial, color: "text-orange-500" },
             { label: "Declined", value: stats.declined, color: "text-red-600" },
             { label: "Pending", value: stats.pending, color: "text-amber-600" },
-            { label: "Maybe", value: stats.maybe, color: "text-gray-500" },
             { label: "Unassigned", value: stats.unassigned, color: "text-blue-600" },
           ].map(({ label, value, color }) => (
             <div
@@ -715,7 +708,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">All statuses</option>
-                  {["PENDING", "ACCEPTED", "PARTIAL", "DECLINED", "MAYBE"].map((s) => (
+                  {["PENDING", "ACCEPTED", "PARTIAL", "DECLINED"].map((s) => (
                     <option key={s} value={s}>{s[0] + s.slice(1).toLowerCase()}</option>
                   ))}
                 </select>
@@ -982,7 +975,6 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                   { value: "ACCEPTED", label: "Accepted", dot: "bg-green-500" },
                   { value: "PARTIAL",  label: "Partial",  dot: "bg-orange-400" },
                   { value: "DECLINED", label: "Declined", dot: "bg-red-500" },
-                  { value: "MAYBE",    label: "Maybe",    dot: "bg-gray-400" },
                 ].map(({ value, label, dot }) => (
                   <button
                     key={value}
@@ -1142,15 +1134,8 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                           eveningParty: g.attendingAfterparty,
                           rehearsalDinner: g.attendingRehearsalDinner,
                         };
-                        const maybeMap: Record<string, boolean> = {
-                          ceremony: g.attendingCeremonyMaybe,
-                          meal: g.attendingReceptionMaybe,
-                          eveningParty: g.attendingAfterpartyMaybe,
-                          rehearsalDinner: g.attendingRehearsalDinnerMaybe,
-                        };
                         const invited = invitedMap[event.key];
                         const attending = attendingMap[event.key];
-                        const maybe = maybeMap[event.key];
                         if (!invited) return null;
                         return (
                           <span
@@ -1159,7 +1144,6 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                             className={`inline-flex items-center justify-center w-4 h-4 rounded text-[10px] font-bold ${
                               attending === true  ? "bg-green-100 text-green-700" :
                               attending === false ? "bg-red-100 text-red-600" :
-                              maybe               ? "bg-amber-100 text-amber-700" :
                               "bg-gray-100 text-gray-400"
                             }`}
                           >
@@ -1262,15 +1246,8 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                             eveningParty: g.attendingAfterparty,
                             rehearsalDinner: g.attendingRehearsalDinner,
                           };
-                          const maybeMap: Record<string, boolean> = {
-                            ceremony: g.attendingCeremonyMaybe,
-                            meal: g.attendingReceptionMaybe,
-                            eveningParty: g.attendingAfterpartyMaybe,
-                            rehearsalDinner: g.attendingRehearsalDinnerMaybe,
-                          };
                           const invited = invitedMap[event.key];
                           const attending = attendingMap[event.key];
-                          const maybe = maybeMap[event.key];
                           if (!invited) return null;
                           return (
                             <span
@@ -1278,13 +1255,11 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                               title={
                                 attending === true  ? `${event.name}: attending` :
                                 attending === false ? `${event.name}: not attending` :
-                                maybe               ? `${event.name}: maybe` :
                                 `${event.name}: no answer yet`
                               }
                               className={`inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold ${
                                 attending === true  ? "bg-green-100 text-green-700" :
                                 attending === false ? "bg-red-100 text-red-600" :
-                                maybe               ? "bg-amber-100 text-amber-700" :
                                 "bg-gray-100 text-gray-400"
                               }`}
                             >
@@ -1394,7 +1369,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
       {/* Bulk set status confirmation dialog */}
       {bulkStatusDialog && (() => {
         const STATUS_LABELS: Record<string, string> = {
-          PENDING: "Pending", ACCEPTED: "Accepted", PARTIAL: "Partial", DECLINED: "Declined", MAYBE: "Maybe",
+          PENDING: "Pending", ACCEPTED: "Accepted", PARTIAL: "Partial", DECLINED: "Declined",
         };
         const label = STATUS_LABELS[bulkStatusDialog.status] ?? bulkStatusDialog.status;
         const selectedGuests = guests.filter(g => selectedIds.has(g.id));

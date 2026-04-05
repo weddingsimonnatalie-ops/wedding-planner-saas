@@ -56,8 +56,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           return result.count;
       }
 
-      // PENDING / MAYBE: clear all attending fields
-      if (rsvpStatus === "PENDING" || rsvpStatus === "MAYBE") {
+      // PENDING: clear all attending fields
+      if (rsvpStatus === "PENDING") {
           const result = await tx.guest.updateMany({
             where: { id: { in: guestIds }, weddingId },
             data: {
