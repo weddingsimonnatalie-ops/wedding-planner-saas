@@ -52,6 +52,11 @@
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
+/* Prevent focus outline on main container (Chrome bug workaround) */
+main:focus {
+  outline: none;
+}
+
 @media (max-width: 767px) {
   .main-content {
     /* 60px for bottom nav + safe area inset */

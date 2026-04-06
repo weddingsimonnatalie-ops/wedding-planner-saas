@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useEffect } from "react";
+import { useState, useTransition, useRef, useEffect, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Edit2, Trash2, Copy, Mail, Upload, X, CheckCircle2, XCircle, ChevronDown, ChevronRight, Loader2, Pencil, Tag, Utensils, Download, Plus, MoreHorizontal, SlidersHorizontal, RefreshCw } from "lucide-react";
@@ -118,6 +118,8 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const [searchValue, setSearchValue] = useState(currentFilters.search ?? "");
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [showStats, setShowStats] = useState(false);
 
   const mealMap = Object.fromEntries(mealOptions.map((m) => [m.id, m.name]));
@@ -143,14 +145,33 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
   }, []);
 
   // Keep search input in sync when URL changes (e.g. "Clear all filters")
+  // But skip if user is actively typing to prevent focus loss
   useEffect(() => {
-    setSearchValue(currentFilters.search ?? "");
+    if (!isTypingRef.current) {
+      setSearchValue(currentFilters.search ?? "");
+    }
   }, [currentFilters.search]);
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
     return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
   }, []);
+
+  // Preserve input focus during typing (Chrome bug workaround)
+  useLayoutEffect(() => {
+    if (isTypingRef.current && searchInputRef.current) {
+      // Use requestAnimationFrame to ensure focus is restored after Chrome's focus management
+      const rafId = requestAnimationFrame(() => {
+        if (isTypingRef.current && searchInputRef.current && document.activeElement !== searchInputRef.current) {
+          searchInputRef.current.focus();
+          // Move cursor to end of input
+          const len = searchInputRef.current.value.length;
+          searchInputRef.current.setSelectionRange(len, len);
+        }
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [searchValue]);
 
   // Pull-to-refresh
   const { isPulling, pullDistance, isRefreshing, containerRef } = usePullToRefresh({
@@ -163,13 +184,15 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
   }
 
   function navigateFilter(url: string) {
-    startTransition(() => router.push(url));
+    startTransition(() => router.push(url, { scroll: false }));
   }
 
   function handleSearchChange(value: string) {
     setSearchValue(value);
+    isTypingRef.current = true;
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
+      isTypingRef.current = false;
       navigateFilter(buildUrl({ ...currentFilters, search: value }));
     }, 300);
   }
@@ -671,10 +694,12 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
           }}
         >
           <input
+            ref={searchInputRef}
             name="search"
             value={searchValue}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search name…"
+            autoComplete="off"
             className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <button
