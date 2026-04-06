@@ -89,22 +89,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Create missing categories
     let categoriesCreated = 0;
     if (confirm && categoryNames.size > 0) {
-      await withTenantContext(weddingId, async (tx) => {
-        // Get max sortOrder for new categories
-        const maxSortResult = await tx.$queryRaw<{ max: number }[]>`
-          SELECT COALESCE(MAX(sort_order), 0) as max FROM planning_categories WHERE wedding_id = ${weddingId}
-        `;
-        let nextSortOrder = maxSortResult[0]?.max ?? 0;
+      // Get max sortOrder for new categories
+      const maxSortResult = await withTenantContext(weddingId, async (tx) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (tx as any).planningCategory.aggregate({
+          where: { weddingId },
+          _max: { sortOrder: true },
+        })
+      );
+      let nextSortOrder = (maxSortResult as { _max: { sortOrder: number | null } })._max.sortOrder ?? 0;
 
-        for (const name of categoryNames) {
-          await tx.$executeRaw`
-            INSERT INTO planning_categories (id, wedding_id, name, colour, sort_order, is_active, created_at)
-            VALUES (gen_random_cuid(), ${weddingId}, ${name}, '#6366f1', ${nextSortOrder}, true, NOW())
-          `;
-          nextSortOrder++;
-          categoriesCreated++;
-        }
-      });
+      for (const name of categoryNames) {
+        await withTenantContext(weddingId, async (tx) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (tx as any).planningCategory.create({
+            data: {
+              weddingId,
+              name,
+              colour: "#6366f1",
+              sortOrder: nextSortOrder,
+              isActive: true,
+            },
+          });
+        });
+        nextSortOrder++;
+        categoriesCreated++;
+      }
 
       // Refresh category map after creating new ones
       const newCategories = await withTenantContext(weddingId, async (tx) =>
