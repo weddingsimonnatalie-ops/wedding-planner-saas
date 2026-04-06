@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Users, CheckSquare, CreditCard, Menu } from "lucide-react";
+import { CalendarDays, Users, CheckSquare, CreditCard, Clock, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@prisma/client";
 
@@ -17,6 +17,7 @@ const TABS = [
   { href: "/guests", label: "Guests", icon: Users, roles: null },
   { href: "/tasks", label: "Tasks", icon: CheckSquare, roles: ["ADMIN", "VIEWER", "RSVP_MANAGER"] as UserRole[] },
   { href: "/payments", label: "Payments", icon: CreditCard, roles: ["ADMIN", "VIEWER"] as UserRole[] },
+  { href: "/timeline", label: "Timeline", icon: Clock, roles: null },
 ] as const;
 
 // Hide the bottom nav on detail/edit pages (e.g. /guests/[id], /suppliers/[id])

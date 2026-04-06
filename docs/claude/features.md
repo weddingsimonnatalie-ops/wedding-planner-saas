@@ -90,8 +90,8 @@ Three roles defined in the `UserRole` Prisma enum:
 - RSVP link with clipboard copy (HTTP fallback for non-secure contexts)
 - CSV import with duplicate detection (see below) and export
 - **Add guest modal**: "Add guest" button in the header row opens `GuestModal` — a modal overlay (no page navigation). On save, calls `router.refresh()` and `triggerRefresh()`, then closes. The `/guests/new` full-page route no longer exists.
-- **Toolbar layout** (desktop): `[Import CSV] [Export CSV] [Template CSV] [Quick select ▾] [Print ▾]` — all owned by `GuestList.tsx` (not `page.tsx`); Quick select only renders when `guests.length > 0 && perms.can.editGuests`
-- **Toolbar layout** (mobile): `[More ▾]` dropdown (containing Print options, Import CSV, Export CSV, Template CSV)
+- **Toolbar layout** (desktop): `[Template] [Export] [Import] [Add guest]` — Template/Export/Import hidden on mobile; Add guest visible on all screen sizes
+- **Quick select and Print toolbar** (desktop): `[Quick select ▾] [Print]` — below the header, before filters
 - **Search bar** is full-width on its own row below the toolbar (debounced 300ms, immediate on Enter); below that is a `[Filters (N) ▾]` button and `[Clear]` button
 - **Collapsible filter panel**: toggled by the Filters button; state persisted to `localStorage`; shows Status, Group, Table (specific table names with Top Table/Head Table pinned first), Event, Meal, and Dietary dropdowns
 - **Active filter badges**: appear below the filter panel for each active filter; each has an × to remove that individual filter
@@ -292,6 +292,12 @@ Three roles defined in the `UserRole` Prisma enum:
 ## Suppliers (`/suppliers`, `/suppliers/[id]`)
 
 - Supplier list with status filter (Enquiry/Quoted/Booked/Complete/Cancelled) and category filter
+- **Header row**: title + action buttons (ADMIN only for edit actions)
+  - `[Template] [Export] [Import] [Add Supplier]` — Template/Export/Import hidden on mobile; Add Supplier visible on all screen sizes
+- **CSV import/export**:
+  - **Export CSV**: downloads all suppliers with columns — Name, Contact Name, Email, Phone, Website, Category, Status, Contract Value, Contract Signed, Notes
+  - **Import CSV**: upload flow with preview, duplicate detection by supplier name (case-insensitive), and per-duplicate actions (Skip/Update existing/Import as new)
+  - **Template**: downloads a sample CSV with headers and an example row
 - **Add supplier modal**: "Add Supplier" button opens `SupplierModal` — a modal overlay with fields:
   - Category (dropdown), Status (dropdown), Supplier name* (required), Contact name, Phone, Email, Website, Contract value
   - On save, calls `router.refresh()` and `triggerRefresh()`, then navigates to the new supplier's detail page ("Create & open" behaviour)
@@ -302,6 +308,25 @@ Three roles defined in the `UserRole` Prisma enum:
   - Payment notes displayed as a third line beneath the payment row when set
 - File attachments: upload/download/delete (stored in S3 at key `{weddingId}/suppliers/{supplierId}/{uuid}.ext`); served via presigned URL redirect from `/api/uploads/[supplierId]/[...filename]`; receipts linked to payments show "Receipt" badge with payment label
 - Supplier categories: configurable with colour, sort order (Settings → Supplier Categories)
+
+## Supplier CSV Import (`/suppliers` → Import CSV)
+
+- Upload flow: parse → preview → confirm
+- **Template download**: sample CSV with headers and example row (Name, Contact Name, Email, Phone, Website, Category, Status, Contract Value, Contract Signed, Notes)
+- Preview shows three categories:
+  - **New suppliers** (green) — will be created
+  - **Duplicates** (amber) — matched by supplier name (case-insensitive); shows incoming CSV data vs existing DB record side-by-side
+  - **Errors** (red) — missing name field; always skipped
+- Per-duplicate action (default: Skip):
+  - **Skip** — do nothing
+  - **Update existing** — overwrite existing record with non-empty CSV fields; category matched by name (warning shown for unknown categories)
+  - **Import as new** — create a second supplier with the same name
+- Global **Skip all** / **Update all** buttons above the duplicate list
+- Category matching: case-insensitive lookup against existing planning categories; unknown categories show a warning in the preview
+- Status values accepted: Enquiry/Quoted/Booked/Cancelled/Complete (case-insensitive, common variants like "Quote" also accepted)
+- Result summary shows: created / updated / skipped / errors
+- API: `POST /api/suppliers/import` — preview mode returns `existingSupplier` and `categoryId` for each row; confirm mode accepts `duplicateActions: Record<string, 'skip'|'update'|'create'>` keyed by CSV line number
+- Export API: `GET /api/suppliers/export` — returns CSV file with all suppliers
 
 ## Payments (`/payments`)
 

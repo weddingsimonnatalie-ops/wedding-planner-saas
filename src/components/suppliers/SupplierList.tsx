@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, ExternalLink, ChevronDown } from "lucide-react";
+import { useState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Plus, Download, Upload, ChevronDown, FileSpreadsheet } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useWedding } from "@/context/WeddingContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { SupplierModal } from "./SupplierModal";
+import { CsvImportModal } from "./CsvImportModal";
+import { CSV_TEMPLATE_HEADERS, CSV_TEMPLATE_EXAMPLE } from "@/lib/supplier-csv";
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   ENQUIRY:   { label: "Enquiry",   cls: "bg-gray-100 text-gray-700" },
@@ -43,13 +46,18 @@ function supplierTotals(s: Supplier) {
 export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[] }) {
   const { can: perms } = usePermissions();
   const { currencySymbol } = useWedding();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
   const [categories, setCategories] = useState<SupplierCategory[]>([]);
   const [catFilter, setCatFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [error, setError] = useState("");
   const [showStats, setShowStats] = useState(false);
+
+  const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(CSV_TEMPLATE_HEADERS + CSV_TEMPLATE_EXAMPLE)}`;
 
   // Sync server-rendered data into state whenever the parent server component re-renders
   useEffect(() => {
@@ -103,15 +111,45 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold text-gray-900">Suppliers</h1>
-        {perms.editSuppliers && (
+        <div className="flex items-center gap-2">
+          <a
+            href={csvTemplateHref}
+            download="supplier-import-template.csv"
+            className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Template
+          </a>
           <button
             type="button"
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
+            onClick={() => {
+              const link = document.createElement("a");
+              link.href = "/api/suppliers/export";
+              link.download = `suppliers-${new Date().toISOString().split("T")[0]}.csv`;
+              link.click();
+            }}
+            className="hidden md:flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
           >
-            <Plus className="w-4 h-4" /> Add Supplier
+            <Download className="w-4 h-4" /> Export
           </button>
-        )}
+          {perms.editSuppliers && (
+            <>
+              <button
+                type="button"
+                onClick={() => setIsImportOpen(true)}
+                className="hidden md:flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                <Upload className="w-4 h-4" /> Import
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
+              >
+                <Plus className="w-4 h-4" /> Add Supplier
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Summary bar - collapsible on mobile */}
@@ -279,6 +317,16 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
 
       {isModalOpen && (
         <SupplierModal onClose={() => setIsModalOpen(false)} />
+      )}
+
+      {isImportOpen && (
+        <CsvImportModal
+          onClose={() => setIsImportOpen(false)}
+          onImported={() => {
+            setIsImportOpen(false);
+            startTransition(() => router.refresh());
+          }}
+        />
       )}
     </div>
   );

@@ -20,12 +20,12 @@ const allNavItems = [
   { href: "/",                  label: "Dashboard",    icon: LayoutDashboard, roles: null },
   { href: "/guests",            label: "Guests",       icon: Users,           roles: null },
   { href: "/seating",           label: "Seating",      icon: LayoutGrid,      roles: null },
-  { href: "/timeline",          label: "Timeline",     icon: Clock,           roles: null },
   { href: "/appointments",      label: "Appointments", icon: CalendarDays,    roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/tasks",             label: "Tasks",        icon: CheckSquare,     roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/suppliers",         label: "Suppliers",    icon: Briefcase,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/payments",          label: "Payments",     icon: CreditCard,      roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/budget",            label: "Budget",       icon: PiggyBank,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
+  { href: "/timeline",          label: "Timeline",     icon: Clock,           roles: null },
   { href: "/settings",          label: "Settings",     icon: Settings,        roles: ["ADMIN"] as UserRole[] },
 ];
 
