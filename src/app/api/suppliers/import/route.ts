@@ -67,7 +67,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       const existingSupplier = existingMap.get(key) ?? null;
       const isDuplicate = !!existingSupplier;
       const categoryId = row.category ? categoryMap.get(row.category.toLowerCase().trim()) : null;
-      const categoryWarning = row.category && !categoryId ? `Unknown category: "${row.category}"` : undefined;
+      const categoryWarning = row.category && !categoryId ? `New category: "${row.category}"` : undefined;
       return { ...row, isDuplicate, existingSupplier, categoryId, categoryWarning };
     });
 
@@ -77,6 +77,54 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // Batch import
     const actions: Record<string, DupAction> = duplicateActions ?? {};
+
+    // Collect unique category names that need to be created
+    const categoryNames = new Set<string>();
+    for (const row of rows) {
+      if (row.category && !categoryMap.has(row.category.toLowerCase().trim())) {
+        categoryNames.add(row.category.trim());
+      }
+    }
+
+    // Create missing categories
+    let categoriesCreated = 0;
+    if (confirm && categoryNames.size > 0) {
+      await withTenantContext(weddingId, async (tx) => {
+        // Get max sortOrder for new categories
+        const maxSortResult = await tx.$queryRaw<{ max: number }[]>`
+          SELECT COALESCE(MAX(sort_order), 0) as max FROM planning_categories WHERE wedding_id = ${weddingId}
+        `;
+        let nextSortOrder = maxSortResult[0]?.max ?? 0;
+
+        for (const name of categoryNames) {
+          await tx.$executeRaw`
+            INSERT INTO planning_categories (id, wedding_id, name, colour, sort_order, is_active, created_at)
+            VALUES (gen_random_cuid(), ${weddingId}, ${name}, '#6366f1', ${nextSortOrder}, true, NOW())
+          `;
+          nextSortOrder++;
+          categoriesCreated++;
+        }
+      });
+
+      // Refresh category map after creating new ones
+      const newCategories = await withTenantContext(weddingId, async (tx) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (tx as any).planningCategory.findMany({
+          where: { weddingId, isActive: true },
+          select: { id: true, name: true },
+        })
+      );
+      for (const c of newCategories) {
+        categoryMap.set(c.name.toLowerCase().trim(), c.id);
+      }
+      // Update rowsWithStatus with new category IDs
+      for (const row of rowsWithStatus) {
+        if (row.category) {
+          row.categoryId = categoryMap.get(row.category.toLowerCase().trim()) ?? null;
+          row.categoryWarning = undefined; // Clear warning since category now exists
+        }
+      }
+    }
 
     const toCreate: Array<{
       name: string;
@@ -179,6 +227,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       updated: result.updated,
       skipped,
       errors: importErrors,
+      categoriesCreated,
     });
   } catch (error) {
     return handleDbError(error);

@@ -43,6 +43,7 @@ interface ImportResult {
   updated: number;
   skipped: number;
   errors: number;
+  categoriesCreated: number;
 }
 
 interface Props {
@@ -382,6 +383,9 @@ export function CsvImportModal({ onClose, onImported }: Props) {
                 )}
                 {result.errors > 0 && (
                   <p className="text-red-600">Errors: {result.errors} row{result.errors !== 1 ? "s" : ""} with missing required fields</p>
+                )}
+                {result.categoriesCreated > 0 && (
+                  <p className="text-blue-600">Categories created: {result.categoriesCreated} new categor{result.categoriesCreated !== 1 ? "ies" : "y"}</p>
                 )}
               </div>
             </div>
