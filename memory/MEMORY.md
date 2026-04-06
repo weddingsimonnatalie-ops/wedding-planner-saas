@@ -1,3 +1,4 @@
 - [Phase 1 project status](project_phase1.md) — scaffold complete, docker compose up works, Phase 2 next
 - [User: Simon Blythe](user_simon.md) — wedding planner app owner, planning wedding with Natalie
 - [Project: Wedding day timeline](project-wedding-day-timeline.md) — Timeline events with configurable categories managed from Settings; colour-coded badges; print view; migrated from hardcoded enum to dynamic categories 2026-04-01
+- [Feedback: Chrome focus fix](feedback-chrome-focus-fix.md) — Chrome loses input focus on state update; use scroll:false and focus restoration pattern

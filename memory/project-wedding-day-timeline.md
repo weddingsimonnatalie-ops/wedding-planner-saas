@@ -100,6 +100,12 @@ Default colours match the original hardcoded values (pink, blue, purple, amber, 
 
 ---
 
+## Navigation
+
+Timeline appears in the sidebar and mobile menu between **Budget** and **Settings**. It is also included in the mobile bottom navigation bar (after Payments, before More button) since 2026-04-05.
+
+---
+
 ## Files
 
 | File | Purpose |
