@@ -15,6 +15,7 @@ interface PageProps {
     event?: string;
     meal?: string;
     dietary?: string;
+    email?: string;
   }>;
 }
 
@@ -22,7 +23,7 @@ export default async function GuestsPage({ searchParams }: PageProps) {
   const ctx = await requireServerContext();
   const { weddingId } = ctx;
 
-  const { search, status, group, tableAssigned, tableId, event, meal, dietary } = await searchParams;
+  const { search, status, group, tableAssigned, tableId, event, meal, dietary, email } = await searchParams;
 
   const overrideStatuses = { in: ["ACCEPTED", "PARTIAL"] };
   const eventFilter: Record<string, unknown> =
@@ -48,6 +49,7 @@ export default async function GuestsPage({ searchParams }: PageProps) {
           ...eventFilter,
           ...(meal === "none" ? { mealChoice: null } : meal ? { mealChoice: meal } : {}),
           ...(dietary === "has_notes" ? { dietaryNotes: { not: null }, NOT: { dietaryNotes: "" } } : dietary === "no_notes" ? { OR: [{ dietaryNotes: null }, { dietaryNotes: "" }] } : {}),
+          ...(email === "with" ? { email: { not: null } } : email === "without" ? { OR: [{ email: null }, { email: "" }] } : {}),
           ...(search
             ? {
                 OR: [
@@ -95,7 +97,7 @@ export default async function GuestsPage({ searchParams }: PageProps) {
   };
 
   // When any filter is active, derive stats from the filtered guest list
-  const hasFilters = !!(search || status || group || tableAssigned || tableId || event || meal || dietary);
+  const hasFilters = !!(search || status || group || tableAssigned || tableId || event || meal || dietary || email);
   const displayStats = hasFilters ? {
     total: guests.length,
     accepted: guests.filter((g) => g.rsvpStatus === "ACCEPTED").length,
@@ -116,7 +118,7 @@ export default async function GuestsPage({ searchParams }: PageProps) {
       totalGuests={totalGuests}
       stats={displayStats}
       hasFilters={hasFilters}
-      currentFilters={{ search, status, group, tableAssigned, tableId, event, meal, dietary }}
+      currentFilters={{ search, status, group, tableAssigned, tableId, event, meal, dietary, email }}
     />
   );
 }

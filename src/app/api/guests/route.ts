@@ -24,6 +24,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const event = searchParams.get("event");
     const meal = searchParams.get("meal");
     const dietary = searchParams.get("dietary");
+    const email = searchParams.get("email");
 
     // Optional pagination
     const skip = searchParams.get("skip") ? parseInt(searchParams.get("skip")!, 10) : undefined;
@@ -61,6 +62,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       ...eventFilter,
       ...(meal === "none" ? { mealChoice: null } : meal ? { mealChoice: meal } : {}),
       ...(dietary === "has_notes" ? { dietaryNotes: { not: null }, NOT: { dietaryNotes: "" } } : dietary === "no_notes" ? { OR: [{ dietaryNotes: null }, { dietaryNotes: "" }] } : {}),
+      ...(email === "with" ? { email: { not: null } } : email === "without" ? { OR: [{ email: null }, { email: "" }] } : {}),
       ...(search
         ? {
             OR: [

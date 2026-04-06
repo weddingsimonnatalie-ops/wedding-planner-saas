@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Edit2, Trash2, Copy, Mail, Upload, X, CheckCircle2, XCircle, ChevronDown, ChevronRight, Loader2, Pencil, Tag, Utensils, Download, Plus, MoreHorizontal, SlidersHorizontal, RefreshCw } from "lucide-react";
+import { Edit2, Trash2, Copy, Mail, Upload, X, CheckCircle2, XCircle, ChevronDown, ChevronRight, Loader2, Pencil, Tag, Utensils, Download, Plus, SlidersHorizontal, RefreshCw, FileSpreadsheet } from "lucide-react";
 import { RsvpStatusBadge } from "./RsvpStatusBadge";
 import { CsvImportModal } from "./CsvImportModal";
 import { PrintGuestListButton } from "./PrintGuestListButton";
@@ -75,6 +75,7 @@ interface Props {
     event?: string;
     meal?: string;
     dietary?: string;
+    email?: string;
   };
 }
 
@@ -104,8 +105,6 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [emailDialog, setEmailDialog] = useState<EmailDialogState | null>(null);
-  const [showQuickSelect, setShowQuickSelect] = useState(false);
-  const quickSelectRef = useRef<HTMLDivElement>(null);
   const [showSetStatus, setShowSetStatus] = useState(false);
   const setStatusRef = useRef<HTMLDivElement>(null);
   const [bulkStatusDialog, setBulkStatusDialog] = useState<{ status: string } | null>(null);
@@ -114,8 +113,6 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
   const setMealRef = useRef<HTMLDivElement>(null);
   const [bulkMealDialog, setBulkMealDialog] = useState<{ mealChoiceId: string | null; mealLabel: string } | null>(null);
   const [bulkMealUpdating, setBulkMealUpdating] = useState(false);
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const moreMenuRef = useRef<HTMLDivElement>(null);
   const [searchValue, setSearchValue] = useState(currentFilters.search ?? "");
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
@@ -124,20 +121,14 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
 
   const mealMap = Object.fromEntries(mealOptions.map((m) => [m.id, m.name]));
 
-  // Close quick select and set status dropdowns on outside click
+  // Close set status dropdowns on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (quickSelectRef.current && !quickSelectRef.current.contains(e.target as Node)) {
-        setShowQuickSelect(false);
-      }
       if (setStatusRef.current && !setStatusRef.current.contains(e.target as Node)) {
         setShowSetStatus(false);
       }
       if (setMealRef.current && !setMealRef.current.contains(e.target as Node)) {
         setShowSetMeal(false);
-      }
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
-        setShowMoreMenu(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -214,7 +205,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
     EVENT_LABELS[`not_attending_${dbField}`] = `Not attending ${event.name}`;
   });
 
-  const activeFilterCount = [filters.status, filters.group, filters.tableAssigned || filters.tableId, filters.event, filters.meal, filters.dietary].filter(Boolean).length;
+  const activeFilterCount = [filters.status, filters.group, filters.tableAssigned || filters.tableId, filters.event, filters.meal, filters.dietary, filters.email].filter(Boolean).length;
   const hasActiveFilters = activeFilterCount > 0 || !!filters.search;
 
   const [showFilterPanel, setShowFilterPanel] = useState(activeFilterCount > 0);
@@ -283,19 +274,6 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
 
   const allSelected = guests.length > 0 && selectedIds.size === guests.length;
   const someSelected = selectedIds.size > 0 && selectedIds.size < guests.length;
-
-  function handleQuickSelect(type: string) {
-    setShowQuickSelect(false);
-    if (type === "clear") {
-      setSelectedIds(new Set());
-    } else if (type === "pending") {
-      setSelectedIds(new Set(guests.filter(g => g.rsvpStatus === "PENDING").map(g => g.id)));
-    } else if (type === "with-email") {
-      setSelectedIds(new Set(guests.filter(g => g.email).map(g => g.id)));
-    } else if (type === "pending-with-email") {
-      setSelectedIds(new Set(guests.filter(g => g.rsvpStatus === "PENDING" && g.email).map(g => g.id)));
-    }
-  }
 
   // ── Individual guest actions ─────────────────────────────────────────────────
 
@@ -490,15 +468,39 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl md:text-2xl font-semibold text-gray-900">Guests</h1>
-        {perms.can.editGuests && (
-          <button
-            type="button"
-            onClick={() => setAddModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
+        <div className="flex items-center gap-2">
+          <a
+            href={csvTemplateHref}
+            download="guest-import-template.csv"
+            className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            <Plus className="w-4 h-4" /> Add guest
-          </button>
-        )}
+            <FileSpreadsheet className="w-4 h-4" /> Template
+          </a>
+          <a
+            href="/api/guests/export"
+            className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <Download className="w-4 h-4" /> Export
+          </a>
+          {perms.can.importExportGuests && (
+            <button
+              type="button"
+              onClick={() => setShowImport(true)}
+              className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Upload className="w-4 h-4" /> Import
+            </button>
+          )}
+          {perms.can.editGuests && (
+            <button
+              type="button"
+              onClick={() => setAddModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
+            >
+              <Plus className="w-4 h-4" /> Add guest
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats bar - collapsible on mobile, card grid on desktop */}
@@ -553,130 +555,6 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
         </div>
       </div>
 
-      {/* Top toolbar */}
-      <div className="flex items-center justify-between gap-2">
-        {/* Desktop toolbar */}
-        <div className="hidden sm:flex items-center gap-2 flex-wrap">
-          {perms.can.importExportGuests && (
-            <button
-              type="button"
-              onClick={() => setShowImport(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              Import CSV
-            </button>
-          )}
-          <a
-            href="/api/guests/export"
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export CSV
-          </a>
-          <a
-            href={csvTemplateHref}
-            download="guest-import-template.csv"
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Template CSV
-          </a>
-          {guests.length > 0 && perms.can.editGuests && (
-            <div className="relative" ref={quickSelectRef}>
-              <button
-                type="button"
-                onClick={() => setShowQuickSelect(v => !v)}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Quick select
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
-              {showQuickSelect && (
-                <div className="absolute left-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-56">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickSelect("pending-with-email")}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    Select all pending with email
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickSelect("pending")}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    Select all pending
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickSelect("with-email")}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    Select all with email
-                  </button>
-                  <div className="border-t border-gray-100 mt-1 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => handleQuickSelect("clear")}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-50"
-                    >
-                      Clear selection
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          <PrintGuestListButton />
-        </div>
-
-        {/* Mobile: More ▾ dropdown — hidden on mobile */}
-        <div className="hidden relative" ref={moreMenuRef}>
-          <button
-            type="button"
-            onClick={() => setShowMoreMenu(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <MoreHorizontal className="w-3.5 h-3.5" />
-            More
-            <ChevronDown className="w-3 h-3" />
-          </button>
-          {showMoreMenu && (
-            <div className="absolute left-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
-              <div className="px-3 py-2 text-xs text-gray-400 font-medium uppercase tracking-wide">Print</div>
-              <PrintGuestListButton inDropdown onClose={() => setShowMoreMenu(false)} />
-              <div className="border-t border-gray-100 my-1" />
-              {perms.can.importExportGuests && (
-                <button
-                  type="button"
-                  onClick={() => { setShowImport(true); setShowMoreMenu(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  Import CSV
-                </button>
-              )}
-              <a
-                href="/api/guests/export"
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                onClick={() => setShowMoreMenu(false)}
-              >
-                <Download className="w-3.5 h-3.5" />
-                Export CSV
-              </a>
-              <a
-                href={csvTemplateHref}
-                download="guest-import-template.csv"
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                onClick={() => setShowMoreMenu(false)}
-              >
-                Template CSV
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Read-only banner */}
       {!perms.can.editGuests && (
         <ReadOnlyBanner message="You have view-only access to the guest list." />
@@ -684,7 +562,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
 
       {/* Filters */}
       <div className="mb-4">
-        {/* Top row: search + filters button + clear */}
+        {/* Top row: search + filters button + clear + print */}
         <form
           className="flex gap-2 mb-2"
           onSubmit={(e) => {
@@ -719,6 +597,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
           >
             Clear
           </button>
+          <PrintGuestListButton />
         </form>
 
         {/* Collapsible filter panel */}
@@ -848,6 +727,18 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                   <option value="no_notes">No dietary notes</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                <select
+                  value={filters.email ?? ""}
+                  onChange={(e) => navigateFilter(buildUrl({ ...filters, email: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">All guests</option>
+                  <option value="with">Has email</option>
+                  <option value="without">No email</option>
+                </select>
+              </div>
             </div>
             <div className="mt-3 pt-3 border-t border-gray-100">
               <button
@@ -942,6 +833,18 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
                 <button
                   type="button"
                   onClick={() => navigateFilter(buildUrl({ ...filters, dietary: "" }))}
+                  className="hover:text-blue-900 ml-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filters.email && (
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs text-blue-700">
+                Email: {filters.email === "with" ? "Has email" : "No email"}
+                <button
+                  type="button"
+                  onClick={() => navigateFilter(buildUrl({ ...filters, email: "" }))}
                   className="hover:text-blue-900 ml-0.5"
                 >
                   <X className="w-3 h-3" />
