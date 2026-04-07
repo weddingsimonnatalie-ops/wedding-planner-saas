@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/api-auth";
 import { withTenantContext } from "@/lib/tenant";
 import { parseSupplierCsv } from "@/lib/supplier-csv";
 import { handleDbError } from "@/lib/db-error";
+import { invalidateCache } from "@/lib/cache";
 
 type DupAction = "skip" | "update" | "create";
 
@@ -115,6 +116,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         nextSortOrder++;
         categoriesCreated++;
       }
+      await invalidateCache(`${weddingId}:planning-categories`);
 
       // Refresh category map after creating new ones
       const newCategories = await withTenantContext(weddingId, async (tx) =>
