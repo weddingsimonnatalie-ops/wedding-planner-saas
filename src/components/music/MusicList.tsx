@@ -2,11 +2,22 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Music, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { Music, Plus, ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { fetchApi } from "@/lib/fetch";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlaylistModal } from "./PlaylistModal";
+import { TrackModal } from "./TrackModal";
+
+interface Track {
+  id: string;
+  title: string;
+  artist: string | null;
+  durationSec: number | null;
+  url: string | null;
+  notes: string | null;
+  sortOrder: number;
+}
 
 interface Playlist {
   id: string;
@@ -198,10 +209,11 @@ function PlaylistContent({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const [tracks, setTracks] = useState<
-    Array<{ id: string; title: string; artist: string | null; durationSec: number | null; url: string | null; notes: string | null; sortOrder: number }>
-  >([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showTrackModal, setShowTrackModal] = useState(false);
+  const [editingTrack, setEditingTrack] = useState<Track | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   // Load tracks when expanded
   useEffect(() => {
@@ -214,6 +226,50 @@ function PlaylistContent({
       })
       .catch(() => setLoading(false));
   }, [playlistId]);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  async function handleAddTrack(data: { title: string; artist: string | null; durationSec: number | null; url: string | null; notes: string | null }) {
+    const res = await fetchApi(`/api/playlists/${playlistId}/tracks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      const { track } = await res.json();
+      setTracks([...tracks, track]);
+      setShowTrackModal(false);
+      showToast("Track added");
+    }
+  }
+
+  async function handleUpdateTrack(data: { id?: string; title: string; artist: string | null; durationSec: number | null; url: string | null; notes: string | null }) {
+    if (!data.id) return;
+    const res = await fetchApi(`/api/tracks/${data.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      const { track } = await res.json();
+      setTracks(tracks.map((t) => (t.id === track.id ? track : t)));
+      setEditingTrack(null);
+      setShowTrackModal(false);
+      showToast("Track updated");
+    }
+  }
+
+  async function handleDeleteTrack(id: string) {
+    if (!confirm("Delete this track?")) return;
+    const res = await fetchApi(`/api/tracks/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setTracks(tracks.filter((t) => t.id !== id));
+      showToast("Track deleted");
+    }
+  }
 
   if (loading) {
     return (
@@ -228,42 +284,96 @@ function PlaylistContent({
   }
 
   return (
-    <div className="border-t border-gray-100 p-4 space-y-2">
-      {tracks.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-4">No tracks yet</p>
-      ) : (
-        tracks.map((track, index) => (
-          <div key={track.id} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50">
-            <span className="text-sm text-gray-400 w-6 text-center">{index + 1}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{track.title}</p>
-              {track.artist && <p className="text-xs text-gray-500">{track.artist}</p>}
+    <>
+      <div className="border-t border-gray-100 p-4 space-y-2">
+        {tracks.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-4">No tracks yet</p>
+        ) : (
+          tracks.map((track, index) => (
+            <div key={track.id} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 group">
+              <span className="text-sm text-gray-400 w-6 text-center">{index + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{track.title}</p>
+                {track.artist && <p className="text-xs text-gray-500">{track.artist}</p>}
+              </div>
+              {track.durationSec && (
+                <span className="text-xs text-gray-400">
+                  {Math.floor(track.durationSec / 60)}:{(track.durationSec % 60).toString().padStart(2, "0")}
+                </span>
+              )}
+              {canEdit && (
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => {
+                      setEditingTrack(track);
+                      setShowTrackModal(true);
+                    }}
+                    className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTrack(track.id)}
+                    className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
-            {track.durationSec && (
-              <span className="text-xs text-gray-400">
-                {Math.floor(track.durationSec / 60)}:{(track.durationSec % 60).toString().padStart(2, "0")}
-              </span>
-            )}
+          ))
+        )}
+
+        {canEdit && (
+          <div className="flex gap-2 pt-2 border-t border-gray-100 mt-2">
+            <button
+              onClick={() => setShowTrackModal(true)}
+              className="flex items-center gap-1 text-sm text-primary hover:text-primary/80"
+            >
+              <Plus className="w-4 h-4" />
+              Add track
+            </button>
+            <span className="text-gray-300">|</span>
+            <button
+              onClick={onEdit}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Edit playlist
+            </button>
+            <span className="text-gray-300">|</span>
+            <button
+              onClick={onDelete}
+              className="text-sm text-red-500 hover:text-red-700"
+            >
+              Delete
+            </button>
           </div>
-        ))
+        )}
+      </div>
+
+      {showTrackModal && canEdit && (
+        <TrackModal
+          playlistId={playlistId}
+          track={editingTrack}
+          onClose={() => {
+            setShowTrackModal(false);
+            setEditingTrack(null);
+          }}
+          onSubmit={(data) => {
+            if (editingTrack) {
+              handleUpdateTrack(data);
+            } else {
+              handleAddTrack(data);
+            }
+          }}
+        />
       )}
 
-      {canEdit && (
-        <div className="flex gap-2 pt-2">
-          <button
-            onClick={onEdit}
-            className="text-xs text-gray-500 hover:text-gray-700"
-          >
-            Edit playlist
-          </button>
-          <button
-            onClick={onDelete}
-            className="text-xs text-red-500 hover:text-red-700"
-          >
-            Delete playlist
-          </button>
+      {toast && (
+        <div className="fixed right-4 px-4 py-2.5 rounded-lg text-sm text-white bg-green-600 shadow-lg" style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+          {toast}
         </div>
       )}
-    </div>
+    </>
   );
 }
