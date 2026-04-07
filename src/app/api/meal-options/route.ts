@@ -15,12 +15,20 @@ export async function GET(req: NextRequest) {
     if (!auth.authorized) return auth.response;
     const { weddingId } = auth;
 
+    const { searchParams } = new URL(req.url);
+    const eventId = searchParams.get("eventId");
+
+    // Cache key includes eventId if filtering
+    const cacheKey = eventId
+      ? `${weddingId}:meal-options:${eventId}`
+      : `${weddingId}:meal-options`;
+
     const options = await getCached(
-      `${weddingId}:meal-options`,
+      cacheKey,
       300_000,
       () => withTenantContext(weddingId, (tx) =>
         tx.mealOption.findMany({
-          where: { weddingId },
+          where: { weddingId, ...(eventId ? { eventId } : {}) },
           orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
         })
       )
@@ -39,10 +47,14 @@ export async function POST(req: NextRequest) {
     if (!auth.authorized) return auth.response;
     const { weddingId } = auth;
 
-    const { name, description, course, isActive, sortOrder } = await req.json();
+    const { name, description, course, isActive, sortOrder, eventId } = await req.json();
 
     if (!name?.trim()) {
         return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    }
+
+    if (!eventId?.trim()) {
+        return NextResponse.json({ error: "Event is required" }, { status: 400 });
     }
 
     // Validate field lengths
@@ -59,6 +71,7 @@ export async function POST(req: NextRequest) {
       tx.mealOption.create({
         data: {
           weddingId,
+          eventId,
           name: name.trim(),
           description: description?.trim() || null,
           course: course?.trim() || null,
@@ -69,6 +82,7 @@ export async function POST(req: NextRequest) {
     );
 
     await invalidateCache(`${weddingId}:meal-options`);
+    await invalidateCache(`${weddingId}:meal-options:${eventId}`);
     return NextResponse.json(option, { status: 201 });
 
   } catch (error) {

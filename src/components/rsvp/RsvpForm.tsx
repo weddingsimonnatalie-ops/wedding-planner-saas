@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { CheckCircle, Heart, XCircle } from "lucide-react";
-import { getEvents } from "@/lib/eventNames";
+import { getEvents, type EventConfig } from "@/lib/eventNames";
 
 type EventChoice = "yes" | "no";
 
 interface MealOption {
   id: string;
+  eventId: string;
   name: string;
   course: string | null;
 }
@@ -16,15 +17,19 @@ interface EventNamesConfig {
   ceremonyEnabled: boolean;
   ceremonyName: string;
   ceremonyLocation?: string | null;
+  ceremonyMealsEnabled?: boolean;
   mealEnabled: boolean;
   mealName: string;
   mealLocation?: string | null;
+  mealMealsEnabled?: boolean;
   eveningPartyEnabled: boolean;
   eveningPartyName: string;
   eveningPartyLocation?: string | null;
+  eveningPartyMealsEnabled?: boolean;
   rehearsalDinnerEnabled: boolean;
   rehearsalDinnerName: string;
   rehearsalDinnerLocation?: string | null;
+  rehearsalDinnerMealsEnabled?: boolean;
 }
 
 interface GuestRsvpData {
@@ -49,7 +54,7 @@ interface SubmittedSnapshot {
   receptionCh: EventChoice | null;
   afterpartyCh: EventChoice | null;
   rehearsalDinnerCh: EventChoice | null;
-  mealChoice: string | null;
+  mealChoices: Record<string, string | null>;
 }
 
 interface Props {
@@ -57,6 +62,7 @@ interface Props {
   guest: GuestRsvpData;
   mealOptions: MealOption[];
   eventNames: EventNamesConfig;
+  mealChoicesByEvent: Record<string, string | null>;
 }
 
 function deriveChoice(attending: boolean | null): EventChoice | null {
@@ -65,7 +71,7 @@ function deriveChoice(attending: boolean | null): EventChoice | null {
   return null;
 }
 
-export function RsvpForm({ token, guest, mealOptions, eventNames }: Props) {
+export function RsvpForm({ token, guest, mealOptions, eventNames, mealChoicesByEvent }: Props) {
   const events = getEvents(eventNames);
   const alreadyResponded = guest.rsvpStatus !== "PENDING" && guest.rsvpRespondedAt;
 
@@ -81,7 +87,25 @@ export function RsvpForm({ token, guest, mealOptions, eventNames }: Props) {
   const [rehearsalDinnerCh, setRehearsalDinnerCh] = useState<EventChoice>(
     deriveChoice(guest.attendingRehearsalDinner) ?? "yes"
   );
-  const [mealChoice, setMealChoice] = useState(guest.mealChoice ?? "");
+
+  // Per-event meal choices
+  const [mealChoices, setMealChoices] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    // Initialize from existing choices or fall back to legacy mealChoice for "meal" event
+    for (const event of events) {
+      if (event.mealsEnabled) {
+        const existing = mealChoicesByEvent[event.key];
+        if (existing) {
+          initial[event.key] = existing;
+        } else if (event.key === "meal" && guest.mealChoice) {
+          // Legacy: fall back to old mealChoice field for meal event
+          initial[event.key] = guest.mealChoice;
+        }
+      }
+    }
+    return initial;
+  });
+
   const [dietaryNotes, setDietaryNotes] = useState(guest.dietaryNotes ?? "");
   const [submitted, setSubmitted] = useState(false);
   const [submittedStatus, setSubmittedStatus] = useState("");
@@ -92,16 +116,37 @@ export function RsvpForm({ token, guest, mealOptions, eventNames }: Props) {
   // If already responded, default to showing confirmation
   const [editing, setEditing] = useState(!alreadyResponded);
 
+  // Get meal options for a specific event
+  function getMealOptionsForEvent(eventId: string): MealOption[] {
+    return mealOptions.filter((m) => m.eventId === eventId);
+  }
+
+  // Map event keys to dbField for invitations
+  const eventInviteMap: Record<string, boolean> = {
+    ceremony: guest.invitedToCeremony,
+    meal: guest.invitedToReception,
+    eveningParty: guest.invitedToAfterparty,
+    rehearsalDinner: guest.invitedToRehearsalDinner,
+  };
+
+  // Map event keys to attendance choices
+  const eventStateMap: Record<string, { val: EventChoice; set: (v: EventChoice) => void }> = {
+    ceremony: { val: ceremonyCh, set: setCeremonyCh },
+    meal: { val: receptionCh, set: setReceptionCh },
+    eveningParty: { val: afterpartyCh, set: setAfterpartyCh },
+    rehearsalDinner: { val: rehearsalDinnerCh, set: setRehearsalDinnerCh },
+  };
+
   if (submitted || (alreadyResponded && !editing)) {
     const status = submitted ? submittedStatus : guest.rsvpStatus;
     const snap: SubmittedSnapshot = submitted && submittedSnapshot
       ? submittedSnapshot
       : {
-          ceremonyCh:   guest.invitedToCeremony   ? (deriveChoice(guest.attendingCeremony)   ?? "yes") : null,
-          receptionCh:  guest.invitedToReception  ? (deriveChoice(guest.attendingReception)  ?? "yes") : null,
+          ceremonyCh: guest.invitedToCeremony ? (deriveChoice(guest.attendingCeremony) ?? "yes") : null,
+          receptionCh: guest.invitedToReception ? (deriveChoice(guest.attendingReception) ?? "yes") : null,
           afterpartyCh: guest.invitedToAfterparty ? (deriveChoice(guest.attendingAfterparty) ?? "yes") : null,
           rehearsalDinnerCh: guest.invitedToRehearsalDinner ? (deriveChoice(guest.attendingRehearsalDinner) ?? "yes") : null,
-          mealChoice: guest.mealChoice,
+          mealChoices: mealChoicesByEvent,
         };
     return (
       <ConfirmationScreen
@@ -122,11 +167,11 @@ export function RsvpForm({ token, guest, mealOptions, eventNames }: Props) {
     setLoading(true);
 
     const payload = {
-      attendingCeremony:   guest.invitedToCeremony   ? ceremonyCh   : undefined,
-      attendingReception:  guest.invitedToReception  ? receptionCh  : undefined,
+      attendingCeremony: guest.invitedToCeremony ? ceremonyCh : undefined,
+      attendingReception: guest.invitedToReception ? receptionCh : undefined,
       attendingAfterparty: guest.invitedToAfterparty ? afterpartyCh : undefined,
       attendingRehearsalDinner: guest.invitedToRehearsalDinner ? rehearsalDinnerCh : undefined,
-      mealChoice: mealChoice || null,
+      mealChoices, // Per-event meal choices
       dietaryNotes: dietaryNotes || null,
     };
 
@@ -142,11 +187,11 @@ export function RsvpForm({ token, guest, mealOptions, eventNames }: Props) {
       const data = await res.json();
       setSubmittedStatus(data.rsvpStatus);
       setSubmittedSnapshot({
-        ceremonyCh:   guest.invitedToCeremony   ? ceremonyCh   : null,
-        receptionCh:  guest.invitedToReception  ? receptionCh  : null,
+        ceremonyCh: guest.invitedToCeremony ? ceremonyCh : null,
+        receptionCh: guest.invitedToReception ? receptionCh : null,
         afterpartyCh: guest.invitedToAfterparty ? afterpartyCh : null,
         rehearsalDinnerCh: guest.invitedToRehearsalDinner ? rehearsalDinnerCh : null,
-        mealChoice: mealChoice || null,
+        mealChoices,
       });
       setSubmitted(true);
     } else {
@@ -154,49 +199,49 @@ export function RsvpForm({ token, guest, mealOptions, eventNames }: Props) {
     }
   }
 
-  // Map event keys to state and setters
-  const eventStateMap: Record<string, { val: EventChoice; set: (v: EventChoice) => void; invited: boolean }> = {
-    ceremony: { val: ceremonyCh, set: setCeremonyCh, invited: guest.invitedToCeremony },
-    meal: { val: receptionCh, set: setReceptionCh, invited: guest.invitedToReception },
-    eveningParty: { val: afterpartyCh, set: setAfterpartyCh, invited: guest.invitedToAfterparty },
-    rehearsalDinner: { val: rehearsalDinnerCh, set: setRehearsalDinnerCh, invited: guest.invitedToRehearsalDinner },
-  };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Per-event attendance */}
       {events.map((event) => {
         const state = eventStateMap[event.key];
-        if (!state || !state.invited) return null;
+        const invited = eventInviteMap[event.key];
+        if (!state || !invited) return null;
+
+        const mealOptionsForEvent = event.mealsEnabled ? getMealOptionsForEvent(event.key) : [];
+        const attending = state.val === "yes";
+
         return (
-          <EventToggle
-            key={event.key}
-            label={event.name}
-            location={event.location}
-            value={state.val}
-            onChange={state.set}
-          />
+          <div key={event.key} className="space-y-3">
+            <EventToggle
+              label={event.name}
+              location={event.location}
+              value={state.val}
+              onChange={state.set}
+            />
+
+            {/* Meal choice for this event if meals enabled and attending */}
+            {attending && mealOptionsForEvent.length > 0 && (
+              <div className="ml-0">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {event.name} meal choice
+                </label>
+                <select
+                  value={mealChoices[event.key] || ""}
+                  onChange={(e) => setMealChoices((prev) => ({ ...prev, [event.key]: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">— Please select —</option>
+                  {mealOptionsForEvent.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}{m.course ? ` (${m.course})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         );
       })}
-
-      {/* Meal choice (only if invited to the meal event) */}
-      {guest.invitedToReception && mealOptions.length > 0 && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Meal choice</label>
-          <select
-            value={mealChoice}
-            onChange={(e) => setMealChoice(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="">— Please select —</option>
-            {mealOptions.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}{m.course ? ` (${m.course})` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
 
       {/* Dietary notes */}
       <div>
@@ -254,12 +299,20 @@ function ConfirmationScreen({
     { key: "rehearsalDinner" as const, label: eventNames.rehearsalDinnerName, invited: guest.invitedToRehearsalDinner, choice: snap.rehearsalDinnerCh },
   ].filter(e => e.invited);
 
-  const attendingReception = snap.receptionCh === "yes";
-  const mealChoiceId = snap.mealChoice ?? null;
-  const mealOption = mealChoiceId ? mealOptions.find(m => m.id === mealChoiceId) : null;
-  const mealLabel = mealOption
-    ? mealOption.name + (mealOption.course ? ` (${mealOption.course})` : "")
-    : null;
+  // Get meal labels for each event
+  const getMealLabel = (eventKey: string): string | null => {
+    const mealChoiceId = snap.mealChoices[eventKey];
+    if (!mealChoiceId) return null;
+    const mealOption = mealOptions.find((m) => m.id === mealChoiceId);
+    if (!mealOption) return null;
+    return mealOption.name + (mealOption.course ? ` (${mealOption.course})` : "");
+  };
+
+  // Check if any events have meal choices
+  const hasMealChoices = events.some((e) => {
+    const eventConfig = eventsConfig.find((ec) => ec.key === e.key);
+    return eventConfig?.mealsEnabled && snap.mealChoices[e.key];
+  });
 
   if (status === "DECLINED") {
     return (
@@ -285,27 +338,30 @@ function ConfirmationScreen({
         <p className="font-semibold text-gray-900 text-lg">Thanks for letting us know, {firstName}!</p>
 
         <div className="mt-4 mb-3 text-left border border-gray-100 rounded-xl overflow-hidden">
-          {events.map(({ label, choice }) => (
-            <div key={label} className="flex items-center justify-between px-4 py-2.5 even:bg-gray-50">
-              <span className="text-sm text-gray-700">{label}</span>
-              {choice === "yes" ? (
-                <span className="flex items-center gap-1 text-sm text-green-600 font-medium">
-                  <CheckCircle className="w-4 h-4" /> See you there!
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-sm text-red-500 font-medium">
-                  <XCircle className="w-4 h-4" /> Sorry you can't make it
-                </span>
-              )}
-            </div>
-          ))}
+          {events.map(({ key, label, choice }) => {
+            const eventConfig = eventsConfig.find((ec) => ec.key === key);
+            const mealLabel = eventConfig?.mealsEnabled && choice === "yes" ? getMealLabel(key) : null;
+            return (
+              <div key={key} className="px-4 py-2.5 even:bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">{label}</span>
+                  {choice === "yes" ? (
+                    <span className="flex items-center gap-1 text-sm text-green-600 font-medium">
+                      <CheckCircle className="w-4 h-4" /> See you there!
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-sm text-red-500 font-medium">
+                      <XCircle className="w-4 h-4" /> Sorry you can't make it
+                    </span>
+                  )}
+                </div>
+                {mealLabel && (
+                  <p className="text-xs text-gray-500 mt-1 ml-0">Meal: {mealLabel}</p>
+                )}
+              </div>
+            );
+          })}
         </div>
-
-        {attendingReception && mealLabel && (
-          <p className="text-sm text-gray-500 mb-3">
-            Your meal choice: <span className="font-medium text-gray-700">{mealLabel}</span>
-          </p>
-        )}
 
         <p className="text-sm text-gray-500">
           We look forward to celebrating with you for the parts you can make!
@@ -327,11 +383,23 @@ function ConfirmationScreen({
       <p className="text-sm text-gray-500 mt-1">
         Thank you for your RSVP. We can't wait to celebrate with you!
       </p>
-      {attendingReception && mealLabel && (
-        <p className="text-sm text-gray-500 mt-2">
-          Your meal choice: <span className="font-medium text-gray-700">{mealLabel}</span>
-        </p>
+
+      {/* Show all meal choices */}
+      {hasMealChoices && (
+        <div className="mt-3 text-left">
+          {events.map(({ key, label, choice }) => {
+            const eventConfig = eventsConfig.find((ec) => ec.key === key);
+            const mealLabel = eventConfig?.mealsEnabled && choice === "yes" ? getMealLabel(key) : null;
+            if (!mealLabel) return null;
+            return (
+              <p key={key} className="text-sm text-gray-500">
+                {label} meal: <span className="font-medium text-gray-700">{mealLabel}</span>
+              </p>
+            );
+          })}
+        </div>
       )}
+
       <button onClick={onChangeResponse} className="mt-4 text-sm text-primary hover:underline">
         Change response
       </button>

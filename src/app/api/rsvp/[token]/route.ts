@@ -70,14 +70,20 @@ export async function GET(
 
     if (!guest) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const mealOptions = await withTenantContext(guest.weddingId, (tx) =>
-      tx.mealOption.findMany({
-        where: { weddingId: guest.weddingId, isActive: true },
-        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      })
+    const [mealOptions, guestMealChoices] = await withTenantContext(guest.weddingId, (tx) =>
+      Promise.all([
+        tx.mealOption.findMany({
+          where: { weddingId: guest.weddingId, isActive: true },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        }),
+        tx.guestMealChoice.findMany({
+          where: { guestId: guest.id },
+          select: { eventId: true, mealOptionId: true },
+        }),
+      ])
     );
 
-    return apiJson({ guest, mealOptions });
+    return apiJson({ guest, mealOptions, guestMealChoices });
   } catch (error) {
     return handleDbError(error);
   }
@@ -123,7 +129,7 @@ export async function POST(
       attendingReception: receptionCh,
       attendingAfterparty: afterpartyCh,
       attendingRehearsalDinner: rehearsalDinnerCh,
-      mealChoice,
+      mealChoices, // Per-event meal choices: Record<string, string | null>
       dietaryNotes,
     } = body;
 
@@ -132,16 +138,10 @@ export async function POST(
     const afterparty      = guest.invitedToAfterparty      ? toAttending(afterpartyCh)      : null;
     const rehearsalDinner = guest.invitedToRehearsalDinner ? toAttending(rehearsalDinnerCh) : null;
 
-    // Validate mealChoice references an active meal option for this wedding (if provided)
-    if (mealChoice && mealChoice.trim()) {
-      const mealOption = await withTenantContext(guest.weddingId, (tx) =>
-        tx.mealOption.findFirst({
-          where: { id: mealChoice.trim(), weddingId: guest.weddingId, isActive: true },
-        })
-      );
-      if (!mealOption) {
-        return NextResponse.json({ error: "Invalid meal option" }, { status: 400 });
-      }
+    // Validate dietary notes length
+    const dietaryError = validateLength(dietaryNotes, "dietaryNotes");
+    if (dietaryError) {
+      return NextResponse.json({ error: dietaryError }, { status: 400 });
     }
 
     const rsvpStatus = calculateRsvpStatus(
@@ -155,28 +155,76 @@ export async function POST(
       rehearsalDinner,
     );
 
-    // Validate dietary notes length
-    const dietaryError = validateLength(dietaryNotes, "dietaryNotes");
-    if (dietaryError) {
-      return NextResponse.json({ error: dietaryError }, { status: 400 });
+    // Process per-event meal choices
+    let legacyMealChoice: string | null = null;
+
+    if (mealChoices && typeof mealChoices === "object") {
+      // Validate each meal choice
+      for (const [eventId, mealOptionId] of Object.entries(mealChoices)) {
+        if (mealOptionId && typeof mealOptionId === "string" && mealOptionId.trim()) {
+          const mealOption = await withTenantContext(guest.weddingId, (tx) =>
+            tx.mealOption.findFirst({
+              where: { id: mealOptionId.trim(), weddingId: guest.weddingId, isActive: true, eventId },
+            })
+          );
+          if (!mealOption) {
+            return NextResponse.json(
+              { error: `Invalid meal option for event ${eventId}` },
+              { status: 400 }
+            );
+          }
+          // Keep legacy mealChoice for the "meal" event
+          if (eventId === "meal") {
+            legacyMealChoice = mealOptionId.trim();
+          }
+        }
+      }
     }
 
-    const updated = await prisma.guest.update({
-      where: { rsvpToken: token },
-      data: {
-        rsvpStatus: rsvpStatus as any,
-        isManualOverride: false,
-        rsvpRespondedAt: new Date(),
-        attendingCeremony:       ceremony,
-        attendingReception:      reception,
-        attendingAfterparty:     afterparty,
-        attendingRehearsalDinner: rehearsalDinner,
-        mealChoice: mealChoice?.trim() || null,
-        dietaryNotes: dietaryNotes?.trim() || null,
-      },
+    // Update guest and meal choices in a transaction
+    const result = await withTenantContext(guest.weddingId, async (tx) => {
+      // Update guest RSVP data
+      const updated = await tx.guest.update({
+        where: { rsvpToken: token },
+        data: {
+          rsvpStatus: rsvpStatus as any,
+          isManualOverride: false,
+          rsvpRespondedAt: new Date(),
+          attendingCeremony: ceremony,
+          attendingReception: reception,
+          attendingAfterparty: afterparty,
+          attendingRehearsalDinner: rehearsalDinner,
+          mealChoice: legacyMealChoice, // Legacy field for backwards compatibility
+          dietaryNotes: dietaryNotes?.trim() || null,
+        },
+      });
+
+      // Delete existing meal choices for this guest
+      await tx.guestMealChoice.deleteMany({
+        where: { guestId: guest.id },
+      });
+
+      // Create new meal choices
+      if (mealChoices && typeof mealChoices === "object") {
+        const mealChoiceData = Object.entries(mealChoices)
+          .filter(([, mealOptionId]) => mealOptionId && typeof mealOptionId === "string" && mealOptionId.trim())
+          .map(([eventId, mealOptionId]) => ({
+            guestId: guest.id,
+            eventId,
+            mealOptionId: mealOptionId as string,
+          }));
+
+        if (mealChoiceData.length > 0) {
+          await tx.guestMealChoice.createMany({
+            data: mealChoiceData,
+          });
+        }
+      }
+
+      return updated;
     });
 
-    return NextResponse.json({ ok: true, rsvpStatus: updated.rsvpStatus });
+    return NextResponse.json({ ok: true, rsvpStatus: result.rsvpStatus });
   } catch (error) {
     return handleDbError(error);
   }

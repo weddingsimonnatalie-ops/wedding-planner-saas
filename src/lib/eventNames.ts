@@ -8,21 +8,26 @@ export interface EventConfig {
   name: string;
   location: string | null;
   dbField: string; // e.g., "ceremony", "reception", "afterparty", "rehearsalDinner"
+  mealsEnabled: boolean;
 }
 
 export interface WeddingEventConfig {
   ceremonyEnabled: boolean;
   ceremonyName: string;
   ceremonyLocation?: string | null;
+  ceremonyMealsEnabled?: boolean;
   mealEnabled: boolean;
   mealName: string;
   mealLocation?: string | null;
+  mealMealsEnabled?: boolean;
   eveningPartyEnabled: boolean;
   eveningPartyName: string;
   eveningPartyLocation?: string | null;
+  eveningPartyMealsEnabled?: boolean;
   rehearsalDinnerEnabled: boolean;
   rehearsalDinnerName: string;
   rehearsalDinnerLocation?: string | null;
+  rehearsalDinnerMealsEnabled?: boolean;
 }
 
 /**
@@ -37,6 +42,7 @@ export function getEvents(wedding: WeddingEventConfig, includeDisabled = false):
       name: wedding.rehearsalDinnerName || "Rehearsal Dinner",
       location: wedding.rehearsalDinnerLocation ?? null,
       dbField: "rehearsalDinner",
+      mealsEnabled: wedding.rehearsalDinnerMealsEnabled ?? false,
     },
     {
       key: "ceremony",
@@ -44,6 +50,7 @@ export function getEvents(wedding: WeddingEventConfig, includeDisabled = false):
       name: wedding.ceremonyName || "Ceremony",
       location: wedding.ceremonyLocation ?? null,
       dbField: "ceremony",
+      mealsEnabled: wedding.ceremonyMealsEnabled ?? false,
     },
     {
       key: "meal",
@@ -51,6 +58,7 @@ export function getEvents(wedding: WeddingEventConfig, includeDisabled = false):
       name: wedding.mealName || "Wedding Breakfast",
       location: wedding.mealLocation ?? null,
       dbField: "reception", // Maps to invitedToReception in Guest model
+      mealsEnabled: wedding.mealMealsEnabled ?? true,
     },
     {
       key: "eveningParty",
@@ -58,6 +66,7 @@ export function getEvents(wedding: WeddingEventConfig, includeDisabled = false):
       name: wedding.eveningPartyName || "Evening Reception",
       location: wedding.eveningPartyLocation ?? null,
       dbField: "afterparty", // Maps to invitedToAfterparty in Guest model
+      mealsEnabled: wedding.eveningPartyMealsEnabled ?? false,
     },
   ];
 

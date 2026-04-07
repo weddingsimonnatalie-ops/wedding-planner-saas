@@ -50,15 +50,19 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       ceremonyEnabled,
       ceremonyName,
       ceremonyLocation,
+      ceremonyMealsEnabled,
       mealEnabled,
       mealName,
       mealLocation,
+      mealMealsEnabled,
       eveningPartyEnabled,
       eveningPartyName,
       eveningPartyLocation,
+      eveningPartyMealsEnabled,
       rehearsalDinnerEnabled,
       rehearsalDinnerName,
       rehearsalDinnerLocation,
+      rehearsalDinnerMealsEnabled,
     } = body;
 
     const errors = validateFields([
@@ -155,6 +159,11 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
           ...(rehearsalDinnerLocation !== undefined
             ? { rehearsalDinnerLocation: String(rehearsalDinnerLocation).trim().slice(0, 200) || null }
             : {}),
+          // Meals enabled per event
+          ...(ceremonyMealsEnabled !== undefined ? { ceremonyMealsEnabled: Boolean(ceremonyMealsEnabled) } : {}),
+          ...(mealMealsEnabled !== undefined ? { mealMealsEnabled: Boolean(mealMealsEnabled) } : {}),
+          ...(eveningPartyMealsEnabled !== undefined ? { eveningPartyMealsEnabled: Boolean(eveningPartyMealsEnabled) } : {}),
+          ...(rehearsalDinnerMealsEnabled !== undefined ? { rehearsalDinnerMealsEnabled: Boolean(rehearsalDinnerMealsEnabled) } : {}),
         },
       })
     );

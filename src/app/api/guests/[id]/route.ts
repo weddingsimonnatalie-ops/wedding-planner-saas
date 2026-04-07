@@ -20,15 +20,21 @@ export async function GET(
     if (!auth.authorized) return auth.response;
     const { weddingId } = auth;
 
-    const guest = await withTenantContext(weddingId, (tx) =>
-      tx.guest.findUnique({
-        where: { id, weddingId },
-        include: { table: { select: { id: true, name: true } } },
-      })
+    const [guest, mealChoices] = await withTenantContext(weddingId, (tx) =>
+      Promise.all([
+        tx.guest.findUnique({
+          where: { id, weddingId },
+          include: { table: { select: { id: true, name: true } } },
+        }),
+        tx.guestMealChoice.findMany({
+          where: { guestId: id },
+          select: { eventId: true, mealOptionId: true },
+        }),
+      ])
     );
 
     if (!guest) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return apiJson(guest);
+    return apiJson({ ...guest, mealChoices });
 
   } catch (error) {
     return handleDbError(error);
@@ -64,7 +70,7 @@ export async function PUT(
     attendingReception,
     attendingAfterparty,
     attendingRehearsalDinner,
-    mealChoice,
+    mealChoices, // Per-event meal choices: Record<string, string>
     dietaryNotes,
     } = body;
 
@@ -124,15 +130,22 @@ export async function PUT(
         }
       }
 
-      // Validate mealChoice references an active meal option (if provided)
-      if (mealChoice !== undefined && mealChoice !== null && mealChoice !== "") {
-        const mealOption = await tx.mealOption.findFirst({
-          where: { id: mealChoice, isActive: true },
-        });
-        if (!mealOption) {
-          return { invalidMeal: true, guest: null };
+      // Validate per-event meal choices
+      if (mealChoices && typeof mealChoices === "object") {
+        for (const [eventId, mealOptionId] of Object.entries(mealChoices)) {
+          if (mealOptionId && typeof mealOptionId === "string" && mealOptionId.trim()) {
+            const mealOption = await tx.mealOption.findFirst({
+              where: { id: mealOptionId.trim(), weddingId, isActive: true, eventId },
+            });
+            if (!mealOption) {
+              return { invalidMeal: true, eventId, guest: null };
+            }
+          }
         }
       }
+
+      // Get legacy mealChoice for backwards compatibility
+      const legacyMealChoice = mealChoices?.meal ?? null;
 
       const guest = await tx.guest.update({
         where: { id, weddingId },
@@ -153,10 +166,33 @@ export async function PUT(
             ...(attendingReception       !== undefined ? { attendingReception }       : {}),
             ...(attendingAfterparty      !== undefined ? { attendingAfterparty }      : {}),
             ...(attendingRehearsalDinner !== undefined ? { attendingRehearsalDinner } : {}),
-            ...(mealChoice   !== undefined ? { mealChoice: mealChoice || null }             : {}),
+            mealChoice: legacyMealChoice, // Legacy field for backwards compatibility
             ...(dietaryNotes !== undefined ? { dietaryNotes: dietaryNotes?.trim() || null } : {}),
         },
       });
+
+      // Update per-event meal choices
+      if (mealChoices !== undefined) {
+        // Delete existing choices
+        await tx.guestMealChoice.deleteMany({
+          where: { guestId: id },
+        });
+
+        // Create new choices
+        const mealChoiceData = Object.entries(mealChoices as Record<string, string>)
+          .filter(([, mealOptionId]) => mealOptionId && mealOptionId.trim())
+          .map(([eventId, mealOptionId]) => ({
+            guestId: id,
+            eventId,
+            mealOptionId,
+          }));
+
+        if (mealChoiceData.length > 0) {
+          await tx.guestMealChoice.createMany({
+            data: mealChoiceData,
+          });
+        }
+      }
 
       return { guest };
     });
@@ -168,7 +204,10 @@ export async function PUT(
       );
     }
     if (result.invalidMeal) {
-      return NextResponse.json({ error: "Invalid meal option" }, { status: 400 });
+      return NextResponse.json(
+        { error: `Invalid meal option for event ${result.eventId}` },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json(result.guest);

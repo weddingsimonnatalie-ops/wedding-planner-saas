@@ -7,24 +7,48 @@ interface EventNamesSettingsProps {
     ceremonyEnabled: boolean;
     ceremonyName: string;
     ceremonyLocation?: string | null;
+    ceremonyMealsEnabled?: boolean;
     mealEnabled: boolean;
     mealName: string;
     mealLocation?: string | null;
+    mealMealsEnabled?: boolean;
     eveningPartyEnabled: boolean;
     eveningPartyName: string;
     eveningPartyLocation?: string | null;
+    eveningPartyMealsEnabled?: boolean;
     rehearsalDinnerEnabled: boolean;
     rehearsalDinnerName: string;
     rehearsalDinnerLocation?: string | null;
+    rehearsalDinnerMealsEnabled?: boolean;
   };
 }
 
 export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
   const [events, setEvents] = useState({
-    ceremony: { enabled: initialConfig.ceremonyEnabled, name: initialConfig.ceremonyName, location: initialConfig.ceremonyLocation ?? "" },
-    meal: { enabled: initialConfig.mealEnabled, name: initialConfig.mealName, location: initialConfig.mealLocation ?? "" },
-    eveningParty: { enabled: initialConfig.eveningPartyEnabled, name: initialConfig.eveningPartyName, location: initialConfig.eveningPartyLocation ?? "" },
-    rehearsalDinner: { enabled: initialConfig.rehearsalDinnerEnabled, name: initialConfig.rehearsalDinnerName, location: initialConfig.rehearsalDinnerLocation ?? "" },
+    ceremony: {
+      enabled: initialConfig.ceremonyEnabled,
+      name: initialConfig.ceremonyName,
+      location: initialConfig.ceremonyLocation ?? "",
+      mealsEnabled: initialConfig.ceremonyMealsEnabled ?? false,
+    },
+    meal: {
+      enabled: initialConfig.mealEnabled,
+      name: initialConfig.mealName,
+      location: initialConfig.mealLocation ?? "",
+      mealsEnabled: initialConfig.mealMealsEnabled ?? true,
+    },
+    eveningParty: {
+      enabled: initialConfig.eveningPartyEnabled,
+      name: initialConfig.eveningPartyName,
+      location: initialConfig.eveningPartyLocation ?? "",
+      mealsEnabled: initialConfig.eveningPartyMealsEnabled ?? false,
+    },
+    rehearsalDinner: {
+      enabled: initialConfig.rehearsalDinnerEnabled,
+      name: initialConfig.rehearsalDinnerName,
+      location: initialConfig.rehearsalDinnerLocation ?? "",
+      mealsEnabled: initialConfig.rehearsalDinnerMealsEnabled ?? false,
+    },
   });
   const [saving, setSaving] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -73,11 +97,17 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
     saveField(enabledField, newValue);
   }
 
-  function updateEvent(eventKey: keyof typeof events, field: "enabled" | "name" | "location", value: boolean | string) {
+  function updateEvent(eventKey: keyof typeof events, field: "enabled" | "name" | "location" | "mealsEnabled", value: boolean | string) {
     setEvents((prev) => ({
       ...prev,
       [eventKey]: { ...prev[eventKey], [field]: value },
     }));
+  }
+
+  function handleMealsToggle(eventKey: keyof typeof events, mealsField: string) {
+    const newValue = !events[eventKey].mealsEnabled;
+    updateEvent(eventKey, "mealsEnabled", newValue);
+    saveField(mealsField, newValue);
   }
 
   const eventRows = [
@@ -87,6 +117,7 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
       enabledField: "rehearsalDinnerEnabled" as const,
       nameField: "rehearsalDinnerName" as const,
       locationField: "rehearsalDinnerLocation" as const,
+      mealsField: "rehearsalDinnerMealsEnabled" as const,
       description: "Optional pre-wedding dinner (common in US)",
     },
     {
@@ -95,6 +126,7 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
       enabledField: "ceremonyEnabled" as const,
       nameField: "ceremonyName" as const,
       locationField: "ceremonyLocation" as const,
+      mealsField: "ceremonyMealsEnabled" as const,
       description: "The main ceremony event",
     },
     {
@@ -103,6 +135,7 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
       enabledField: "mealEnabled" as const,
       nameField: "mealName" as const,
       locationField: "mealLocation" as const,
+      mealsField: "mealMealsEnabled" as const,
       description: "The first meal after the ceremony",
     },
     {
@@ -111,6 +144,7 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
       enabledField: "eveningPartyEnabled" as const,
       nameField: "eveningPartyName" as const,
       locationField: "eveningPartyLocation" as const,
+      mealsField: "eveningPartyMealsEnabled" as const,
       description: "The evening celebration",
     },
   ];
@@ -135,6 +169,21 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
               >
                 {events[row.key].enabled ? "Shown" : "Hidden"}
               </button>
+              {events[row.key].enabled && (
+                <button
+                  type="button"
+                  onClick={() => handleMealsToggle(row.key, row.mealsField)}
+                  disabled={saving === row.mealsField}
+                  className={`text-xs px-2 py-0.5 rounded-full border transition-colors flex-shrink-0 ${
+                    events[row.key].mealsEnabled
+                      ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                      : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100"
+                  } disabled:opacity-50`}
+                  title={events[row.key].mealsEnabled ? "Click to disable meal selection" : "Click to enable meal selection"}
+                >
+                  {events[row.key].mealsEnabled ? "Meals on" : "Meals off"}
+                </button>
+              )}
             </div>
             <p className="text-xs text-gray-500 mb-3">{row.description}</p>
             <div className="space-y-2">
@@ -184,7 +233,7 @@ export function EventNamesSettings({ initialConfig }: EventNamesSettingsProps) {
       </div>
 
       <p className="text-xs text-gray-400">
-        Toggle events on/off to show or hide them on RSVP forms and guest lists. At least one event must be enabled.
+        Toggle events on/off to show or hide them on RSVP forms and guest lists. Enable &quot;Meals&quot; to allow guests to select meal options for that event. At least one event must be enabled.
         UK weddings typically use &quot;Wedding Breakfast&quot; for the meal and &quot;Evening Reception&quot; for the party.
       </p>
     </div>

@@ -18,15 +18,19 @@ interface WeddingConfig {
   ceremonyEnabled: boolean;
   ceremonyName: string;
   ceremonyLocation?: string | null;
+  ceremonyMealsEnabled: boolean;
   mealEnabled: boolean;
   mealName: string;
   mealLocation?: string | null;
+  mealMealsEnabled: boolean;
   eveningPartyEnabled: boolean;
   eveningPartyName: string;
   eveningPartyLocation?: string | null;
+  eveningPartyMealsEnabled: boolean;
   rehearsalDinnerEnabled: boolean;
   rehearsalDinnerName: string;
   rehearsalDinnerLocation?: string | null;
+  rehearsalDinnerMealsEnabled: boolean;
 }
 import { UsersManager } from "./UsersManager";
 import { MealOptionsList } from "./MealOptionsList";
@@ -39,6 +43,7 @@ import { EventNamesSettings } from "./EventNamesSettings";
 import { TwoFactorSettings } from "./TwoFactorSettings";
 import { TrustedDevicesList } from "./TrustedDevicesList";
 import { WeddingConfigForm } from "@/components/wedding-config-form";
+import { getEvents } from "@/lib/eventNames";
 import Link from "next/link";
 import { CreditCard } from "lucide-react";
 
@@ -138,15 +143,19 @@ export function SettingsClient({
                 ceremonyEnabled: config?.ceremonyEnabled ?? true,
                 ceremonyName: config?.ceremonyName ?? "Ceremony",
                 ceremonyLocation: config?.ceremonyLocation,
+                ceremonyMealsEnabled: config?.ceremonyMealsEnabled ?? false,
                 mealEnabled: config?.mealEnabled ?? true,
                 mealName: config?.mealName ?? "Wedding Breakfast",
                 mealLocation: config?.mealLocation,
+                mealMealsEnabled: config?.mealMealsEnabled ?? true,
                 eveningPartyEnabled: config?.eveningPartyEnabled ?? true,
                 eveningPartyName: config?.eveningPartyName ?? "Evening Reception",
                 eveningPartyLocation: config?.eveningPartyLocation,
+                eveningPartyMealsEnabled: config?.eveningPartyMealsEnabled ?? false,
                 rehearsalDinnerEnabled: config?.rehearsalDinnerEnabled ?? false,
                 rehearsalDinnerName: config?.rehearsalDinnerName ?? "Rehearsal Dinner",
                 rehearsalDinnerLocation: config?.rehearsalDinnerLocation,
+                rehearsalDinnerMealsEnabled: config?.rehearsalDinnerMealsEnabled ?? false,
               }}
             />
           </div>
@@ -183,9 +192,13 @@ export function SettingsClient({
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-base font-medium text-gray-900 mb-1">Meal Options</h2>
           <p className="text-sm text-gray-500 mb-4">
-            Configure the meal choices shown on RSVP forms.
+            Configure the meal choices shown on RSVP forms for each event.
           </p>
-          <MealOptionsList initialOptions={mealOptions} mealCounts={mealCounts} />
+          <MealOptionsList
+            initialOptions={mealOptions}
+            mealCounts={mealCounts}
+            events={config ? getEvents(config, true) : []}
+          />
         </div>
       )}
 

@@ -6,12 +6,16 @@ import type { UserRole, SubStatus } from "@prisma/client";
 export type EventNamesConfig = {
   ceremonyEnabled: boolean;
   ceremonyName: string;
+  ceremonyMealsEnabled?: boolean;
   mealEnabled: boolean;
   mealName: string;
+  mealMealsEnabled?: boolean;
   eveningPartyEnabled: boolean;
   eveningPartyName: string;
+  eveningPartyMealsEnabled?: boolean;
   rehearsalDinnerEnabled: boolean;
   rehearsalDinnerName: string;
+  rehearsalDinnerMealsEnabled?: boolean;
 };
 
 type WeddingContextValue = {

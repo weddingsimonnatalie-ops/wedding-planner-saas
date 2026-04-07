@@ -120,6 +120,12 @@ model Wedding {
   rehearsalDinnerName    String  @default("Rehearsal Dinner")
   rehearsalDinnerLocation String?
 
+  // Per-event meal configuration
+  ceremonyMealsEnabled      Boolean @default(false)
+  mealMealsEnabled          Boolean @default(true)
+  eveningPartyMealsEnabled Boolean @default(false)
+  rehearsalDinnerMealsEnabled Boolean @default(false)
+
   // Data retention
   cancelledAt          DateTime?
   deleteScheduledAt    DateTime?
@@ -224,6 +230,7 @@ model Guest {
 
   mealChoice   String?
   dietaryNotes String?
+  mealChoices  GuestMealChoice[]
 
   tableId    String?
   table      Table?  @relation(fields: [tableId], references: [id])
@@ -252,17 +259,34 @@ enum RsvpStatus {
   DECLINED
 }
 
+model GuestMealChoice {
+  id           String      @id @default(cuid())
+  guestId      String
+  guest        Guest       @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  eventId      String      // "ceremony", "meal", "eveningParty", "rehearsalDinner"
+  mealOptionId String?
+  mealOption   MealOption? @relation(fields: [mealOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([guestId, eventId])
+  @@index([guestId])
+  @@index([mealOptionId])
+}
+
 model MealOption {
   id          String  @id @default(cuid())
   weddingId   String
   wedding     Wedding @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  eventId     String  // "ceremony", "meal", "eveningParty", "rehearsalDinner"
   name        String
   description String?
   course      String?
   isActive    Boolean @default(true)
   sortOrder   Int     @default(0)
 
-  @@index([weddingId])
+  guestChoices GuestMealChoice[]
+
+  @@unique([weddingId, eventId, name])
+  @@index([weddingId, eventId])
 }
 
 // --- SEATING ---

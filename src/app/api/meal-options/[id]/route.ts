@@ -16,7 +16,7 @@ export async function PUT(
     if (!auth.authorized) return auth.response;
     const { weddingId } = auth;
 
-    const { name, description, course, isActive, sortOrder } = await req.json();
+    const { name, description, course, isActive, sortOrder, eventId } = await req.json();
 
     if (!name?.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -32,6 +32,11 @@ export async function PUT(
       return NextResponse.json({ error: errors[0] }, { status: 400 });
     }
 
+    // Get the old event to invalidate the correct cache
+    const oldOption = await withTenantContext(weddingId, (tx) =>
+      tx.mealOption.findUnique({ where: { id, weddingId }, select: { eventId: true } })
+    );
+
     const option = await withTenantContext(weddingId, (tx) =>
       tx.mealOption.update({
         where: { id, weddingId },
@@ -41,11 +46,18 @@ export async function PUT(
           course: course?.trim() || null,
           isActive: Boolean(isActive),
           sortOrder: sortOrder ?? 0,
+          ...(eventId ? { eventId } : {}),
         },
       })
     );
 
     await invalidateCache(`${weddingId}:meal-options`);
+    if (oldOption?.eventId) {
+      await invalidateCache(`${weddingId}:meal-options:${oldOption.eventId}`);
+    }
+    if (eventId && eventId !== oldOption?.eventId) {
+      await invalidateCache(`${weddingId}:meal-options:${eventId}`);
+    }
     return NextResponse.json(option);
 
   } catch (error) {
@@ -64,10 +76,18 @@ export async function DELETE(
     if (!auth.authorized) return auth.response;
     const { weddingId } = auth;
 
+    // Get the event to invalidate the correct cache
+    const oldOption = await withTenantContext(weddingId, (tx) =>
+      tx.mealOption.findUnique({ where: { id, weddingId }, select: { eventId: true } })
+    );
+
     await withTenantContext(weddingId, (tx) =>
       tx.mealOption.delete({ where: { id, weddingId } })
     );
     await invalidateCache(`${weddingId}:meal-options`);
+    if (oldOption?.eventId) {
+      await invalidateCache(`${weddingId}:meal-options:${oldOption.eventId}`);
+    }
     return NextResponse.json({ ok: true });
 
   } catch (error) {

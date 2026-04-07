@@ -33,12 +33,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
         currencySymbol: true,
         ceremonyEnabled: true,
         ceremonyName: true,
+        ceremonyMealsEnabled: true,
         mealEnabled: true,
         mealName: true,
+        mealMealsEnabled: true,
         eveningPartyEnabled: true,
         eveningPartyName: true,
+        eveningPartyMealsEnabled: true,
         rehearsalDinnerEnabled: true,
         rehearsalDinnerName: true,
+        rehearsalDinnerMealsEnabled: true,
       },
     }),
   ]);
@@ -69,12 +73,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const eventNames: EventNamesConfig = {
     ceremonyEnabled: weddingBilling?.ceremonyEnabled ?? true,
     ceremonyName: weddingBilling?.ceremonyName ?? "Ceremony",
+    ceremonyMealsEnabled: weddingBilling?.ceremonyMealsEnabled ?? false,
     mealEnabled: weddingBilling?.mealEnabled ?? true,
     mealName: weddingBilling?.mealName ?? "Wedding Breakfast",
+    mealMealsEnabled: weddingBilling?.mealMealsEnabled ?? true,
     eveningPartyEnabled: weddingBilling?.eveningPartyEnabled ?? true,
     eveningPartyName: weddingBilling?.eveningPartyName ?? "Evening Reception",
+    eveningPartyMealsEnabled: weddingBilling?.eveningPartyMealsEnabled ?? false,
     rehearsalDinnerEnabled: weddingBilling?.rehearsalDinnerEnabled ?? false,
     rehearsalDinnerName: weddingBilling?.rehearsalDinnerName ?? "Rehearsal Dinner",
+    rehearsalDinnerMealsEnabled: weddingBilling?.rehearsalDinnerMealsEnabled ?? false,
   };
 
   return (

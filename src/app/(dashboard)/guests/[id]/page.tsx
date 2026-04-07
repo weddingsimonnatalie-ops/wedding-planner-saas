@@ -13,7 +13,7 @@ export default async function EditGuestPage({ params }: { params: Promise<{ id: 
   const ctx = await requireServerContext();
   const { weddingId, role } = ctx;
 
-  const [guest, groups, mealOptions] = await withTenantContext(weddingId, (tx) =>
+  const [guest, groups, mealOptions, mealChoices] = await withTenantContext(weddingId, (tx) =>
     Promise.all([
       tx.guest.findUnique({ where: { id, weddingId } }),
       tx.guest.findMany({
@@ -25,6 +25,10 @@ export default async function EditGuestPage({ params }: { params: Promise<{ id: 
       tx.mealOption.findMany({
         where: { weddingId, isActive: true },
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+      tx.guestMealChoice.findMany({
+        where: { guestId: id },
+        select: { eventId: true, mealOptionId: true },
       }),
     ])
   );
@@ -61,6 +65,7 @@ export default async function EditGuestPage({ params }: { params: Promise<{ id: 
           guest={guest as any}
           groups={groups}
           mealOptions={mealOptions}
+          mealChoices={mealChoices}
           tableWithGuests={tableWithGuests as any}
           readOnly={!can.editGuests(role)}
         />

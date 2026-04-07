@@ -3,9 +3,11 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { getEvents, type EventConfig } from "@/lib/eventNames";
 
 interface MealOption {
   id: string;
+  eventId: string;
   name: string;
   description: string | null;
   course: string | null;
@@ -16,20 +18,34 @@ interface MealOption {
 interface Props {
   initialOptions: MealOption[];
   mealCounts: Record<string, number>;
+  events: EventConfig[];
 }
 
 const emptyOption = { name: "", description: "", course: "", isActive: true, sortOrder: 0 };
 
-export function MealOptionsList({ initialOptions, mealCounts }: Props) {
+export function MealOptionsList({ initialOptions, mealCounts, events }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [options, setOptions] = useState(initialOptions);
+  const [activeEvent, setActiveEvent] = useState<string | null>(() => {
+    // Default to the first event with meals enabled
+    const eventWithMeals = events.find((e) => e.mealsEnabled);
+    return eventWithMeals?.key ?? null;
+  });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<typeof emptyOption>(emptyOption);
   const [showAdd, setShowAdd] = useState(false);
   const [newData, setNewData] = useState<typeof emptyOption>(emptyOption);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
+
+  // Filter events to only those with meals enabled
+  const eventsWithMeals = events.filter((e) => e.mealsEnabled);
+
+  // Filter options for the active event
+  const filteredOptions = activeEvent
+    ? options.filter((o) => o.eventId === activeEvent)
+    : [];
 
   function showToast(msg: string) {
     setToast(msg);
@@ -39,10 +55,12 @@ export function MealOptionsList({ initialOptions, mealCounts }: Props) {
   async function handleAdd() {
     setError("");
     if (!newData.name.trim()) { setError("Name is required"); return; }
+    if (!activeEvent) { setError("Select an event first"); return; }
+
     const res = await fetch("/api/meal-options", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newData, sortOrder: options.length }),
+      body: JSON.stringify({ ...newData, eventId: activeEvent, sortOrder: filteredOptions.length }),
     });
     if (res.ok) {
       const created = await res.json();
@@ -60,10 +78,11 @@ export function MealOptionsList({ initialOptions, mealCounts }: Props) {
   async function handleUpdate(id: string) {
     setError("");
     if (!editData.name.trim()) { setError("Name is required"); return; }
+
     const res = await fetch(`/api/meal-options/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editData),
+      body: JSON.stringify({ ...editData }),
     });
     if (res.ok) {
       const updated = await res.json();
@@ -87,14 +106,48 @@ export function MealOptionsList({ initialOptions, mealCounts }: Props) {
     }
   }
 
+  // If no events have meals enabled, show a message
+  if (eventsWithMeals.length === 0) {
+    return (
+      <div className="text-sm text-gray-500">
+        <p>No events have meals enabled.</p>
+        <p className="mt-2">
+          Go to <strong>Settings → General → Event Names</strong> and enable meals for one or more events.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
-      {options.length === 0 && !showAdd && (
-        <p className="text-sm text-gray-400 mb-3">No meal options yet.</p>
+      {/* Event tabs */}
+      {eventsWithMeals.length > 1 && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          {eventsWithMeals.map((event) => (
+            <button
+              key={event.key}
+              onClick={() => setActiveEvent(event.key)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
+                activeEvent === event.key
+                  ? "bg-primary text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {event.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Meal options list for selected event */}
+      {filteredOptions.length === 0 && !showAdd && (
+        <p className="text-sm text-gray-400 mb-3">
+          No meal options for {events.find((e) => e.key === activeEvent)?.name ?? "this event"}.
+        </p>
       )}
 
       <div className="space-y-2 mb-3">
-        {options.map((opt) =>
+        {filteredOptions.map((opt) =>
           editingId === opt.id ? (
             <div key={opt.id} className="border border-primary/30 rounded-lg p-3 space-y-2 bg-primary/5">
               <OptionFields data={editData} onChange={setEditData} />

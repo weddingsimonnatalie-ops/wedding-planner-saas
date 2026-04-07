@@ -39,8 +39,14 @@ interface Guest {
 
 interface MealOption {
   id: string;
+  eventId: string;
   name: string;
   course: string | null;
+}
+
+interface MealChoice {
+  eventId: string;
+  mealOptionId: string | null;
 }
 
 interface TableWithGuests {
@@ -54,13 +60,14 @@ interface Props {
   guest?: Guest;
   groups: string[];
   mealOptions: MealOption[];
+  mealChoices?: MealChoice[];
   tableWithGuests?: TableWithGuests | null;
   readOnly?: boolean;
 }
 
 const ALL_STATUSES = ["PENDING", "ACCEPTED", "PARTIAL", "DECLINED"] as const;
 
-export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnly = false }: Props) {
+export function GuestForm({ guest, groups, mealOptions, mealChoices = [], tableWithGuests, readOnly = false }: Props) {
   const roCls = readOnly ? "bg-gray-50 cursor-not-allowed opacity-75" : "";
   const { subscriptionStatus, eventNames } = useWedding();
   const events = getEvents(eventNames);
@@ -86,14 +93,45 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
   const [notes, setNotes] = useState(guest?.notes ?? "");
 
   // ── Meal fields (edit only, saved via main form) ──────────────────────────
-  const [mealChoice, setMealChoice] = useState(guest?.mealChoice ?? "");
+  // Per-event meal choices
+  const [eventMealChoices, setEventMealChoices] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    // Initialize from mealChoices prop (per-event choices)
+    for (const choice of mealChoices) {
+      if (choice.mealOptionId) {
+        initial[choice.eventId] = choice.mealOptionId;
+      }
+    }
+    // Fall back to legacy mealChoice for "meal" event
+    if (!initial["meal"] && guest?.mealChoice) {
+      initial["meal"] = guest.mealChoice;
+    }
+    return initial;
+  });
   const [dietaryNotes, setDietaryNotes] = useState(guest?.dietaryNotes ?? "");
+
+  // Get meal options for a specific event
+  const getMealOptionsForEvent = (eventId: string) => {
+    return mealOptions.filter((m) => m.eventId === eventId);
+  };
 
   // ── Track dirty state for inactivity warning ───────────────────────────────
   const isDirty = useMemo(() => {
     if (isEdit) {
       // Edit mode: compare current values to original
       const g = guest!;
+      const originalMealChoices: Record<string, string> = {};
+      for (const choice of mealChoices) {
+        if (choice.mealOptionId) {
+          originalMealChoices[choice.eventId] = choice.mealOptionId;
+        }
+      }
+      if (!originalMealChoices["meal"] && g.mealChoice) {
+        originalMealChoices["meal"] = g.mealChoice;
+      }
+      const mealChoicesChanged = Object.keys({ ...originalMealChoices, ...eventMealChoices }).some(
+        (key) => (originalMealChoices[key] ?? "") !== (eventMealChoices[key] ?? "")
+      );
       return (
         firstName !== g.firstName ||
         lastName !== g.lastName ||
@@ -106,7 +144,7 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
         afterparty !== g.invitedToAfterparty ||
         rehearsalDinner !== g.invitedToRehearsalDinner ||
         (notes || "") !== (g.notes || "") ||
-        (mealChoice || "") !== (g.mealChoice || "") ||
+        mealChoicesChanged ||
         (dietaryNotes || "") !== (g.dietaryNotes || "")
       );
     } else {
@@ -125,7 +163,7 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
         notes !== ""
       );
     }
-  }, [isEdit, guest, firstName, lastName, email, phone, groupName, isChild, ceremony, reception, afterparty, rehearsalDinner, notes, mealChoice, dietaryNotes]);
+  }, [isEdit, guest, mealChoices, firstName, lastName, email, phone, groupName, isChild, ceremony, reception, afterparty, rehearsalDinner, notes, eventMealChoices, dietaryNotes]);
 
   // Register dirty state with global context
   const formId = isEdit && guest ? `guest-${guest.id}` : "guest-new";
@@ -149,7 +187,7 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
   }, []);
 
   // ── Sync all form state from a freshly fetched guest record ───────────────
-  function syncFromFresh(fresh: Guest) {
+  function syncFromFresh(fresh: Guest, freshMealChoices?: MealChoice[]) {
     setLocalGuest(fresh);
     setFirstName(fresh.firstName);
     setLastName(fresh.lastName);
@@ -162,7 +200,19 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
     setAfterparty(fresh.invitedToAfterparty);
     setRehearsalDinner(fresh.invitedToRehearsalDinner);
     setNotes(fresh.notes ?? "");
-    setMealChoice(fresh.mealChoice ?? "");
+    // Update meal choices
+    const newMealChoices: Record<string, string> = {};
+    if (freshMealChoices) {
+      for (const choice of freshMealChoices) {
+        if (choice.mealOptionId) {
+          newMealChoices[choice.eventId] = choice.mealOptionId;
+        }
+      }
+    }
+    if (!newMealChoices["meal"] && fresh.mealChoice) {
+      newMealChoices["meal"] = fresh.mealChoice;
+    }
+    setEventMealChoices(newMealChoices);
     setDietaryNotes(fresh.dietaryNotes ?? "");
     setDisplayStatus(fresh.rsvpStatus);
     setDisplaySeat(fresh.seatNumber ?? null);
@@ -276,7 +326,7 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
       invitedToRehearsalDinner: rehearsalDinner,
       notes: notes || null,
       ...(isEdit ? {
-        mealChoice: mealChoice || null,
+        mealChoices: eventMealChoices, // Per-event meal choices
         dietaryNotes: dietaryNotes || null,
       } : {}),
     };
@@ -578,26 +628,42 @@ export function GuestForm({ guest, groups, mealOptions, tableWithGuests, readOnl
           {/* Meal & Dietary section */}
           <div className="border-t border-gray-200 pt-5">
             <h3 className="text-sm font-semibold text-gray-800 mb-3">Meal &amp; Dietary</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {reception && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Meal choice</label>
-                  <select
-                    value={mealChoice}
-                    disabled={readOnly}
-                    onChange={(e) => !readOnly && setMealChoice(e.target.value)}
-                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary ${roCls}`}
-                  >
-                    <option value="">— No choice —</option>
-                    {mealOptions.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}{m.course ? ` (${m.course})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div className={!reception ? "sm:col-span-2" : ""}>
+            <div className="space-y-4">
+              {/* Per-event meal choices */}
+              {events.map((event) => {
+                // Check if guest is invited to this event
+                const invitedMap: Record<string, boolean> = {
+                  ceremony: !!localGuest?.invitedToCeremony,
+                  meal: !!localGuest?.invitedToReception,
+                  eveningParty: !!localGuest?.invitedToAfterparty,
+                  rehearsalDinner: !!localGuest?.invitedToRehearsalDinner,
+                };
+                if (!invitedMap[event.key] || !event.mealsEnabled) return null;
+                const eventMealOpts = getMealOptionsForEvent(event.key);
+                if (eventMealOpts.length === 0) return null;
+                return (
+                  <div key={event.key}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {event.name} meal
+                    </label>
+                    <select
+                      value={eventMealChoices[event.key] || ""}
+                      disabled={readOnly}
+                      onChange={(e) => !readOnly && setEventMealChoices((prev) => ({ ...prev, [event.key]: e.target.value }))}
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary ${roCls}`}
+                    >
+                      <option value="">— No choice —</option>
+                      {eventMealOpts.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}{m.course ? ` (${m.course})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+              {/* Dietary notes */}
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Dietary notes</label>
                 <input
                   readOnly={readOnly}

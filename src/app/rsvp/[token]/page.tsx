@@ -18,7 +18,7 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
 
   // Scope meal options and wedding config to this guest's wedding
   const weddingId = guest.weddingId;
-  const [mealOptions, wedding] = await withTenantContext(weddingId, (tx) =>
+  const [mealOptions, wedding, guestMealChoices] = await withTenantContext(weddingId, (tx) =>
     Promise.all([
       tx.mealOption.findMany({
         where: { weddingId, isActive: true },
@@ -33,16 +33,24 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
           ceremonyEnabled: true,
           ceremonyName: true,
           ceremonyLocation: true,
+          ceremonyMealsEnabled: true,
           mealEnabled: true,
           mealName: true,
           mealLocation: true,
+          mealMealsEnabled: true,
           eveningPartyEnabled: true,
           eveningPartyName: true,
           eveningPartyLocation: true,
+          eveningPartyMealsEnabled: true,
           rehearsalDinnerEnabled: true,
           rehearsalDinnerName: true,
           rehearsalDinnerLocation: true,
+          rehearsalDinnerMealsEnabled: true,
         },
+      }),
+      tx.guestMealChoice.findMany({
+        where: { guestId: guest.id },
+        select: { eventId: true, mealOptionId: true },
       }),
     ])
   );
@@ -62,16 +70,26 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
     ceremonyEnabled: wedding?.ceremonyEnabled ?? true,
     ceremonyName: wedding?.ceremonyName ?? "Ceremony",
     ceremonyLocation: wedding?.ceremonyLocation ?? null,
+    ceremonyMealsEnabled: wedding?.ceremonyMealsEnabled ?? false,
     mealEnabled: wedding?.mealEnabled ?? true,
     mealName: wedding?.mealName ?? "Wedding Breakfast",
     mealLocation: wedding?.mealLocation ?? null,
+    mealMealsEnabled: wedding?.mealMealsEnabled ?? true,
     eveningPartyEnabled: wedding?.eveningPartyEnabled ?? true,
     eveningPartyName: wedding?.eveningPartyName ?? "Evening Reception",
     eveningPartyLocation: wedding?.eveningPartyLocation ?? null,
+    eveningPartyMealsEnabled: wedding?.eveningPartyMealsEnabled ?? false,
     rehearsalDinnerEnabled: wedding?.rehearsalDinnerEnabled ?? false,
     rehearsalDinnerName: wedding?.rehearsalDinnerName ?? "Rehearsal Dinner",
     rehearsalDinnerLocation: wedding?.rehearsalDinnerLocation ?? null,
+    rehearsalDinnerMealsEnabled: wedding?.rehearsalDinnerMealsEnabled ?? false,
   };
+
+  // Convert guest meal choices to a record for easy lookup
+  const mealChoicesByEvent: Record<string, string | null> = {};
+  for (const choice of guestMealChoices) {
+    mealChoicesByEvent[choice.eventId] = choice.mealOptionId;
+  }
 
   return (
     <>
@@ -115,6 +133,7 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
             }}
             mealOptions={mealOptions}
             eventNames={eventNames}
+            mealChoicesByEvent={mealChoicesByEvent}
           />
         </div>
       </div>
