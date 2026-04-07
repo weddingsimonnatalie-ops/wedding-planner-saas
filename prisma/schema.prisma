@@ -92,6 +92,7 @@ model Wedding {
   themeHue             Int             @default(330)
   currencySymbol       String          @default("£")
   totalBudget         Float?          // Overall wedding budget
+  timezone            String          @default("Europe/London")  // IANA timezone for date calculations
 
   // Stripe
   stripeCustomerId     String?         @unique

@@ -14,6 +14,7 @@ interface WeddingConfig {
   themeHue: number;
   currencySymbol: string;
   totalBudget?: number | null;
+  timezone: string;
   // Event name configuration
   ceremonyEnabled: boolean;
   ceremonyName: string;
@@ -42,6 +43,7 @@ import { CurrencySymbolPicker } from "./CurrencySymbolPicker";
 import { EventNamesSettings } from "./EventNamesSettings";
 import { TwoFactorSettings } from "./TwoFactorSettings";
 import { TrustedDevicesList } from "./TrustedDevicesList";
+import { TimezonePicker } from "./TimezonePicker";
 import { WeddingConfigForm } from "@/components/wedding-config-form";
 import { getEvents } from "@/lib/eventNames";
 import Link from "next/link";
@@ -182,6 +184,14 @@ export function SettingsClient({
               Choose the symbol shown next to monetary amounts throughout the planner.
             </p>
             <CurrencySymbolPicker initialSymbol={config?.currencySymbol ?? "£"} />
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-base font-medium text-gray-900 mb-1">Timezone</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Set your local timezone for accurate countdown and date calculations.
+            </p>
+            <TimezonePicker initialTimezone={config?.timezone ?? "Europe/London"} />
           </div>
 
         </div>

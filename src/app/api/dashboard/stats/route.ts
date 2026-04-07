@@ -183,6 +183,7 @@ export async function GET(req: NextRequest) {
         wedding: {
           coupleName: config?.coupleName ?? "Our Wedding",
           weddingDate: config?.weddingDate ?? null,
+          timezone: config?.timezone ?? "Europe/London",
         },
         guests: {
           total: totalGuests,

@@ -46,6 +46,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       themeHue,
       currencySymbol,
       totalBudget,
+      timezone,
       // Event name configuration
       ceremonyEnabled,
       ceremonyName,
@@ -129,6 +130,9 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
             : {}),
           ...(totalBudget !== undefined
             ? { totalBudget: totalBudget !== null ? Math.max(0, Number(totalBudget)) : null }
+            : {}),
+          ...(timezone !== undefined
+            ? { timezone: String(timezone).trim() || "Europe/London" }
             : {}),
           // Event name configuration
           ...(ceremonyEnabled !== undefined ? { ceremonyEnabled: Boolean(ceremonyEnabled) } : {}),

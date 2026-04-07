@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Heart, Clock, AlertCircle, Check, Mail, TrendingUp,
   Users, LayoutGrid, ArrowRight, CalendarDays, MapPin, CheckSquare,
+  Briefcase, Utensils,
 } from "lucide-react";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { fetchApi } from "@/lib/fetch";
@@ -14,7 +15,7 @@ import { UserRole } from "@prisma/client";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface DashStats {
-  wedding: { coupleName: string; weddingDate: string | null };
+  wedding: { coupleName: string; weddingDate: string | null; timezone: string };
   guests: { total: number; accepted: number; partial: number; declined: number; pending: number; dietary: number; receptionEligible: number; assigned: number };
   meals: { name: string; count: number }[];
   payments: {
@@ -127,19 +128,47 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
   );
   if (!stats) return null;
 
+  // Helper to format date using user's timezone
+  const formatDateWithTimezone = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: stats.wedding.timezone,
+      });
+    } catch {
+      return new Date(dateStr).toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Welcome */}
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">
-          Welcome back, {userName ?? "there"} 👋
+      <div className="relative">
+        {/* Decorative accent line */}
+        <div className="absolute -left-4 top-0 bottom-0 w-1 rounded-full bg-gradient-to-b from-primary/40 to-primary/10" />
+        <p className="text-sm text-gray-500 mb-0.5">{stats.wedding.coupleName}</p>
+        <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">
+          Welcome back, {userName ?? "there"}
         </h1>
-        <p className="text-gray-500 mt-0.5 text-sm">{stats.wedding.coupleName} planning dashboard</p>
+        {stats.wedding.weddingDate && (
+          <p className="text-sm text-primary mt-1 font-medium">
+            {formatDateWithTimezone(stats.wedding.weddingDate)}
+          </p>
+        )}
       </div>
 
       {/* Row 1 — quick-stat cards */}
-      <div className={`grid gap-3 ${showFinance ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 lg:grid-cols-3"}`}>
-        <CountdownCard weddingDate={stats.wedding.weddingDate} />
+      <div className={`grid gap-3 animate-fade-in-up stagger-1 ${showFinance ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 lg:grid-cols-3"}`}>
+        <CountdownCard weddingDate={stats.wedding.weddingDate} timezone={stats.wedding.timezone} />
         <QuickStat
           icon={<Users className="w-5 h-5 text-indigo-500" />}
           label="Guests accepted"
@@ -170,8 +199,8 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
       </div>
 
       {/* Row 2 — Guest breakdown + Budget */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Guest donut */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-in-up stagger-2">
+        {/* Guest summary */}
         <div className={`${showFinance ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-xl border border-gray-200 p-5`}>
           <SectionHeader title="Guest summary" href="/guests" />
           <div className="mt-4">
@@ -181,18 +210,18 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
             </p>
             <div className="space-y-2.5">
               {[
-                { label: "Accepted", value: stats.guests.accepted, color: "bg-green-500" },
-                { label: "Partial",  value: stats.guests.partial,  color: "bg-orange-400" },
-                { label: "Declined", value: stats.guests.declined, color: "bg-red-500" },
-                { label: "Pending",  value: stats.guests.pending,  color: "bg-amber-400" },
-                { label: "Dietary req.", value: stats.guests.dietary, color: "bg-purple-400" },
-              ].map(({ label, value, color }) => (
+                { label: "Accepted", value: stats.guests.accepted, dotClass: "bg-green-500", barClass: "from-green-500 to-green-400" },
+                { label: "Partial",  value: stats.guests.partial,  dotClass: "bg-orange-500", barClass: "from-orange-500 to-orange-400" },
+                { label: "Declined", value: stats.guests.declined, dotClass: "bg-red-500", barClass: "from-red-500 to-red-400" },
+                { label: "Pending",  value: stats.guests.pending,  dotClass: "bg-amber-500", barClass: "from-amber-500 to-amber-400" },
+                { label: "Dietary req.", value: stats.guests.dietary, dotClass: "bg-purple-500", barClass: "from-purple-500 to-purple-400" },
+              ].map(({ label, value, dotClass, barClass }) => (
                 <div key={label} className="flex items-center gap-3">
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${color}`} />
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dotClass}`} />
                   <span className="text-xs text-gray-500 w-14 shrink-0">{label}</span>
                   <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all ${color}`}
+                      className={`h-full rounded-full bg-gradient-to-r ${barClass} transition-all duration-500`}
                       style={{ width: stats.guests.total > 0 ? `${(value / stats.guests.total) * 100}%` : "0%" }}
                     />
                   </div>
@@ -201,9 +230,13 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
               ))}
             </div>
             {stats.guests.total === 0 && (
-              <Link href="/guests" className="text-xs text-primary hover:underline mt-3 block">
-                Add your first guest →
-              </Link>
+              <EmptyState
+                icon={Users}
+                title="No guests yet"
+                description="Start building your guest list to track RSVPs"
+                actionLabel="Add your first guest"
+                href="/guests"
+              />
             )}
           </div>
         </div>
@@ -220,19 +253,23 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
               ].map(({ label, value, cls }) => (
                 <div key={label} className="flex justify-between items-baseline">
                   <span className="text-xs text-gray-500">{label}</span>
-                  <span className={`text-sm font-semibold ${cls}`}>{fmt(currencySymbol, value)}</span>
+                  <span className={`text-sm font-semibold tabular-nums ${cls}`}>{fmt(currencySymbol, value)}</span>
                 </div>
               ))}
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden mt-2">
                 <div
-                  className="h-full bg-green-500 rounded-full transition-all"
+                  className="h-full rounded-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-500"
                   style={{ width: `${stats.budget.contracted > 0 ? Math.min(100, (stats.budget.paid / stats.budget.contracted) * 100) : 0}%` }}
                 />
               </div>
               {stats.budget.contracted === 0 && (
-                <Link href="/suppliers" className="text-xs text-primary hover:underline block mt-1">
-                  Add your first supplier →
-                </Link>
+                <EmptyState
+                  icon={Briefcase}
+                  title="No suppliers yet"
+                  description="Add suppliers to track your budget"
+                  actionLabel="Add your first supplier"
+                  href="/suppliers"
+                />
               )}
             </div>
           </div>
@@ -240,15 +277,17 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
       </div>
 
       {/* Row 3 — Meals + Supplier status */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-in-up stagger-3">
         {/* Meal choices */}
         <div className={`${showFinance ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-xl border border-gray-200 p-5`}>
           <SectionHeader title="Meal choices" href="/guests" />
           <div className="mt-4">
             {stats.meals.length === 0 ? (
-              <p className="text-sm text-gray-400">
-                No meal data yet — choices are recorded when guests RSVP.
-              </p>
+              <EmptyState
+                icon={Utensils}
+                title="No meal choices yet"
+                description="Meal selections will appear as guests RSVP"
+              />
             ) : (
               <MealBars meals={stats.meals} />
             )}
@@ -274,9 +313,13 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
                 );
               })}
               {Object.values(stats.suppliers).every(v => v === 0) && (
-                <Link href="/suppliers" className="text-xs text-primary hover:underline block">
-                  Add your first supplier →
-                </Link>
+                <EmptyState
+                  icon={Briefcase}
+                  title="No suppliers yet"
+                  description="Track your vendors and bookings"
+                  actionLabel="Add your first supplier"
+                  href="/suppliers"
+                />
               )}
             </div>
           </div>
@@ -285,13 +328,19 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
 
       {/* Row 3.5 — Budget categories (admin only) */}
       {showFinance && stats.budgetCategories.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-5 animate-fade-in-up stagger-4">
           <SectionHeader title="Budget by category" href="/budget" />
           <div className="mt-4 space-y-3">
             {stats.budgetCategories.slice(0, 4).map(cat => {
               const percent = cat.allocated > 0 ? Math.min(100, (cat.paid / cat.allocated) * 100) : 0;
               const isOver = cat.paid > cat.allocated && cat.allocated > 0;
-              const progressColour = isOver ? "bg-red-500" : percent > 90 ? "bg-amber-500" : percent > 70 ? "bg-yellow-500" : "bg-green-500";
+              const progressGradient = isOver
+                ? "from-red-500 to-red-400"
+                : percent > 90
+                  ? "from-amber-500 to-amber-400"
+                  : percent > 70
+                    ? "from-yellow-500 to-yellow-400"
+                    : "from-green-500 to-green-400";
               return (
                 <div key={cat.id} className="flex items-center gap-3">
                   <div
@@ -301,13 +350,13 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-baseline mb-1">
                       <span className="text-sm font-medium text-gray-800 truncate">{cat.name}</span>
-                      <span className={`text-xs ${isOver ? "text-red-600 font-medium" : "text-gray-500"}`}>
+                      <span className={`text-xs tabular-nums ${isOver ? "text-red-600 font-medium" : "text-gray-500"}`}>
                         {fmt(currencySymbol, cat.paid)} / {fmt(currencySymbol, cat.allocated)}
                       </span>
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all ${progressColour}`}
+                        className={`h-full rounded-full bg-gradient-to-r ${progressGradient} transition-all duration-500`}
                         style={{ width: `${percent}%` }}
                       />
                     </div>
@@ -325,7 +374,7 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
       )}
 
       {/* Row 4 — Upcoming payments (full width, admin only) */}
-      {showFinance && <div className="bg-white rounded-xl border border-gray-200">
+      {showFinance && <div className="bg-white rounded-xl border border-gray-200 animate-fade-in-up stagger-5">
         <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-gray-400" />
@@ -394,7 +443,7 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
       </div>}
 
       {/* Row 5 — Upcoming appointments (full width) */}
-      <div className="bg-white rounded-xl border border-gray-200">
+      <div className="bg-white rounded-xl border border-gray-200 animate-fade-in-up stagger-5">
         <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CalendarDays className="w-4 h-4 text-gray-400" />
@@ -467,7 +516,7 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
       </div>
 
       {/* Row 6 — Upcoming tasks (full width, all roles) */}
-      <div className="bg-white rounded-xl border border-gray-200">
+      <div className="bg-white rounded-xl border border-gray-200 animate-fade-in-up stagger-6">
         <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CheckSquare className="w-4 h-4 text-gray-400" />
@@ -608,26 +657,165 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
-function CountdownCard({ weddingDate }: { weddingDate: string | null }) {
+function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  actionLabel,
+  href,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  actionLabel?: string;
+  href?: string;
+}) {
+  return (
+    <div className="px-5 py-8 text-center">
+      <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+        <Icon className="w-6 h-6 text-gray-300" />
+      </div>
+      <p className="text-sm font-medium text-gray-700 mb-1">{title}</p>
+      <p className="text-xs text-gray-400 mb-3">{description}</p>
+      {actionLabel && href && (
+        <Link href={href} className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium">
+          {actionLabel}
+          <ArrowRight className="w-3 h-3" />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function CountdownCard({ weddingDate, timezone }: { weddingDate: string | null; timezone: string }) {
+  // Calculate days until wedding using the user's timezone
   const days = weddingDate
-    ? Math.ceil((new Date(weddingDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    ? (() => {
+        try {
+          // Get current date in the user's timezone
+          const now = new Date();
+          const todayStr = now.toLocaleDateString("en-CA", { timeZone: timezone }); // en-CA gives YYYY-MM-DD
+          const today = new Date(todayStr + "T00:00:00");
+
+          // Parse wedding date and set to midnight in user's timezone
+          const weddingStr = new Date(weddingDate).toLocaleDateString("en-CA", { timeZone: timezone });
+          const wedding = new Date(weddingStr + "T00:00:00");
+
+          const diffMs = wedding.getTime() - today.getTime();
+          return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        } catch {
+          // Fallback to UTC if timezone is invalid
+          const wedding = new Date(weddingDate);
+          const today = new Date();
+          today.setUTCHours(0, 0, 0, 0);
+          const weddingMidnight = new Date(Date.UTC(
+            wedding.getUTCFullYear(),
+            wedding.getUTCMonth(),
+            wedding.getUTCDate()
+          ));
+          return Math.ceil((weddingMidnight.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        }
+      })()
     : null;
 
+  // Calculate progress (days elapsed / typical 365-day planning period)
+  const planningDays = 365;
+  const daysElapsed = weddingDate
+    ? Math.max(0, planningDays - (days ?? 0))
+    : 0;
+  const progress = Math.min(100, (daysElapsed / planningDays) * 100);
+
+  // SVG circle calculations
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+  // Format wedding date for display using user's timezone
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: timezone,
+      });
+    } catch {
+      // Fallback to UTC if timezone is invalid
+      return new Date(dateStr).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+    }
+  };
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
-      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
-        <Heart className="w-5 h-5 text-primary fill-primary/20" />
+    <div className="bg-gradient-to-br from-primary/5 to-white rounded-xl border border-primary/10 p-4 md:p-5 flex items-center gap-3 md:gap-4 relative overflow-hidden">
+      {/* Subtle decorative element */}
+      <div className="absolute -top-6 -right-6 w-20 h-20 bg-primary/5 rounded-full blur-xl" />
+
+      {/* Circular progress ring - smaller on mobile */}
+      <div className="relative shrink-0">
+        <svg
+          className="w-14 h-14 md:w-20 md:h-20 -rotate-90"
+          viewBox="0 0 96 96"
+        >
+          {/* Background circle */}
+          <circle
+            cx="48"
+            cy="48"
+            r={radius}
+            stroke="currentColor"
+            strokeWidth="6"
+            fill="none"
+            className="text-gray-100"
+          />
+          {/* Progress circle */}
+          {days !== null && days > 0 && (
+            <circle
+              cx="48"
+              cy="48"
+              r={radius}
+              stroke="hsl(var(--primary))"
+              strokeWidth="6"
+              fill="none"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              className="transition-all duration-1000 ease-out"
+            />
+          )}
+        </svg>
+        {/* Heart icon in center */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Heart className={`w-5 h-5 md:w-6 md:h-6 text-primary fill-primary/20 ${days !== null && days > 0 ? 'animate-pulse-heart' : ''}`} />
+        </div>
       </div>
-      <div className="min-w-0">
+
+      {/* Text content */}
+      <div className="min-w-0 relative z-10">
         <p className="text-xs text-gray-500">Wedding day</p>
         {days === null ? (
-          <Link href="/settings" className="text-xs text-primary hover:underline">Set date in Settings</Link>
+          <Link href="/settings" className="text-sm text-primary hover:underline font-medium">
+            Set date in Settings
+          </Link>
         ) : days > 0 ? (
-          <p className="text-xl font-bold text-primary leading-none mt-0.5">{days} <span className="text-sm font-normal text-gray-500">days</span></p>
+          <>
+            <p className="text-2xl md:text-3xl font-bold text-primary leading-none mt-0.5">
+              {days}
+              <span className="text-sm font-normal text-gray-500 ml-1">days</span>
+            </p>
+            {weddingDate && (
+              <p className="text-xs text-gray-400 mt-0.5 hidden sm:block">
+                {formatDate(weddingDate)}
+              </p>
+            )}
+          </>
         ) : days === 0 ? (
-          <p className="text-sm font-bold text-primary">Today! 🎉</p>
+          <p className="text-lg md:text-xl font-bold text-primary">Today! 🎉</p>
         ) : (
-          <p className="text-sm font-medium text-gray-500">{Math.abs(days)} days ago</p>
+          <p className="text-lg font-medium text-gray-500">{Math.abs(days)} days ago</p>
         )}
       </div>
     </div>
@@ -638,13 +826,19 @@ function QuickStat({ icon, label, value, sub, href }: {
   icon: React.ReactNode; label: string; value: string; sub: string; href: string;
 }) {
   return (
-    <Link href={href} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3 hover:shadow-sm transition-shadow">
-      <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center shrink-0">
+    <Link
+      href={href}
+      className="group bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3
+        md:hover:shadow-md md:hover:-translate-y-0.5 md:hover:border-primary/20
+        transition-all duration-200 active:bg-gray-50 md:active:bg-white"
+    >
+      <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center shrink-0
+        md:group-hover:scale-110 transition-transform duration-200">
         {icon}
       </div>
       <div className="min-w-0">
         <p className="text-xs text-gray-500 truncate">{label}</p>
-        <p className="text-lg font-bold text-gray-900 leading-none mt-0.5">{value}</p>
+        <p className="text-lg font-bold text-gray-900 leading-none mt-0.5 tabular-nums">{value}</p>
         <p className="text-xs text-gray-400 truncate">{sub}</p>
       </div>
     </Link>
@@ -654,9 +848,16 @@ function QuickStat({ icon, label, value, sub, href }: {
 function SectionHeader({ title, href }: { title: string; href: string }) {
   return (
     <div className="flex items-center justify-between">
-      <p className="text-sm font-medium text-gray-700">{title}</p>
-      <Link href={href} className="text-xs text-gray-400 hover:text-primary flex items-center gap-0.5">
-        View all <ArrowRight className="w-3 h-3" />
+      <div className="relative">
+        <p className="text-sm font-medium text-gray-700">{title}</p>
+        <div className="absolute -bottom-1 left-0 w-8 h-0.5 bg-primary/40 rounded-full" />
+      </div>
+      <Link
+        href={href}
+        className="text-xs text-gray-400 hover:text-primary flex items-center gap-0.5 group transition-colors"
+      >
+        View all
+        <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
       </Link>
     </div>
   );
@@ -664,7 +865,13 @@ function SectionHeader({ title, href }: { title: string; href: string }) {
 
 function MealBars({ meals }: { meals: { name: string; count: number }[] }) {
   const max = Math.max(...meals.map(m => m.count), 1);
-  const colors = ["bg-indigo-500", "bg-violet-500", "bg-pink-500", "bg-amber-500", "bg-teal-500"];
+  const colors = [
+    "from-indigo-500 to-indigo-400",
+    "from-violet-500 to-violet-400",
+    "from-pink-500 to-pink-400",
+    "from-amber-500 to-amber-400",
+    "from-teal-500 to-teal-400",
+  ];
   return (
     <div className="space-y-2.5">
       {meals.map((m, i) => (
@@ -672,11 +879,11 @@ function MealBars({ meals }: { meals: { name: string; count: number }[] }) {
           <p className="text-xs text-gray-600 w-32 truncate shrink-0">{m.name}</p>
           <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full ${colors[i % colors.length]} transition-all`}
+              className={`h-full rounded-full bg-gradient-to-r ${colors[i % colors.length]} transition-all duration-500`}
               style={{ width: `${(m.count / max) * 100}%` }}
             />
           </div>
-          <span className="text-xs font-semibold text-gray-700 w-5 text-right shrink-0">{m.count}</span>
+          <span className="text-xs font-semibold text-gray-700 w-5 text-right shrink-0 tabular-nums">{m.count}</span>
         </div>
       ))}
     </div>
