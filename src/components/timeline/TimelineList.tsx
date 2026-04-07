@@ -164,8 +164,8 @@ export function TimelineList() {
           onClick={can.editTimeline ? () => setShowModal(true) : undefined}
         />
       ) : (
-        <div className="space-y-3">
-          {events.map((event) => {
+        <div className="space-y-3 animate-fade-in-up">
+          {events.map((event, index) => {
             const category = event.categoryId ? categoryMap.get(event.categoryId) || event.category : null;
             const bgColor = category?.colour || "#f3f4f6";
 
@@ -173,7 +173,8 @@ export function TimelineList() {
               <div
                 key={event.id}
                 onClick={() => can.editTimeline && handleEdit(event)}
-                className={`bg-white border rounded-lg p-4 ${can.editTimeline ? "cursor-pointer hover:shadow-md transition-shadow" : ""}`}
+                className={`bg-white border rounded-lg p-4 transition-all duration-200 ${can.editTimeline ? "cursor-pointer hover:shadow-md hover:border-gray-300" : ""}`}
+                style={{ animationDelay: `${index * 0.05}s` }}
               >
                 <div className="flex items-start gap-3">
                   {/* Time */}

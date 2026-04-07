@@ -159,22 +159,22 @@ function SummaryBar({ payments }: { payments: PaymentItem[] }) {
         </div>
       )}
       {/* Desktop: 4-column card grid */}
-      <div className="hidden md:grid md:grid-cols-4 md:gap-3">
-        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center min-w-0">
-          <p className="text-lg font-bold text-gray-900 truncate">{fmt(currencySymbol, totalRemaining)}</p>
-          <p className="text-xs text-gray-500 leading-tight">Remaining</p>
+      <div className="hidden md:grid md:grid-cols-4 md:gap-3 animate-fade-in-up">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 text-center min-w-0 transition-all duration-200 hover:shadow-sm hover:border-gray-300">
+          <p className="text-xl font-bold text-gray-900 tabular-nums truncate">{fmt(currencySymbol, totalRemaining)}</p>
+          <p className="text-xs text-gray-500 leading-tight mt-1">Remaining</p>
         </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center min-w-0">
-          <p className="text-lg font-bold text-amber-700 truncate">{fmt(currencySymbol, dueThisMonth)}</p>
-          <p className="text-xs text-amber-600 leading-tight">Due this month</p>
+        <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-center min-w-0 transition-all duration-200 hover:shadow-sm hover:border-amber-300">
+          <p className="text-xl font-bold text-amber-700 tabular-nums truncate">{fmt(currencySymbol, dueThisMonth)}</p>
+          <p className="text-xs text-amber-600 leading-tight mt-1">Due this month</p>
         </div>
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center min-w-0">
-          <p className="text-lg font-bold text-red-700 truncate">{fmt(currencySymbol, totalOverdue)}</p>
-          <p className="text-xs text-red-500 leading-tight">Overdue</p>
+        <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 text-center min-w-0 transition-all duration-200 hover:shadow-sm hover:border-red-300">
+          <p className="text-xl font-bold text-red-700 tabular-nums truncate">{fmt(currencySymbol, totalOverdue)}</p>
+          <p className="text-xs text-red-500 leading-tight mt-1">Overdue</p>
         </div>
-        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center min-w-0">
-          <p className="text-lg font-bold text-green-700 truncate">{fmt(currencySymbol, paidThisYear)}</p>
-          <p className="text-xs text-green-600 leading-tight">Paid this year</p>
+        <div className="rounded-xl border border-green-200 bg-green-50/50 p-4 text-center min-w-0 transition-all duration-200 hover:shadow-sm hover:border-green-300">
+          <p className="text-xl font-bold text-green-700 tabular-nums truncate">{fmt(currencySymbol, paidThisYear)}</p>
+          <p className="text-xs text-green-600 leading-tight mt-1">Paid this year</p>
         </div>
       </div>
     </div>
