@@ -1,13 +1,5 @@
-export const dynamic = "force-dynamic";
+import { redirect } from "next/navigation";
 
-import { AppointmentsList } from "@/components/appointments/AppointmentsList";
-import { requireServerContext } from "@/lib/server-context";
-
-export default async function AppointmentsPage() {
-  await requireServerContext(["ADMIN", "VIEWER"]);
-  return (
-    <div className="max-w-3xl">
-      <AppointmentsList />
-    </div>
-  );
+export default function AppointmentsPage() {
+  redirect("/planner?tab=events");
 }

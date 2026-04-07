@@ -4,17 +4,18 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Plus, Edit2, Trash2, CheckSquare, ChevronDown, RefreshCw,
-  Check, RotateCcw, Mail, X, Search,
+  Edit2, Trash2, CheckSquare, ChevronDown, RefreshCw,
+  Check, RotateCcw, Mail, X, Search, Plus,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useRefresh } from "@/context/RefreshContext";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { SwipeableRow } from "@/components/ui/SwipeableRow";
-import { TaskModal, TaskData, TaskPriority, RecurringInterval } from "./TaskModal";
+import { PlannerItemModal } from "./PlannerItemModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
+import type { TaskData, TaskPriority, RecurringInterval } from "./types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -254,7 +255,7 @@ function TaskRow({
 // ── Group section ─────────────────────────────────────────────────────────────
 
 function GroupSection({
-  label, tasks, headerCls, borderCls,
+  label, tasks, headerCls,
   selectedIds, canBulkSelect, canComplete,
   onToggleSelect, onToggleSelectAll, onToggleComplete,
   onEdit, onDelete,
@@ -280,7 +281,6 @@ function GroupSection({
 
   return (
     <div>
-      {/* Group header */}
       <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg mb-2 ${headerCls}`}>
         {canBulkSelect && (
           <label className="flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer -m-2 p-2">
@@ -297,7 +297,6 @@ function GroupSection({
         <span className="text-xs opacity-70">({tasks.length})</span>
       </div>
 
-      {/* Individual task cards */}
       <div className="space-y-3">
         {tasks.map(t => (
           <SwipeableRow
@@ -336,9 +335,9 @@ interface FilterUser     { id: string; name: string | null; email: string }
 interface FilterCategory { id: string; name: string; isActive: boolean }
 interface FilterSupplier { id: string; name: string }
 
-// ── Main page client ──────────────────────────────────────────────────────────
+// ── Main tab component ────────────────────────────────────────────────────────
 
-export function TasksPageClient() {
+export function PlannerTasksTab() {
   const router = useRouter();
   const { can: perms, isViewer, isRsvpManager } = usePermissions();
   const { refreshToken, triggerRefresh } = useRefresh();
@@ -348,15 +347,15 @@ export function TasksPageClient() {
     onRefresh: () => router.refresh(),
   });
 
-  const [tasks, setTasks]         = useState<TaskData[]>([]);
-  const [users, setUsers]         = useState<FilterUser[]>([]);
+  const [tasks, setTasks]           = useState<TaskData[]>([]);
+  const [users, setUsers]           = useState<FilterUser[]>([]);
   const [categories, setCategories] = useState<FilterCategory[]>([]);
-  const [suppliers, setSuppliers] = useState<FilterSupplier[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState("");
+  const [suppliers, setSuppliers]   = useState<FilterSupplier[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState("");
 
-  const [modalOpen, setModalOpen]   = useState(false);
-  const [editing, setEditing]       = useState<TaskData | null>(null);
+  const [modalOpen, setModalOpen]       = useState(false);
+  const [editing, setEditing]           = useState<TaskData | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TaskData | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [completedOpen, setCompletedOpen]   = useState(false);
@@ -407,14 +406,13 @@ export function TasksPageClient() {
     setTimeout(() => setToast(null), 3000);
   }
 
-  // ── Toggle complete (single) ────────────────────────────────────────────────
+  // ── Toggle complete ────────────────────────────────────────────────────────
 
   async function handleToggleComplete(task: TaskData) {
     if (!perms.completeTasks) return;
     const completing = !task.isCompleted;
     const now = new Date().toISOString();
 
-    // Optimistic update
     setTasks(prev => prev.map(t =>
       t.id === task.id
         ? { ...t, isCompleted: completing, completedAt: completing ? now : null }
@@ -428,7 +426,6 @@ export function TasksPageClient() {
     });
 
     if (!res.ok) {
-      // Revert
       setTasks(prev => prev.map(t => t.id === task.id ? task : t));
       showToast("Failed to update task", false);
       return;
@@ -440,15 +437,11 @@ export function TasksPageClient() {
       return nextTask ? [...next, nextTask] : next;
     });
 
-    if (completing) {
-      showToast("Task completed ✓");
-    } else {
-      showToast("Task marked incomplete");
-    }
+    showToast(completing ? "Task completed ✓" : "Task marked incomplete");
     triggerRefresh();
   }
 
-  // ── Save (add / edit) ───────────────────────────────────────────────────────
+  // ── Save ───────────────────────────────────────────────────────────────────
 
   function handleSave(task: TaskData) {
     setTasks(prev => {
@@ -466,7 +459,7 @@ export function TasksPageClient() {
     triggerRefresh();
   }
 
-  // ── Single delete ───────────────────────────────────────────────────────────
+  // ── Delete ─────────────────────────────────────────────────────────────────
 
   async function handleDeleteConfirm() {
     if (!deleteTarget) return;
@@ -481,16 +474,12 @@ export function TasksPageClient() {
     setDeleteTarget(null);
   }
 
-  // ── Bulk select ─────────────────────────────────────────────────────────────
+  // ── Bulk select ────────────────────────────────────────────────────────────
 
   function handleToggleSelect(id: string) {
     setSelectedIds(prev => {
       const n = new Set(prev);
-      if (n.has(id)) {
-        n.delete(id);
-      } else {
-        n.add(id);
-      }
+      if (n.has(id)) n.delete(id); else n.add(id);
       return n;
     });
   }
@@ -503,13 +492,12 @@ export function TasksPageClient() {
     });
   }
 
-  // ── Bulk complete ───────────────────────────────────────────────────────────
+  // ── Bulk complete ──────────────────────────────────────────────────────────
 
   async function handleBulkComplete() {
     const ids = Array.from(selectedIds);
     const now = new Date().toISOString();
 
-    // Optimistic: mark selected incomplete → complete
     setTasks(prev => prev.map(t =>
       ids.includes(t.id) && !t.isCompleted
         ? { ...t, isCompleted: true, completedAt: now }
@@ -534,22 +522,17 @@ export function TasksPageClient() {
       }
     }
 
-    if (nextTasks.length > 0) {
-      setTasks(prev => [...prev, ...nextTasks]);
-    }
-
+    if (nextTasks.length > 0) setTasks(prev => [...prev, ...nextTasks]);
     setSelectedIds(new Set());
     showToast(`${ids.length} task${ids.length !== 1 ? "s" : ""} completed ✓`);
     triggerRefresh();
   }
 
-  // ── Bulk delete ─────────────────────────────────────────────────────────────
+  // ── Bulk delete ────────────────────────────────────────────────────────────
 
   async function handleBulkDeleteConfirm() {
     const ids = Array.from(selectedIds);
-    await Promise.all(ids.map(id =>
-      fetch(`/api/tasks/${id}`, { method: "DELETE" })
-    ));
+    await Promise.all(ids.map(id => fetch(`/api/tasks/${id}`, { method: "DELETE" })));
     setTasks(prev => prev.filter(t => !ids.includes(t.id)));
     setSelectedIds(new Set());
     setBulkDeleteOpen(false);
@@ -560,7 +543,7 @@ export function TasksPageClient() {
   function openAdd()                { setEditing(null); setModalOpen(true); }
   function openEdit(task: TaskData) { setEditing(task); setModalOpen(true); }
 
-  // ── Filter ──────────────────────────────────────────────────────────────────
+  // ── Filters ────────────────────────────────────────────────────────────────
 
   const filtersActive = !!(filterPriority || filterAssignee || filterCategory || filterSupplier);
 
@@ -577,7 +560,7 @@ export function TasksPageClient() {
     setFilterCategory(""); setFilterSupplier("");
   }
 
-  // ── Group ───────────────────────────────────────────────────────────────────
+  // ── Group ──────────────────────────────────────────────────────────────────
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -595,9 +578,9 @@ export function TasksPageClient() {
     if (!t.dueDate)    { noDueDate.push(t); continue; }
     const d = new Date(t.dueDate);
     d.setHours(0, 0, 0, 0);
-    if (d < today)         overdue.push(t);
+    if (d < today)             overdue.push(t);
     else if (d <= weekFromNow) dueThisWeek.push(t);
-    else                   upcoming.push(t);
+    else                       upcoming.push(t);
   }
 
   completed.sort((a, b) => {
@@ -623,7 +606,6 @@ export function TasksPageClient() {
 
   const selCount = selectedIds.size;
 
-  // Common props for GroupSection
   const groupProps = {
     selectedIds,
     canBulkSelect,
@@ -651,277 +633,263 @@ export function TasksPageClient() {
       )}
 
       <div className="max-w-3xl" style={{ paddingBottom: 'max(5rem, calc(5rem + env(safe-area-inset-bottom)))' }}>
-      {/* ReadOnly banner */}
-      {isViewer && (
-        <ReadOnlyBanner message="You have view-only access to tasks." />
-      )}
-      {isRsvpManager && (
-        <ReadOnlyBanner message="You can view and complete tasks but cannot add or edit them." />
-      )}
-
-      {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-          {error}
-        </div>
-      )}
-
-      {/* Page header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Tasks</h1>
-        {perms.editTasks && (
-          <button
-            type="button"
-            onClick={openAdd}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
-          >
-            <Plus className="w-4 h-4" />
-            Add task
-          </button>
+        {/* ReadOnly banners */}
+        {isViewer && (
+          <ReadOnlyBanner message="You have view-only access to tasks." />
         )}
-      </div>
-
-      {/* Filter row */}
-      <div className="grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap gap-2 sm:items-center mb-4">
-        <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)} className={inputCls}>
-          <option value="">All priorities</option>
-          <option value="HIGH">High</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="LOW">Low</option>
-        </select>
-
-        <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className={inputCls}>
-          <option value="">All assignees</option>
-          {users.map(u => (
-            <option key={u.id} value={u.id}>{u.name ?? u.email}</option>
-          ))}
-        </select>
-
-        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className={inputCls}>
-          <option value="">All categories</option>
-          {categories.filter(c => c.isActive).map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-
-        <select value={filterSupplier} onChange={e => setFilterSupplier(e.target.value)} className={inputCls}>
-          <option value="">All suppliers</option>
-          {suppliers.map(s => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
-
-        {filtersActive && (
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="col-span-2 sm:col-span-1 text-xs text-gray-500 hover:text-gray-700 underline text-center sm:text-left self-center"
-          >
-            Clear filters
-          </button>
+        {isRsvpManager && (
+          <ReadOnlyBanner message="You can view and complete tasks but cannot add or edit them." />
         )}
-      </div>
 
-      {/* Task groups */}
-      {loading ? (
-        <div className="space-y-3 animate-pulse">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 h-16" />
-          ))}
+        {error && (
+          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+            {error}
+          </div>
+        )}
+
+        {/* Filter row */}
+        <div className="grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap gap-2 sm:items-center mb-4">
+          <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)} className={inputCls}>
+            <option value="">All priorities</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+
+          <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className={inputCls}>
+            <option value="">All assignees</option>
+            {users.map(u => (
+              <option key={u.id} value={u.id}>{u.name ?? u.email}</option>
+            ))}
+          </select>
+
+          <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className={inputCls}>
+            <option value="">All categories</option>
+            {categories.filter(c => c.isActive).map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+
+          <select value={filterSupplier} onChange={e => setFilterSupplier(e.target.value)} className={inputCls}>
+            <option value="">All suppliers</option>
+            {suppliers.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+
+          {filtersActive && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="col-span-2 sm:col-span-1 text-xs text-gray-500 hover:text-gray-700 underline text-center sm:text-left self-center"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Empty: no tasks at all */}
-          {allTasksEmpty && (
-            <div className="py-16 text-center">
-              <CheckSquare className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-              <p className="text-sm font-medium text-gray-600 mb-1">No tasks yet</p>
-              <p className="text-sm text-gray-400 mb-4 max-w-xs mx-auto">
-                Stay organised by adding tasks for everything you need to do before the big day.
-              </p>
+
+        {/* Task groups */}
+        {loading ? (
+          <div className="space-y-3 animate-pulse">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-200 h-16" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Empty: no tasks at all */}
+            {allTasksEmpty && (
+              <div className="py-16 text-center">
+                <CheckSquare className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                <p className="text-sm font-medium text-gray-600 mb-1">No tasks yet</p>
+                <p className="text-sm text-gray-400 mb-4 max-w-xs mx-auto">
+                  Stay organised by adding tasks for everything you need to do before the big day.
+                </p>
+                {perms.editTasks && (
+                  <button
+                    type="button"
+                    onClick={openAdd}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add your first task
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Empty: filters active but no results */}
+            {!allTasksEmpty && noGroupResults && filtersActive && (
+              <div className="py-16 text-center">
+                <Search className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                <p className="text-sm font-medium text-gray-600 mb-1">No tasks match your filters</p>
+                <p className="text-sm text-gray-400 mb-4">Try adjusting or clearing your filters.</p>
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
+
+            <GroupSection label="Overdue"       tasks={overdue}     headerCls="text-red-700 bg-red-50"    borderCls="border-red-200"   {...groupProps} />
+            <GroupSection label="Due this week" tasks={dueThisWeek} headerCls="text-amber-700 bg-amber-50" borderCls="border-amber-200" {...groupProps} />
+            <GroupSection label="Upcoming"      tasks={upcoming}    headerCls="text-blue-700 bg-blue-50"  borderCls="border-blue-200"  {...groupProps} />
+            <GroupSection label="No due date"   tasks={noDueDate}   headerCls="text-gray-600 bg-gray-50"  borderCls="border-gray-200"  {...groupProps} />
+
+            {/* Completed (collapsible) */}
+            {completed.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setCompletedOpen(o => !o)}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors min-h-[44px]"
+                >
+                  <ChevronDown className={`w-4 h-4 transition-transform ${completedOpen ? "rotate-180" : ""}`} />
+                  Completed ({completed.length})
+                </button>
+
+                {completedOpen && (
+                  <div className="px-4 pb-3">
+                    {completedVisible.map(t => (
+                      <SwipeableRow
+                        key={t.id}
+                        actions={[
+                          ...(canComplete
+                            ? [{
+                                icon: <Check className="w-5 h-5" />,
+                                label: "Undo",
+                                colour: "bg-green-500",
+                                onClick: () => handleToggleComplete(t),
+                              }]
+                            : []),
+                          ...(deleteHandler
+                            ? [{
+                                icon: <Trash2 className="w-5 h-5" />,
+                                label: "Delete",
+                                colour: "bg-red-500",
+                                onClick: () => deleteHandler(t),
+                              }]
+                            : []),
+                        ]}
+                      >
+                        <TaskRow
+                          task={t}
+                          isSelected={selectedIds.has(t.id)}
+                          canBulkSelect={canBulkSelect}
+                          canComplete={canComplete}
+                          onToggleSelect={handleToggleSelect}
+                          onToggleComplete={handleToggleComplete}
+                          onEdit={editHandler}
+                          onDelete={deleteHandler}
+                        />
+                      </SwipeableRow>
+                    ))}
+                    {!showAllCompleted && completed.length > 20 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllCompleted(true)}
+                        className="mt-2 text-sm text-primary hover:underline"
+                      >
+                        Show all completed ({completed.length})
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Bulk action bar */}
+        {selCount > 0 && (
+          <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-40 flex items-center justify-center px-4 py-3 bg-white border-t border-gray-200 shadow-lg md:left-56" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              <span className="text-sm text-gray-600 font-medium mr-1">
+                {selCount} selected
+              </span>
+
+              {perms.completeTasks && (
+                <button
+                  type="button"
+                  onClick={handleBulkComplete}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors min-h-[44px]"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  Complete ({selCount})
+                </button>
+              )}
+
               {perms.editTasks && (
                 <button
                   type="button"
-                  onClick={openAdd}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                  onClick={() => setBulkDeleteOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors min-h-[44px]"
                 >
-                  <Plus className="w-4 h-4" />
-                  Add your first task
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete ({selCount})
                 </button>
               )}
-            </div>
-          )}
 
-          {/* Empty: filters active but no results */}
-          {!allTasksEmpty && noGroupResults && filtersActive && (
-            <div className="py-16 text-center">
-              <Search className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-              <p className="text-sm font-medium text-gray-600 mb-1">No tasks match your filters</p>
-              <p className="text-sm text-gray-400 mb-4">Try adjusting or clearing your filters.</p>
               <button
                 type="button"
-                onClick={clearFilters}
-                className="text-sm text-primary hover:underline"
+                onClick={() => setSelectedIds(new Set())}
+                className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors min-h-[44px]"
               >
-                Clear filters
+                <X className="w-3.5 h-3.5" />
+                Clear
               </button>
             </div>
-          )}
-
-          <GroupSection label="Overdue"       tasks={overdue}      headerCls="text-red-700 bg-red-50"    borderCls="border-red-200"    {...groupProps} />
-          <GroupSection label="Due this week" tasks={dueThisWeek}  headerCls="text-amber-700 bg-amber-50" borderCls="border-amber-200"  {...groupProps} />
-          <GroupSection label="Upcoming"      tasks={upcoming}     headerCls="text-blue-700 bg-blue-50"  borderCls="border-blue-200"   {...groupProps} />
-          <GroupSection label="No due date"   tasks={noDueDate}    headerCls="text-gray-600 bg-gray-50"  borderCls="border-gray-200"   {...groupProps} />
-
-          {/* Completed (collapsible) */}
-          {completed.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200">
-              <button
-                type="button"
-                onClick={() => setCompletedOpen(o => !o)}
-                className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm text-gray-500 hover:text-gray-700 transition-colors min-h-[44px]"
-              >
-                <ChevronDown className={`w-4 h-4 transition-transform ${completedOpen ? "rotate-180" : ""}`} />
-                Completed ({completed.length})
-              </button>
-
-              {completedOpen && (
-                <div className="px-4 pb-3">
-                  {completedVisible.map(t => (
-                    <SwipeableRow
-                      key={t.id}
-                      actions={[
-                        ...(canComplete
-                          ? [{
-                              icon: <Check className="w-5 h-5" />,
-                              label: "Undo",
-                              colour: "bg-green-500",
-                              onClick: () => handleToggleComplete(t),
-                            }]
-                          : []),
-                        ...(deleteHandler
-                          ? [{
-                              icon: <Trash2 className="w-5 h-5" />,
-                              label: "Delete",
-                              colour: "bg-red-500",
-                              onClick: () => deleteHandler(t),
-                            }]
-                          : []),
-                      ]}
-                    >
-                      <TaskRow
-                        task={t}
-                        isSelected={selectedIds.has(t.id)}
-                        canBulkSelect={canBulkSelect}
-                        canComplete={canComplete}
-                        onToggleSelect={handleToggleSelect}
-                        onToggleComplete={handleToggleComplete}
-                        onEdit={editHandler}
-                        onDelete={deleteHandler}
-                      />
-                    </SwipeableRow>
-                  ))}
-                  {!showAllCompleted && completed.length > 20 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAllCompleted(true)}
-                      className="mt-2 text-sm text-primary hover:underline"
-                    >
-                      Show all completed ({completed.length})
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Bulk action bar ─────────────────────────────────────────────────── */}
-      {selCount > 0 && (
-        <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-40 flex items-center justify-center px-4 py-3 bg-white border-t border-gray-200 shadow-lg md:left-56" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
-          <div className="flex items-center gap-2 flex-wrap justify-center">
-            <span className="text-sm text-gray-600 font-medium mr-1">
-              {selCount} selected
-            </span>
-
-            {perms.completeTasks && (
-              <button
-                type="button"
-                onClick={handleBulkComplete}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors min-h-[44px]"
-              >
-                <Check className="w-3.5 h-3.5" />
-                Complete ({selCount})
-              </button>
-            )}
-
-            {perms.editTasks && (
-              <button
-                type="button"
-                onClick={() => setBulkDeleteOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors min-h-[44px]"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Delete ({selCount})
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setSelectedIds(new Set())}
-              className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors min-h-[44px]"
-            >
-              <X className="w-3.5 h-3.5" />
-              Clear
-            </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Add / edit modal */}
-      {modalOpen && perms.editTasks && (
-        <TaskModal
-          initial={editing}
-          onSave={handleSave}
-          onClose={() => { setModalOpen(false); setEditing(null); }}
-        />
-      )}
+        {/* Edit modal */}
+        {modalOpen && perms.editTasks && (
+          <PlannerItemModal
+            type="task"
+            initialTask={editing}
+            onTaskSave={handleSave}
+            onClose={() => { setModalOpen(false); setEditing(null); }}
+          />
+        )}
 
-      {/* Single delete confirm */}
-      {deleteTarget && (
-        <ConfirmModal
-          message={
-            <span>
-              Delete task <strong>{deleteTarget.title}</strong>? This cannot be undone.
-            </span>
-          }
-          onConfirm={handleDeleteConfirm}
-          onCancel={() => setDeleteTarget(null)}
-        />
-      )}
+        {/* Single delete confirm */}
+        {deleteTarget && (
+          <ConfirmModal
+            message={
+              <span>
+                Delete task <strong>{deleteTarget.title}</strong>? This cannot be undone.
+              </span>
+            }
+            onConfirm={handleDeleteConfirm}
+            onCancel={() => setDeleteTarget(null)}
+          />
+        )}
 
-      {/* Bulk delete confirm */}
-      {bulkDeleteOpen && (
-        <ConfirmModal
-          message={
-            <span>
-              Delete <strong>{selCount} task{selCount !== 1 ? "s" : ""}</strong>? This cannot be undone.
-            </span>
-          }
-          onConfirm={handleBulkDeleteConfirm}
-          onCancel={() => setBulkDeleteOpen(false)}
-        />
-      )}
+        {/* Bulk delete confirm */}
+        {bulkDeleteOpen && (
+          <ConfirmModal
+            message={
+              <span>
+                Delete <strong>{selCount} task{selCount !== 1 ? "s" : ""}</strong>? This cannot be undone.
+              </span>
+            }
+            onConfirm={handleBulkDeleteConfirm}
+            onCancel={() => setBulkDeleteOpen(false)}
+          />
+        )}
 
-      {toast && (
-        <div
-          className={`fixed bottom-16 right-4 px-4 py-2.5 rounded-lg text-sm text-white shadow-lg z-50 ${
-            toast.ok ? "bg-green-600" : "bg-red-600"
-          }`}
-        >
-          {toast.msg}
-        </div>
-      )}
+        {toast && (
+          <div
+            className={`fixed bottom-16 right-4 px-4 py-2.5 rounded-lg text-sm text-white shadow-lg z-50 ${
+              toast.ok ? "bg-green-600" : "bg-red-600"
+            }`}
+          >
+            {toast.msg}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -38,6 +38,12 @@ export const can = {
   completeTasks: (role: UserRole) => role === "ADMIN" || role === "RSVP_MANAGER",
   viewTasks: (_role: UserRole) => true,
 
+  // Planner (unified Events + Tasks)
+  accessPlanner: (_role: UserRole) => true,
+  editPlannerEvents: (role: UserRole) => role === "ADMIN",
+  editPlannerTasks: (role: UserRole) => role === "ADMIN",
+  completePlannerTasks: (role: UserRole) => role === "ADMIN" || role === "RSVP_MANAGER",
+
   // Timeline
   editTimeline: (role: UserRole) => role === "ADMIN",
   viewTimeline: (_role: UserRole) => true,

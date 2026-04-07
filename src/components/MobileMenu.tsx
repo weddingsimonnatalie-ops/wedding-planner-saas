@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import {
   LayoutDashboard, Users, LayoutGrid, Briefcase, Settings,
-  Heart, LogOut, User, CalendarDays, CreditCard, CheckSquare, Clock, PiggyBank,
+  Heart, LogOut, User, CalendarCheck, CreditCard, Clock, PiggyBank,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
 
@@ -15,25 +15,23 @@ interface MobileMenuProps {
   open: boolean;
   onClose: () => void;
   user?: { name?: string | null; email?: string | null; role?: UserRole };
-  taskBadge: number;
-  appointmentBadge: number;
+  plannerBadge: number;
   paymentBadge: number;
 }
 
 const allNavItems = [
-  { href: "/",                  label: "Dashboard",    icon: LayoutDashboard, roles: null },
-  { href: "/guests",            label: "Guests",       icon: Users,           roles: null },
-  { href: "/seating",           label: "Seating",      icon: LayoutGrid,      roles: null },
-  { href: "/appointments",      label: "Appointments", icon: CalendarDays,    roles: ["ADMIN", "VIEWER"] as UserRole[] },
-  { href: "/tasks",             label: "Tasks",        icon: CheckSquare,     roles: ["ADMIN", "VIEWER", "RSVP_MANAGER"] as UserRole[] },
-  { href: "/suppliers",         label: "Suppliers",    icon: Briefcase,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
-  { href: "/payments",          label: "Payments",     icon: CreditCard,      roles: ["ADMIN", "VIEWER"] as UserRole[] },
-  { href: "/budget",            label: "Budget",       icon: PiggyBank,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
-  { href: "/timeline",          label: "Timeline",     icon: Clock,           roles: null },
-  { href: "/settings",          label: "Settings",     icon: Settings,        roles: ["ADMIN"] as UserRole[] },
+  { href: "/",          label: "Dashboard", icon: LayoutDashboard, roles: null },
+  { href: "/guests",    label: "Guests",    icon: Users,           roles: null },
+  { href: "/seating",   label: "Seating",   icon: LayoutGrid,      roles: null },
+  { href: "/planner",   label: "Planner",   icon: CalendarCheck,   roles: null },
+  { href: "/suppliers", label: "Suppliers", icon: Briefcase,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
+  { href: "/payments",  label: "Payments",  icon: CreditCard,      roles: ["ADMIN", "VIEWER"] as UserRole[] },
+  { href: "/budget",    label: "Budget",    icon: PiggyBank,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
+  { href: "/timeline",  label: "Timeline",  icon: Clock,           roles: null },
+  { href: "/settings",  label: "Settings",  icon: Settings,        roles: ["ADMIN"] as UserRole[] },
 ] as const;
 
-export function MobileMenu({ open, onClose, user, taskBadge, appointmentBadge, paymentBadge }: MobileMenuProps) {
+export function MobileMenu({ open, onClose, user, plannerBadge, paymentBadge }: MobileMenuProps) {
   const pathname = usePathname();
   const role = user?.role ?? "ADMIN";
 
@@ -68,12 +66,10 @@ export function MobileMenu({ open, onClose, user, taskBadge, appointmentBadge, p
                 ? pathname === "/settings" || (pathname.startsWith("/settings") && !pathname.startsWith("/settings/profile"))
                 : pathname.startsWith(href);
             const showBadge =
-              (href === "/tasks" && taskBadge > 0) ||
-              (href === "/appointments" && appointmentBadge > 0) ||
+              (href === "/planner" && plannerBadge > 0) ||
               (href === "/payments" && paymentBadge > 0);
             const badgeCount =
-              href === "/tasks" ? taskBadge :
-              href === "/appointments" ? appointmentBadge :
+              href === "/planner" ? plannerBadge :
               paymentBadge;
 
             return (

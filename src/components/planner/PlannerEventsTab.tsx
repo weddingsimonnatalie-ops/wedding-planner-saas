@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { fetchApi } from "@/lib/fetch";
-import { Plus, Edit2, Trash2, MapPin, ChevronDown, CalendarDays } from "lucide-react";
-import { AppointmentModal, AppointmentData } from "./AppointmentModal";
+import { Edit2, Trash2, MapPin, ChevronDown, CalendarDays } from "lucide-react";
+import { PlannerItemModal } from "./PlannerItemModal";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useRefresh } from "@/context/RefreshContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
+import type { EventData } from "./types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -32,14 +34,14 @@ function CategoryBadge({ name, colour }: { name: string; colour: string }) {
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
-function AppointmentCard({
-  appt,
+function EventCard({
+  event,
   onEdit,
   onDelete,
   isPast,
 }: {
-  appt: AppointmentData;
-  onEdit?: (a: AppointmentData) => void;
+  event: EventData;
+  onEdit?: (e: EventData) => void;
   onDelete?: (id: string) => void;
   isPast: boolean;
 }) {
@@ -48,37 +50,37 @@ function AppointmentCard({
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h3 className="text-sm font-semibold text-gray-900">{appt.title}</h3>
-            {appt.category && (
-              <CategoryBadge name={appt.category.name} colour={appt.category.colour} />
+            <h3 className="text-sm font-semibold text-gray-900">{event.title}</h3>
+            {event.category && (
+              <CategoryBadge name={event.category.name} colour={event.category.colour} />
             )}
           </div>
 
           <p className="text-xs text-gray-500 mb-1.5">
-            <span className="font-medium text-gray-700">{fmtDate(appt.date)}</span>
+            <span className="font-medium text-gray-700">{fmtDate(event.date)}</span>
           </p>
 
-          {appt.location && (
+          {event.location && (
             <p className="text-xs text-gray-500 flex items-center gap-1 mb-1">
               <MapPin className="w-3 h-3 shrink-0" />
-              {appt.location}
+              {event.location}
             </p>
           )}
 
-          {appt.supplier && (
+          {event.supplier && (
             <p className="text-xs text-gray-500 mb-1">
               Supplier:{" "}
               <Link
-                href={`/suppliers/${appt.supplier.id}`}
+                href={`/suppliers/${event.supplier.id}`}
                 className="text-primary hover:underline font-medium"
               >
-                {appt.supplier.name}
+                {event.supplier.name}
               </Link>
             </p>
           )}
 
-          {appt.notes && (
-            <p className="text-xs text-gray-400 line-clamp-2 mt-1">{appt.notes}</p>
+          {event.notes && (
+            <p className="text-xs text-gray-400 line-clamp-2 mt-1">{event.notes}</p>
           )}
         </div>
 
@@ -86,7 +88,7 @@ function AppointmentCard({
           <div className="flex items-center gap-1 shrink-0">
             {onEdit && (
               <button
-                onClick={() => onEdit(appt)}
+                onClick={() => onEdit(event)}
                 className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
                 title="Edit"
               >
@@ -95,7 +97,7 @@ function AppointmentCard({
             )}
             {onDelete && (
               <button
-                onClick={() => onDelete(appt.id)}
+                onClick={() => onDelete(event.id)}
                 className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                 title="Delete"
               >
@@ -111,16 +113,17 @@ function AppointmentCard({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-interface ApptCategory { id: string; name: string; colour: string }
+interface Category { id: string; name: string; colour: string }
 
-export function AppointmentsList() {
+export function PlannerEventsTab() {
   const { can: perms } = usePermissions();
-  const [appointments, setAppointments] = useState<AppointmentData[]>([]);
-  const [apptCategories, setApptCategories] = useState<ApptCategory[]>([]);
+  const { refreshToken } = useRefresh();
+  const [events, setEvents] = useState<EventData[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<AppointmentData | null>(null);
+  const [editing, setEditing] = useState<EventData | null>(null);
   const [pastOpen, setPastOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState("");
   const [filterSupplier, setFilterSupplier] = useState("");
@@ -132,28 +135,28 @@ export function AppointmentsList() {
     fetchApi("/api/appointments")
       .then(r => {
         if (!r.ok) {
-          setError("Failed to load appointments. Please refresh the page.");
+          setError("Failed to load events. Please refresh the page.");
           setLoading(false);
           return;
         }
         return r.json();
       })
       .then(data => {
-        if (data) setAppointments(data);
+        if (data) setEvents(data);
         setLoading(false);
       })
       .catch(() => {
-        setError("Failed to load appointments. Please refresh the page.");
+        setError("Failed to load events. Please refresh the page.");
         setLoading(false);
       });
-  }, []);
+  }, [refreshToken]);
 
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
     fetchApi("/api/planning-categories")
       .then(r => r.json())
-      .then((data: ApptCategory[]) => setApptCategories(data))
+      .then((data: Category[]) => setCategories(data))
       .catch(() => {});
   }, []);
 
@@ -162,51 +165,51 @@ export function AppointmentsList() {
     setTimeout(() => setToast(null), 3000);
   }
 
-  function handleSave(appt: AppointmentData) {
-    setAppointments(prev => {
-      const idx = prev.findIndex(a => a.id === appt.id);
+  function handleSave(event: EventData) {
+    setEvents(prev => {
+      const idx = prev.findIndex(e => e.id === event.id);
       if (idx >= 0) {
         const next = [...prev];
-        next[idx] = appt;
+        next[idx] = event;
         return next.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       }
-      return [...prev, appt].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      return [...prev, event].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     });
     setModalOpen(false);
     setEditing(null);
-    showToast(editing ? "Appointment updated" : "Appointment added");
+    showToast(editing ? "Event updated" : "Event added");
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this appointment?")) return;
+    if (!confirm("Delete this event?")) return;
     const res = await fetch(`/api/appointments/${id}`, { method: "DELETE" });
     if (res.ok) {
-      setAppointments(prev => prev.filter(a => a.id !== id));
-      showToast("Appointment deleted");
+      setEvents(prev => prev.filter(e => e.id !== id));
+      showToast("Event deleted");
     } else {
       showToast("Failed to delete", false);
     }
   }
 
   function openAdd() { setEditing(null); setModalOpen(true); }
-  function openEdit(appt: AppointmentData) { setEditing(appt); setModalOpen(true); }
+  function openEdit(event: EventData) { setEditing(event); setModalOpen(true); }
 
   // Partition into upcoming / past
   const now = new Date();
-  const filtered = appointments.filter(a => {
-    if (filterCategory && a.categoryId !== filterCategory) return false;
-    if (filterSupplier && a.supplierId !== filterSupplier) return false;
+  const filtered = events.filter(e => {
+    if (filterCategory && e.categoryId !== filterCategory) return false;
+    if (filterSupplier && e.supplierId !== filterSupplier) return false;
     return true;
   });
-  const upcoming = filtered.filter(a => new Date(a.date) >= now);
-  const past = filtered.filter(a => new Date(a.date) < now);
+  const upcoming = filtered.filter(e => new Date(e.date) >= now);
+  const past = filtered.filter(e => new Date(e.date) < now);
 
   // Unique suppliers for filter
   const supplierOptions = Array.from(
     new Map(
-      appointments
-        .filter(a => a.supplier)
-        .map(a => [a.supplierId!, a.supplier!.name])
+      events
+        .filter(e => e.supplier)
+        .map(e => [e.supplierId!, e.supplier!.name])
     ).entries()
   );
 
@@ -224,21 +227,8 @@ export function AppointmentsList() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">Appointments</h1>
-        {perms.editAppointments && (
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
-          >
-            <Plus className="w-4 h-4" /> Add appointment
-          </button>
-        )}
-      </div>
-
       {!perms.editAppointments && (
-        <ReadOnlyBanner message="You have view-only access to appointments." />
+        <ReadOnlyBanner message="You have view-only access to events." />
       )}
 
       {error && (
@@ -255,7 +245,7 @@ export function AppointmentsList() {
           className={inputCls}
         >
           <option value="">All categories</option>
-          {apptCategories.map(c => (
+          {categories.map(c => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
@@ -278,13 +268,13 @@ export function AppointmentsList() {
       {upcoming.length === 0 && past.length === 0 && (
         <div className="py-16 text-center">
           <CalendarDays className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-          <p className="text-sm text-gray-400 mb-3">No appointments yet</p>
+          <p className="text-sm text-gray-400 mb-3">No events yet</p>
           {perms.editAppointments && (
             <button
               onClick={openAdd}
               className="text-sm text-primary hover:underline"
             >
-              Add your first appointment
+              Add your first event
             </button>
           )}
         </div>
@@ -292,14 +282,14 @@ export function AppointmentsList() {
 
       {upcoming.length === 0 && (past.length > 0 || filterCategory || filterSupplier) && (
         <div className="py-10 text-center">
-          <p className="text-sm text-gray-400">No upcoming appointments</p>
+          <p className="text-sm text-gray-400">No upcoming events</p>
         </div>
       )}
 
-      {upcoming.map(appt => (
-        <AppointmentCard
-          key={appt.id}
-          appt={appt}
+      {upcoming.map(event => (
+        <EventCard
+          key={event.id}
+          event={event}
           isPast={false}
           onEdit={perms.editAppointments ? openEdit : undefined}
           onDelete={perms.editAppointments ? handleDelete : undefined}
@@ -314,15 +304,15 @@ export function AppointmentsList() {
             className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors py-2"
           >
             <ChevronDown className={`w-4 h-4 transition-transform ${pastOpen ? "rotate-180" : ""}`} />
-            Past appointments ({past.length})
+            Past events ({past.length})
           </button>
 
           {pastOpen && (
             <div className="space-y-3 mt-2">
-              {past.slice().reverse().map(appt => (
-                <AppointmentCard
-                  key={appt.id}
-                  appt={appt}
+              {past.slice().reverse().map(event => (
+                <EventCard
+                  key={event.id}
+                  event={event}
                   isPast={true}
                   onEdit={perms.editAppointments ? openEdit : undefined}
                   onDelete={perms.editAppointments ? handleDelete : undefined}
@@ -335,9 +325,10 @@ export function AppointmentsList() {
 
       {/* Modal */}
       {modalOpen && perms.editAppointments && (
-        <AppointmentModal
-          initial={editing}
-          onSave={handleSave}
+        <PlannerItemModal
+          type="event"
+          initialEvent={editing}
+          onEventSave={handleSave}
           onClose={() => { setModalOpen(false); setEditing(null); }}
         />
       )}

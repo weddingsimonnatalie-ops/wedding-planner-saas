@@ -2,39 +2,35 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Users, CheckSquare, CreditCard, Clock, Menu } from "lucide-react";
+import { CalendarCheck, Users, CreditCard, Clock, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@prisma/client";
 
 interface BottomNavProps {
   role: UserRole;
-  taskBadge: number;
+  plannerBadge: number;
   onOpenSidebar: () => void;
 }
 
 const TABS = [
-  { href: "/appointments", label: "Appts", icon: CalendarDays, roles: ["ADMIN", "VIEWER"] as UserRole[] },
-  { href: "/guests", label: "Guests", icon: Users, roles: null },
-  { href: "/tasks", label: "Tasks", icon: CheckSquare, roles: ["ADMIN", "VIEWER", "RSVP_MANAGER"] as UserRole[] },
-  { href: "/payments", label: "Payments", icon: CreditCard, roles: ["ADMIN", "VIEWER"] as UserRole[] },
-  { href: "/timeline", label: "Timeline", icon: Clock, roles: null },
+  { href: "/planner", label: "Planner", icon: CalendarCheck, roles: null },
+  { href: "/guests",  label: "Guests",  icon: Users,         roles: null },
+  { href: "/payments", label: "Payments", icon: CreditCard,  roles: ["ADMIN", "VIEWER"] as UserRole[] },
+  { href: "/timeline", label: "Timeline", icon: Clock,       roles: null },
 ] as const;
 
-// Hide the bottom nav on detail/edit pages (e.g. /guests/[id], /suppliers/[id])
-// so the full screen is available for the form. These are paths with a segment
-// after a known section root that isn't a recognised sub-page.
-const SECTION_ROOTS = ["/guests", "/suppliers", "/appointments", "/tasks", "/payments", "/timeline"];
+// Hide the bottom nav on detail/edit pages
+const SECTION_ROOTS = ["/guests", "/suppliers", "/planner", "/payments", "/timeline"];
 
 function isDetailPage(pathname: string): boolean {
   return SECTION_ROOTS.some((root) => {
     if (!pathname.startsWith(root + "/")) return false;
     const rest = pathname.slice(root.length + 1);
-    // Allow known sub-pages (settings tabs, print-designer, etc.) to keep nav
     return rest.length > 0 && !rest.startsWith("new");
   });
 }
 
-export function BottomNav({ role, taskBadge, onOpenSidebar }: BottomNavProps) {
+export function BottomNav({ role, plannerBadge, onOpenSidebar }: BottomNavProps) {
   const pathname = usePathname();
 
   const visibleTabs = TABS.filter(tab => tab.roles === null || tab.roles.includes(role));
@@ -48,7 +44,7 @@ export function BottomNav({ role, taskBadge, onOpenSidebar }: BottomNavProps) {
     >
       {visibleTabs.map(({ href, label, icon: Icon }) => {
         const active = pathname.startsWith(href);
-        const showBadge = href === "/tasks" && taskBadge > 0;
+        const showBadge = href === "/planner" && plannerBadge > 0;
 
         return (
           <Link

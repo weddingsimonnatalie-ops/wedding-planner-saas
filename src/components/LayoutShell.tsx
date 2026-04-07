@@ -9,7 +9,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { MobileMenu } from "@/components/MobileMenu";
 import {
   LayoutDashboard, Users, LayoutGrid, Briefcase, Settings,
-  Heart, LogOut, User, X, CalendarDays, CreditCard, CheckSquare,
+  Heart, LogOut, User, X, CalendarCheck, CreditCard,
   Clock, PiggyBank,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
@@ -20,8 +20,7 @@ const allNavItems = [
   { href: "/",                  label: "Dashboard",    icon: LayoutDashboard, roles: null },
   { href: "/guests",            label: "Guests",       icon: Users,           roles: null },
   { href: "/seating",           label: "Seating",      icon: LayoutGrid,      roles: null },
-  { href: "/appointments",      label: "Appointments", icon: CalendarDays,    roles: ["ADMIN", "VIEWER"] as UserRole[] },
-  { href: "/tasks",             label: "Tasks",        icon: CheckSquare,     roles: ["ADMIN", "VIEWER"] as UserRole[] },
+  { href: "/planner",           label: "Planner",      icon: CalendarCheck,   roles: null },
   { href: "/suppliers",         label: "Suppliers",    icon: Briefcase,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/payments",          label: "Payments",     icon: CreditCard,      roles: ["ADMIN", "VIEWER"] as UserRole[] },
   { href: "/budget",            label: "Budget",       icon: PiggyBank,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
@@ -41,8 +40,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(true); // start hidden; corrected by effect
-  const [taskBadge, setTaskBadge] = useState(0);
-  const [appointmentBadge, setAppointmentBadge] = useState(0);
+  const [plannerBadge, setPlannerBadge] = useState(0);
   const [paymentBadge, setPaymentBadge] = useState(0);
   const pathname = usePathname();
   const { refreshToken } = useRefresh();
@@ -66,13 +64,12 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  // Combined badge counts: tasks, appointments, payments (refresh on each navigation)
+  // Badge counts: planner (tasks + appointments), payments (refresh on each navigation)
   useEffect(() => {
     fetchApi("/api/dashboard/counts")
       .then(r => r.ok ? r.json() : { tasks: 0, appointments: 0, payments: 0 })
       .then((data: { tasks: number; appointments: number; payments: number }) => {
-        setTaskBadge(data.tasks);
-        setAppointmentBadge(data.appointments);
+        setPlannerBadge((data.tasks ?? 0) + (data.appointments ?? 0));
         setPaymentBadge(data.payments);
       })
       .catch(() => {});
@@ -106,12 +103,10 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
                 ? pathname === "/settings" || (pathname.startsWith("/settings") && !pathname.startsWith("/settings/profile"))
                 : pathname.startsWith(href);
             const showBadge =
-              (href === "/tasks" && taskBadge > 0) ||
-              (href === "/appointments" && appointmentBadge > 0) ||
+              (href === "/planner" && plannerBadge > 0) ||
               (href === "/payments" && paymentBadge > 0);
             const badgeCount =
-              href === "/tasks" ? taskBadge :
-              href === "/appointments" ? appointmentBadge :
+              href === "/planner" ? plannerBadge :
               paymentBadge;
             return (
               <Link
@@ -194,7 +189,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
         {/* Bottom navigation bar (mobile only) */}
         <BottomNav
           role={role}
-          taskBadge={taskBadge}
+          plannerBadge={plannerBadge}
           onOpenSidebar={() => setMobileMenuOpen(true)}
         />
       </div>
@@ -204,8 +199,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
         user={user}
-        taskBadge={taskBadge}
-        appointmentBadge={appointmentBadge}
+        plannerBadge={plannerBadge}
         paymentBadge={paymentBadge}
       />
     </div>
