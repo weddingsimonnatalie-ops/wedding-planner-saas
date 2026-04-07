@@ -69,6 +69,7 @@ Three roles defined in the `UserRole` Prisma enum:
 ## Dashboard (`/`)
 
 - Countdown to wedding day
+- **Design**: Entrance animations (`animate-fade-in-up` with staggered delays), hover effects on cards, circular progress ring on countdown, section headers with accent underlines
 - Quick stats:
   - **Guests accepted**: shows `accepted / total`; "% responded" = `(total - pending) / total` (guests who have any non-PENDING status, not just those who accepted)
   - **Seated**: shows `assigned / receptionEligible`; uses the same filter as the seating planner — `invitedToReception: true AND NOT (attendingReception: false AND rsvpStatus NOT IN ['DECLINED'])` — so admin-overridden guests are counted correctly; `assigned` applies the same filter with `tableId != null`
@@ -335,6 +336,7 @@ Three roles defined in the `UserRole` Prisma enum:
 
 - **Header row**: title + "Add payment" button (ADMIN only); rendered in `PaymentsList.tsx`
 - Cross-supplier view of all payments — the single place to manage the full payment schedule
+- **Design**: Entrance animations on stats grid, hover effects on cards, `tabular-nums` for number alignment
 - **Summary bar** (always unfiltered, full dataset): Total remaining (grey) · Due this month (amber) · Overdue (red) · Paid this year (green)
 - **Add payment button**: Opens `PaymentModal` to create a payment — supplier dropdown (required), label, amount, due date, notes, optional receipt upload; uses responsive grid layout
 - **Filters**: Status (All/Pending/Overdue/Paid/Cancelled) · Supplier dropdown · Date range (All time / Overdue / Due this week / Due this month / Due in 3 months / Due in 6 months / Custom from–to)
@@ -401,6 +403,7 @@ Unified view combining appointments (Events) and tasks. `/appointments` and `/ta
 ## Timeline (`/timeline`)
 
 - **Header row**: title + "Add event" button (ADMIN only); rendered in `TimelineList.tsx`
+- **Design**: Staggered entrance animations on event cards, hover effects
 - Chronological list of wedding day events sorted by start time
 - Each event shows: time, duration, title, location, vendor badge (if linked), notes
 - **Category badges**: colour-coded labels from configurable Timeline Categories
