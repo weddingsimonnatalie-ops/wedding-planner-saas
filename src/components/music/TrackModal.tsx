@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Search, Loader2 } from "lucide-react";
+import { fetchApi } from "@/lib/fetch";
 
 interface Track {
   id?: string;
@@ -12,11 +13,40 @@ interface Track {
   notes: string | null;
 }
 
+interface SearchResult {
+  id: string;
+  title: string;
+  artist: string;
+  durationSec: number | null;
+  album: string | null;
+  genre: string | null;
+  youtubeUrl: string | null;
+  thumbnail: string | null;
+}
+
 interface Props {
   playlistId: string;
   track?: Track | null;
   onClose: () => void;
   onSubmit: (data: Track) => void;
+}
+
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+function parseDuration(input: string): number | null {
+  const match = input.match(/^(\d+):(\d{2})$/);
+  if (match) {
+    return parseInt(match[1]) * 60 + parseInt(match[2]);
+  }
+  const seconds = parseInt(input);
+  if (!isNaN(seconds) && seconds > 0) {
+    return seconds;
+  }
+  return null;
 }
 
 export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
@@ -29,23 +59,55 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
   const [notes, setNotes] = useState(track?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
 
-  function formatDuration(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  // Search state
+  const [searchArtist, setSearchArtist] = useState("");
+  const [searchTrack, setSearchTrack] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
+  async function handleSearch() {
+    if (!searchArtist.trim() || !searchTrack.trim()) {
+      setSearchError("Please enter both artist and track name");
+      return;
+    }
+
+    setSearching(true);
+    setSearchError(null);
+    setSearchResults([]);
+
+    try {
+      const res = await fetchApi(
+        `/api/music/search?artist=${encodeURIComponent(searchArtist)}&track=${encodeURIComponent(searchTrack)}`
+      );
+      const data = await res.json();
+
+      if (data.error) {
+        setSearchError(data.error);
+      } else if (data.results.length === 0) {
+        setSearchError("No results found. Try a different search.");
+      } else {
+        setSearchResults(data.results);
+      }
+    } catch {
+      setSearchError("Failed to search. Please try again.");
+    } finally {
+      setSearching(false);
+    }
   }
 
-  function parseDuration(input: string): number | null {
-    const match = input.match(/^(\d+):(\d{2})$/);
-    if (match) {
-      return parseInt(match[1]) * 60 + parseInt(match[2]);
+  function handleSelectResult(result: SearchResult) {
+    setTitle(result.title);
+    setArtist(result.artist);
+    if (result.durationSec) {
+      setDurationInput(formatDuration(result.durationSec));
     }
-    // Try parsing as just seconds
-    const seconds = parseInt(input);
-    if (!isNaN(seconds) && seconds > 0) {
-      return seconds;
+    if (result.youtubeUrl) {
+      setUrl(result.youtubeUrl);
     }
-    return null;
+    setSearchResults([]);
+    setSearchArtist("");
+    setSearchTrack("");
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -85,7 +147,7 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
 
       {/* Bottom sheet (mobile) / centred modal (desktop) */}
       <div
-        className="relative w-full md:max-w-lg md:mx-4 bg-white rounded-t-2xl md:rounded-xl shadow-xl flex flex-col h-[calc(100svh-env(safe-area-inset-top,0px))] md:h-auto md:max-h-[calc(100vh-4rem)]"
+        className="relative w-full md:max-w-lg md:mx-4 bg-white rounded-t-2xl md:rounded-xl shadow-xl flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle — mobile only */}
@@ -109,8 +171,69 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto overscroll-contain p-5">
+          {/* Search section */}
+          {!track && (
+            <div className="mb-6 pb-6 border-b border-gray-200">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">
+                Search TheAudioDB
+              </h3>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={searchArtist}
+                  onChange={(e) => setSearchArtist(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="Artist"
+                />
+                <input
+                  type="text"
+                  value={searchTrack}
+                  onChange={(e) => setSearchTrack(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="Song title"
+                />
+                <button
+                  type="button"
+                  onClick={handleSearch}
+                  disabled={searching || !searchArtist.trim() || !searchTrack.trim()}
+                  className="px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-gray-400">
+                Search for a song to auto-fill details
+              </p>
+
+              {/* Search results */}
+              {searchError && (
+                <p className="text-sm text-red-600 mt-2">{searchError}</p>
+              )}
+
+              {searchResults.length > 0 && (
+                <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
+                  {searchResults.map((result) => (
+                    <button
+                      key={result.id}
+                      type="button"
+                      onClick={() => handleSelectResult(result)}
+                      className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <p className="font-medium text-gray-900">{result.title}</p>
+                      <p className="text-sm text-gray-500">
+                        {result.artist}
+                        {result.durationSec && ` · ${formatDuration(result.durationSec)}`}
+                        {result.album && ` · ${result.album}`}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Manual entry form */}
           <form id="track-form" onSubmit={handleSubmit} className="space-y-4">
-            {/* Title */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Title *
@@ -121,11 +244,10 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 placeholder="Song title"
-                autoFocus
+                autoFocus={!!track}
               />
             </div>
 
-            {/* Artist */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Artist
@@ -139,7 +261,6 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
               />
             </div>
 
-            {/* Duration */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Duration
@@ -154,7 +275,6 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
               <p className="text-xs text-gray-400 mt-1">Format: MM:SS</p>
             </div>
 
-            {/* URL */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Link
@@ -164,11 +284,10 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                placeholder="YouTube, Spotify, or Apple Music link (optional)"
+                placeholder="YouTube or other link (optional)"
               />
             </div>
 
-            {/* Notes */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Notes
@@ -182,17 +301,12 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
               />
             </div>
 
-            {error && (
-              <p className="text-sm text-red-600">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-600">{error}</p>}
           </form>
         </div>
 
         {/* Footer */}
-        <div
-          className="shrink-0 border-t border-gray-200 flex justify-end gap-3 px-5 py-4"
-          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
-        >
+        <div className="shrink-0 border-t border-gray-200 flex justify-end gap-3 px-5 py-4">
           <button
             type="button"
             onClick={onClose}
