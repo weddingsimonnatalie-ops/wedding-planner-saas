@@ -37,7 +37,13 @@ Singleton (`id = 1`). Couple name, date. `themeHue Int @default(330)` — HSL hu
 - `eveningPartyEnabled Boolean @default(true)` / `eveningPartyName String @default("Evening Reception")` / `eveningPartyLocation String?`
 - `rehearsalDinnerEnabled Boolean @default(false)` / `rehearsalDinnerName String @default("Rehearsal Dinner")` / `rehearsalDinnerLocation String?`
 
-Use `getEvents(wedding)` from `src/lib/eventNames.ts` everywhere — never hardcode event names or assume exactly 3 events. The `meal` key maps to `reception` DB fields; `eveningParty` maps to `afterparty` DB fields. Each `EventConfig` returned by `getEvents()` includes a `location: string | null` field — show it on the RSVP form under the event name when set.
+**Per-event meal configuration** (on `Wedding` model):
+- `ceremonyMealsEnabled Boolean @default(false)`
+- `mealMealsEnabled Boolean @default(true)`
+- `eveningPartyMealsEnabled Boolean @default(false)`
+- `rehearsalDinnerMealsEnabled Boolean @default(false)`
+
+Use `getEvents(wedding)` from `src/lib/eventNames.ts` everywhere — never hardcode event names or assume exactly 3 events. The `meal` key maps to `reception` DB fields; `eveningParty` maps to `afterparty` DB fields. Each `EventConfig` returned by `getEvents()` includes a `location: string | null` field and `mealsEnabled: boolean` field.
 
 ## Guest
 
@@ -47,7 +53,9 @@ Core guest record. Key fields:
 - `invitedToCeremony/Reception/Afterparty/RehearsalDinner` — which events invited to (rehearsalDinner defaults false)
 - `attendingCeremony/Reception/Afterparty/RehearsalDinner` — actual responses (nullable until answered)
 - `attendingCeremonyMaybe/ReceptionMaybe/AfterpartyMaybe/RehearsalDinnerMaybe` — maybe state per event (`BOOLEAN NOT NULL DEFAULT false`)
-- `mealChoice` — foreign-key-like string referencing `MealOption.id`
+- `mealChoice` — legacy field, references `MealOption.id` for backwards compatibility (still populated from "meal" event choice)
+- `dietaryNotes` — shared dietary requirements across all events
+- `mealChoices` — relation to `GuestMealChoice` for per-event meal selections
 - `tableId` — nullable FK to `Table`
 - `seatNumber` — nullable `Int`; seat position at the assigned table (1..capacity)
 - `isManualOverride` — `Boolean @default(false)`; set `true` by admin PATCH/bulk-status, `false` by public RSVP; drives the pencil icon in the guest list
@@ -55,7 +63,19 @@ Core guest record. Key fields:
 
 ## MealOption
 
-Configurable meal choices (name, course, description, active flag, sort order).
+Configurable meal choices per event. Key fields:
+- `eventId` — which event this meal belongs to (`ceremony`, `meal`, `eveningParty`, `rehearsalDinner`)
+- `name`, `course`, `description` — meal details
+- `isActive` — whether shown on RSVP forms
+- `sortOrder` — display order within event
+
+## GuestMealChoice
+
+Per-event meal selections. Links a guest to a meal option for a specific event:
+- `guestId` — FK to Guest
+- `eventId` — which event (`ceremony`, `meal`, `eveningParty`, `rehearsalDinner`)
+- `mealOptionId` — FK to MealOption (nullable if no choice made)
+- Unique constraint on `(guestId, eventId)` — one meal choice per event per guest
 
 ## Room / Table / RoomElement
 

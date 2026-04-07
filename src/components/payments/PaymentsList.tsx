@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Check, RotateCcw, Mail, Pencil, Trash2, ChevronDown, CreditCard, X, Plus,
-  Paperclip, Eye, Camera, FileText, RefreshCw,
+  Paperclip, Eye, Camera, FileText, RefreshCw, Search,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -14,6 +14,7 @@ import { useWedding, getEmailBlockReason, getUploadBlockReason } from "@/context
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PaymentModal } from "./PaymentModal";
 import { ReceiptUploadModal } from "./ReceiptUploadModal";
 import { ReceiptViewModal } from "./ReceiptViewModal";
@@ -1065,19 +1066,21 @@ export function PaymentsList() {
 
       {/* Empty states */}
       {payments.length === 0 && (
-        <div className="py-16 text-center">
-          <CreditCard className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-          <p className="text-sm text-gray-400 mb-1">No payments yet</p>
-          <Link href="/suppliers" className="text-sm text-primary hover:underline">
-            Add payments via a supplier →
-          </Link>
-        </div>
+        <EmptyState
+          icon={CreditCard}
+          title="No payments yet"
+          description="Add payments via a supplier"
+          actionLabel="View suppliers"
+          href="/suppliers"
+        />
       )}
 
       {payments.length > 0 && filtered.length === 0 && (
-        <div className="py-12 text-center">
-          <p className="text-sm text-gray-400">No payments match your filters</p>
-        </div>
+        <EmptyState
+          icon={Search}
+          title="No payments match your filters"
+          description="Try adjusting or clearing your filters"
+        />
       )}
 
       {/* Groups */}

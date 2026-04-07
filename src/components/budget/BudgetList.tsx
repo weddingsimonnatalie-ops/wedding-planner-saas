@@ -9,6 +9,7 @@ import { useWedding } from "@/context/WeddingContext";
 import { useRefresh } from "@/context/RefreshContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface CategoryBreakdown {
   id: string;
@@ -412,18 +413,13 @@ export function BudgetList() {
       </h2>
 
       {summary.categories.length === 0 && summary.unallocated.supplierCount === 0 ? (
-        <div className="bg-white rounded-xl border border-dashed border-gray-200 py-16 text-center">
-          <PiggyBank className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-400 text-sm">No categories yet</p>
-          {can.editBudget && (
-            <Link
-              href="/settings?tab=categories"
-              className="mt-2 inline-block text-sm text-primary hover:underline"
-            >
-              Add categories in Settings
-            </Link>
-          )}
-        </div>
+        <EmptyState
+          icon={PiggyBank}
+          title="No budget categories"
+          description="Add categories in Settings to track spending"
+          actionLabel={can.editBudget ? "Add categories" : undefined}
+          href={can.editBudget ? "/settings?tab=categories" : undefined}
+        />
       ) : (
         <div className="space-y-4">
           {/* Categories with allocation */}

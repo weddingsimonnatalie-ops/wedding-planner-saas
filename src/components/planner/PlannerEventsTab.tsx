@@ -8,6 +8,7 @@ import { PlannerItemModal } from "./PlannerItemModal";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useRefresh } from "@/context/RefreshContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { EventData } from "./types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -266,18 +267,13 @@ export function PlannerEventsTab() {
 
       {/* Upcoming */}
       {upcoming.length === 0 && past.length === 0 && (
-        <div className="py-16 text-center">
-          <CalendarDays className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-          <p className="text-sm text-gray-400 mb-3">No events yet</p>
-          {perms.editAppointments && (
-            <button
-              onClick={openAdd}
-              className="text-sm text-primary hover:underline"
-            >
-              Add your first event
-            </button>
-          )}
-        </div>
+        <EmptyState
+          icon={CalendarDays}
+          title="No events yet"
+          description="Add appointments to stay organised"
+          actionLabel={perms.editAppointments ? "Add your first event" : undefined}
+          onClick={perms.editAppointments ? openAdd : undefined}
+        />
       )}
 
       {upcoming.length === 0 && (past.length > 0 || filterCategory || filterSupplier) && (

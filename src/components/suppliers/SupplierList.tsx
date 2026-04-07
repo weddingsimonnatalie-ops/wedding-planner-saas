@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Download, Upload, ChevronDown, FileSpreadsheet } from "lucide-react";
+import { Plus, Download, Upload, ChevronDown, FileSpreadsheet, Briefcase } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useWedding } from "@/context/WeddingContext";
@@ -10,6 +10,7 @@ import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { SupplierModal } from "./SupplierModal";
 import { CsvImportModal } from "./CsvImportModal";
 import { CSV_TEMPLATE_HEADERS, CSV_TEMPLATE_EXAMPLE } from "@/lib/supplier-csv";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   ENQUIRY:   { label: "Enquiry",   cls: "bg-gray-100 text-gray-700" },
@@ -182,15 +183,19 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
           </div>
         )}
         {/* Desktop: 4-column card grid */}
-        <div className="hidden md:grid md:grid-cols-4 md:gap-3">
+        <div className="hidden md:grid md:grid-cols-4 md:gap-3 animate-fade-in-up">
           {[
             { label: "Contracted", value: fmt(currencySymbol, totals.contracted), cls: "text-gray-900" },
             { label: "Paid", value: fmt(currencySymbol, totals.paid), cls: "text-green-700" },
             { label: "Remaining", value: fmt(currencySymbol, totals.remaining), cls: "text-amber-700" },
             { label: "Overdue", value: String(totals.overdue), cls: totals.overdue > 0 ? "text-red-600" : "text-gray-500" },
-          ].map(({ label, value, cls }) => (
-            <div key={label} className="bg-white rounded-xl border border-gray-200 px-4 py-3 text-center min-w-0">
-              <p className={`text-xl font-bold ${cls} truncate`}>{value}</p>
+          ].map(({ label, value, cls }, index) => (
+            <div
+              key={label}
+              className="bg-white rounded-xl border border-gray-200 px-4 py-3 text-center min-w-0 transition-all duration-200 hover:shadow-sm hover:border-gray-300"
+              style={{ animationDelay: `${index * 0.05}s` }}
+            >
+              <p className={`text-xl font-bold ${cls} tabular-nums truncate`}>{value}</p>
               <p className="text-xs text-gray-500 leading-tight">{label}</p>
             </div>
           ))}
@@ -224,14 +229,13 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
 
       {/* Grouped supplier cards */}
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-dashed border-gray-200 py-16 text-center">
-          <p className="text-gray-400 text-sm">No suppliers yet</p>
-          {perms.editSuppliers && (
-            <button type="button" onClick={() => setIsModalOpen(true)} className="mt-2 text-sm text-primary hover:underline">
-              Add the first supplier
-            </button>
-          )}
-        </div>
+        <EmptyState
+          icon={Briefcase}
+          title="No suppliers yet"
+          description="Add vendors to track bookings and payments"
+          actionLabel={perms.editSuppliers ? "Add your first supplier" : undefined}
+          onClick={perms.editSuppliers ? () => setIsModalOpen(true) : undefined}
+        />
       ) : (
         <div className="space-y-6">
           {groupNames.map(groupName => {

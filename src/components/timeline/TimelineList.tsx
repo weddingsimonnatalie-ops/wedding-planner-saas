@@ -5,6 +5,7 @@ import { Plus, Clock, MapPin, Briefcase, Loader2 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { TimelineEventModal } from "./TimelineEventModal";
 import { TimelinePrintView } from "./TimelinePrintView";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface TimelineEvent {
   id: string;
@@ -155,15 +156,13 @@ export function TimelineList() {
 
       {/* Timeline */}
       {events.length === 0 ? (
-        <div className="text-center py-12">
-          <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500">No events yet</p>
-          {can.editTimeline && (
-            <p className="text-sm text-gray-400 mt-1">
-              Add your first event to start planning your wedding day
-            </p>
-          )}
-        </div>
+        <EmptyState
+          icon={Clock}
+          title="No timeline events"
+          description="Add events to your wedding day schedule"
+          actionLabel={can.editTimeline ? "Add your first event" : undefined}
+          onClick={can.editTimeline ? () => setShowModal(true) : undefined}
+        />
       ) : (
         <div className="space-y-3">
           {events.map((event) => {

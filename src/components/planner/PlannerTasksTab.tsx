@@ -15,6 +15,7 @@ import { SwipeableRow } from "@/components/ui/SwipeableRow";
 import { PlannerItemModal } from "./PlannerItemModal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { TaskData, TaskPriority, RecurringInterval } from "./types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -699,39 +700,22 @@ export function PlannerTasksTab() {
           <div className="space-y-4">
             {/* Empty: no tasks at all */}
             {allTasksEmpty && (
-              <div className="py-16 text-center">
-                <CheckSquare className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                <p className="text-sm font-medium text-gray-600 mb-1">No tasks yet</p>
-                <p className="text-sm text-gray-400 mb-4 max-w-xs mx-auto">
-                  Stay organised by adding tasks for everything you need to do before the big day.
-                </p>
-                {perms.editTasks && (
-                  <button
-                    type="button"
-                    onClick={openAdd}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add your first task
-                  </button>
-                )}
-              </div>
+              <EmptyState
+                icon={CheckSquare}
+                title="No tasks yet"
+                description="Stay organised by adding tasks for everything you need to do before the big day"
+                actionLabel={perms.editTasks ? "Add your first task" : undefined}
+                onClick={perms.editTasks ? openAdd : undefined}
+              />
             )}
 
             {/* Empty: filters active but no results */}
             {!allTasksEmpty && noGroupResults && filtersActive && (
-              <div className="py-16 text-center">
-                <Search className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                <p className="text-sm font-medium text-gray-600 mb-1">No tasks match your filters</p>
-                <p className="text-sm text-gray-400 mb-4">Try adjusting or clearing your filters.</p>
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="text-sm text-primary hover:underline"
-                >
-                  Clear filters
-                </button>
-              </div>
+              <EmptyState
+                icon={Search}
+                title="No tasks match your filters"
+                description="Try adjusting or clearing your filters"
+              />
             )}
 
             <GroupSection label="Overdue"       tasks={overdue}     headerCls="text-red-700 bg-red-50"    borderCls="border-red-200"   {...groupProps} />

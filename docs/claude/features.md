@@ -174,8 +174,9 @@ Three roles defined in the `UserRole` Prisma enum:
   - Yes → `attendingX=true, attendingXMaybe=false`
   - Maybe → `attendingX=null, attendingXMaybe=true`
   - No → `attendingX=false, attendingXMaybe=false`
-- Meal choice dropdown (only if invited to reception/meal event, only if meal options configured)
-- Dietary notes textarea
+- **Meal choice dropdown** (only if invited to reception/meal event, only if meal options configured)
+- **Per-event meal selection**: Each event with meals enabled shows its own meal dropdown (e.g., "Rehearsal Dinner meal", "Wedding Breakfast meal")
+- Dietary notes textarea (shared across all events)
 - Five-state confirmation screen after submit:
   - **ACCEPTED** — green checkmark, "See you there, [Name]!"
   - **MAYBE** — amber HelpCircle icon, "Thanks for letting us know, [Name]! We'll keep you posted…"
@@ -421,7 +422,7 @@ Unified view combining appointments (Events) and tasks. `/appointments` and `/ta
 
 Organized into 4 tabs accessible to ADMIN only:
 - **General tab**: Wedding Details (couple name, date), Notifications (reminder email), Session Timeout (inactivity timeout + warning time), Wedding Colour Theme (palette picker), **Event Names + Locations** (enable/disable + rename + per-event location for all 4 events)
-- **Meals tab**: Meal Options — add/edit/deactivate meal choices
+- **Meals tab**: Meal Options — event tabs show meal choices for each event with meals enabled; add/edit/deactivate per-event; "Meals on/Meals off" toggle in Event Names settings controls which events have meal selection
 - **Categories tab**: Supplier Categories, Appointment Categories, Task Categories, Timeline Categories — each with add/edit/delete/reorder
 - **Users tab**: User Management (inline) + link to Security page
 
