@@ -47,6 +47,10 @@ export const can = {
   // Timeline
   editTimeline: (role: UserRole) => role === "ADMIN",
   viewTimeline: (_role: UserRole) => true,
+
+  // Music Playlists
+  editMusic: (role: UserRole) => role === "ADMIN",
+  viewMusic: (_role: UserRole) => true,
 };
 
 // Role display helpers

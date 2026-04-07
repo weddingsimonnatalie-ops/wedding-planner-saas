@@ -149,6 +149,7 @@ model Wedding {
   attachments           Attachment[]
   timelineEvents        TimelineEvent[]
   timelineCategories    TimelineCategory[]
+  playlists             Playlist[]
 }
 
 model WeddingMember {
@@ -571,6 +572,38 @@ model TimelineEvent {
 
   @@index([weddingId])
   @@index([weddingId, startTime])
+}
+
+// --- MUSIC PLAYLISTS ---
+
+model Playlist {
+  id          String   @id @default(cuid())
+  weddingId   String
+  wedding     Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tracks      Track[]
+
+  @@index([weddingId])
+}
+
+model Track {
+  id          String   @id @default(cuid())
+  playlistId  String
+  playlist    Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  title       String
+  artist      String?
+  durationSec Int?
+  url         String?
+  notes       String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([playlistId])
 }
 
 // --- SECURITY ---

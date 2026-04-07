@@ -37,6 +37,8 @@ export function usePermissions() {
       editPlannerEvents: can.editPlannerEvents(role),
       editPlannerTasks: can.editPlannerTasks(role),
       completePlannerTasks: can.completePlannerTasks(role),
+      editMusic: can.editMusic(role),
+      viewMusic: can.viewMusic(role),
     },
     isAdmin: role === "ADMIN",
     isViewer: role === "VIEWER",
