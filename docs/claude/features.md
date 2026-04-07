@@ -25,8 +25,8 @@ Three roles defined in the `UserRole` Prisma enum:
 | Role | Access |
 |------|--------|
 | `ADMIN` | Full access to everything |
-| `VIEWER` | Read-only access; can see Guests, Seating, Suppliers, Payments, Appointments, Dashboard; cannot edit anything |
-| `RSVP_MANAGER` | Can edit guests and RSVP data; cannot see Suppliers, Payments, or Settings |
+| `VIEWER` | Read-only access; can see Guests, Seating, Suppliers, Payments, Planner, Dashboard; cannot edit anything |
+| `RSVP_MANAGER` | Can edit guests and RSVP data; can complete tasks; cannot see Suppliers, Payments, or Settings |
 
 **Permission definitions** — `src/lib/permissions.ts` (`can.*` helpers):
 - `editGuests` / `deleteGuests` / `manageRsvp` / `importExportGuests` — ADMIN + RSVP_MANAGER
@@ -39,6 +39,7 @@ Three roles defined in the `UserRole` Prisma enum:
 - `completeTasks` — ADMIN + RSVP_MANAGER (check off tasks)
 - `viewTasks` — all roles
 - `accessSettings` — ADMIN only
+- `accessPlanner` / `editPlannerEvents` / `editPlannerTasks` / `completePlannerTasks` — planner-specific aliases
 
 **Client-side hook** — `src/hooks/usePermissions.ts`:
 - Reads role from `useSession()`; defaults to `"VIEWER"` when session is undefined/loading (safe default)
@@ -351,41 +352,49 @@ Three roles defined in the `UserRole` Prisma enum:
 - `GET /api/payments` returns all payments with supplier info + receipt attachment data; auto-detects OVERDUE (PENDING + dueDate < today) in response without writing to DB; uses `Array.from(new Set(...))` for deduplication (TypeScript target constraint — do not use `[...new Set(...)]`)
 - Components: `src/components/payments/PaymentsList.tsx`, `src/components/payments/PaymentModal.tsx`, `src/components/payments/ReceiptUploadModal.tsx`, `src/components/payments/ReceiptViewModal.tsx`
 
-## Appointments (`/appointments`)
+## Planner (`/planner`)
 
-- **Header row**: title + "Add appointment" button (ADMIN only); rendered in `AppointmentsList.tsx`
-- List of upcoming and past appointments
-- Link to supplier
-- Optional email reminder (N days before appointment)
-- Categories configurable with colour (Settings → Appointment Categories)
-- Reminder daemon checks hourly and sends reminder email to `SMTP_FROM`
+Unified view combining appointments (Events) and tasks. `/appointments` and `/tasks` both redirect here.
 
-## Tasks (`/tasks`)
+**Components:** `src/components/planner/PlannerClient.tsx` (unified list), `PlannerItemModal.tsx` (add/edit modal), `PlannerEventsTab.tsx` (standalone events list, not used by main page), `PlannerTasksTab.tsx` (standalone tasks list, not used by main page), `types.ts` (shared types).
 
-- **Header row**: title + "Add task" button (ADMIN only); rendered in `TasksPageClient.tsx`
-- Full task list grouped by time period: **Overdue** (red) · **Due this week** (amber) · **Upcoming** (blue) · **No due date** (grey) · **Completed** (collapsible, most recent 20 shown by default)
-- Each task shows: priority dot (red=HIGH, amber=MEDIUM, grey=LOW), title, recurring icon, due date label, category dot + name, assignee, supplier link, notes preview
-- **Due date labels**: "X days overdue" (red) · "Due today" / "Due tomorrow" (amber) · "Due 15 May" (grey) — calculated fresh each render
-- **Add / edit modal**: title, category, priority, due date, assignee, linked supplier, notes, recurring section
-- **Recurring tasks**: interval (Daily / Weekly / Fortnightly / Monthly) + optional end date; completing a recurring task auto-creates the next occurrence if within end date
-- **Filters**: priority, assignee, category, supplier; filters stack vertically on mobile
-- **Bulk selection**: checkboxes on each task; group-level select-all; bulk complete and bulk delete
-- **Empty states**: "No tasks yet" (with description and "Add your first task" for ADMIN); "No tasks match your filters" (with "Clear filters" link)
-- **Supplier tasks section**: embedded in `/suppliers/[id]`; shows tasks linked to that supplier; sorted incomplete first by due date then completed
-- **Dashboard widget**: upcoming and overdue tasks (full width, visible to all roles)
-- **Sidebar badge**: red count badge on Tasks nav item showing overdue + due-this-week count; hidden when 0
-- **Task categories**: configurable (Settings → Task Categories) with name, colour, sort order, active flag
+**Unified chronological list** — fetches both `/api/appointments` and `/api/tasks` in parallel, then groups:
+- **Overdue** (red header) — tasks with a past due date, not completed
+- **Upcoming** (blue header) — future events + tasks with future due dates, interleaved by date, sorted soonest-first
+- **No due date** (grey header) — tasks without a due date, not completed
+- **Past & completed** (collapsible) — past events + completed tasks, newest-first
 
-**Role permissions for tasks:**
-| Role | View | Complete | Add/Edit/Delete |
-|------|------|----------|-----------------|
+**Visual differentiation:**
+- Events: blue left border + "Event" pill (CalendarDays icon); shows date/time, location, supplier link
+- Tasks: standard card + "Task" pill + priority badge; shows due date label, assignee, complete/reminder/edit/delete actions
+
+**Add / edit modal (`PlannerItemModal`):**
+- Type toggle (Event / Task) shown for new items; type fixed when editing
+- Event fields: title, category, date & time (required), location, email reminder, supplier, notes
+- Task fields: title, category, priority, due date, assigned to, supplier, notes, recurring section
+- Recurring tasks: Daily / Weekly / Fortnightly / Monthly + optional end date; completing auto-creates next occurrence
+
+**Events (appointments):**
+- Optional email reminder (N days before); reminder daemon checks hourly
+- Categories from shared PlanningCategory pool
+- Supplier link on card
+
+**Tasks:**
+- Grouped as above; inline complete / mark-not-done / email reminder
+- Swipe-to-delete on mobile
+- **Supplier tasks section**: still embedded in `/suppliers/[id]` via `SupplierTasksSection.tsx`
+- **Dashboard widget**: upcoming and overdue tasks visible to all roles
+
+**Nav badge**: combined tasks + appointments count on "Planner" nav item (CalendarCheck icon).
+
+**Refresh coordination**: `triggerRefresh()` from `useRefresh()` context; list re-fetches via `refreshToken` dep.
+
+**Role permissions:**
+| Role | View | Complete tasks | Add/Edit/Delete |
+|------|------|----------------|-----------------|
 | ADMIN | ✅ | ✅ | ✅ |
-| RSVP_MANAGER | ✅ | ✅ | ❌ |
+| RSVP_MANAGER | ✅ (tasks only) | ✅ | ❌ |
 | VIEWER | ✅ | ❌ | ❌ |
-
-- RSVP_MANAGER sees ReadOnlyBanner: "You can view and complete tasks but cannot add or edit them."
-- VIEWER sees ReadOnlyBanner: "You have view-only access to tasks." and complete checkbox is disabled
-- VIEWER cannot see suppliers at all so never sees the supplier tasks section
 
 ## Timeline (`/timeline`)
 
