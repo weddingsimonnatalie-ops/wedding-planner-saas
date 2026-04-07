@@ -311,38 +311,38 @@ export function BudgetList() {
         )}
 
         {/* Desktop: 4-column grid */}
-        <div className="hidden md:grid md:grid-cols-4 md:gap-3">
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="hidden md:grid md:grid-cols-4 md:gap-3 animate-fade-in-up">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 transition-all duration-200 hover:shadow-sm hover:border-gray-300">
             <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
               <DollarSign className="w-4 h-4" />
               {hasBudget ? "Total Budget" : "Allocated"}
             </div>
-            <div className="text-xl font-bold text-gray-900">
+            <div className="text-xl font-bold text-gray-900 tabular-nums">
               {hasBudget ? fmt(currencySymbol, summary.totalBudget) : fmt(currencySymbol, summary.totalAllocated)}
             </div>
             {hasBudget && allocatedPercent > 0 && (
               <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-primary rounded-full"
+                  className="h-full bg-primary rounded-full transition-all duration-500"
                   style={{ width: `${Math.min(allocatedPercent, 100)}%` }}
                 />
               </div>
             )}
           </div>
 
-          <div className={`bg-white rounded-lg border p-4 ${isOverContracted ? "border-red-300 bg-red-50" : "border-gray-200"}`}>
+          <div className={`bg-white rounded-lg border p-4 transition-all duration-200 hover:shadow-sm ${isOverContracted ? "border-red-300 bg-red-50 hover:border-red-400" : "border-gray-200 hover:border-gray-300"}`}>
             <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
               <TrendingUp className="w-4 h-4" />
               Contracted
             </div>
-            <div className={`text-xl font-bold ${isOverContracted ? "text-red-600" : "text-gray-900"}`}>
+            <div className={`text-xl font-bold tabular-nums ${isOverContracted ? "text-red-600" : "text-gray-900"}`}>
               {fmt(currencySymbol, summary.totalContracted)}
             </div>
             {hasBudget && contractedPercent > 0 && (
               <>
                 <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${isOverContracted ? "bg-red-500" : contractedPercent > 90 ? "bg-amber-400" : "bg-primary"}`}
+                    className={`h-full rounded-full transition-all duration-500 ${isOverContracted ? "bg-red-500" : contractedPercent > 90 ? "bg-amber-400" : "bg-primary"}`}
                     style={{ width: `${Math.min(contractedPercent, 100)}%` }}
                   />
                 </div>
@@ -355,17 +355,17 @@ export function BudgetList() {
             )}
           </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 transition-all duration-200 hover:shadow-sm hover:border-gray-300">
             <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
               <TrendingDown className="w-4 h-4" />
               Paid
             </div>
-            <div className="text-xl font-bold text-gray-900">{fmt(currencySymbol, summary.totalPaid)}</div>
+            <div className="text-xl font-bold text-gray-900 tabular-nums">{fmt(currencySymbol, summary.totalPaid)}</div>
             {hasBudget && spentPercent > 0 && (
               <>
                 <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${spentPercent > 100 ? "bg-red-500" : spentPercent > 90 ? "bg-amber-400" : "bg-primary"}`}
+                    className={`h-full rounded-full transition-all duration-500 ${spentPercent > 100 ? "bg-red-500" : spentPercent > 90 ? "bg-amber-400" : "bg-primary"}`}
                     style={{ width: `${Math.min(spentPercent, 100)}%` }}
                   />
                 </div>
@@ -376,12 +376,12 @@ export function BudgetList() {
             )}
           </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 transition-all duration-200 hover:shadow-sm hover:border-gray-300">
             <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
               <PiggyBank className="w-4 h-4" />
               Remaining
             </div>
-            <div className={`text-xl font-bold ${summary.totalRemaining < 0 ? "text-red-600" : "text-gray-900"}`}>
+            <div className={`text-xl font-bold tabular-nums ${summary.totalRemaining < 0 ? "text-red-600" : "text-gray-900"}`}>
               {fmt(currencySymbol, summary.totalRemaining)}
             </div>
           </div>
@@ -408,9 +408,12 @@ export function BudgetList() {
       )}
 
       {/* Categories */}
-      <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">
-        Budget by Category
-      </h2>
+      <div className="relative mb-3">
+        <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+          Budget by Category
+        </h2>
+        <div className="absolute -bottom-1 left-0 w-8 h-0.5 bg-primary/40 rounded-full" />
+      </div>
 
       {summary.categories.length === 0 && summary.unallocated.supplierCount === 0 ? (
         <EmptyState
@@ -421,10 +424,12 @@ export function BudgetList() {
           href={can.editBudget ? "/settings?tab=categories" : undefined}
         />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in-up stagger-2">
           {/* Categories with allocation */}
-          {summary.categories.filter(c => c.allocated > 0 || c.supplierCount > 0).map(cat => (
-            <CategoryCard key={cat.id} category={cat} />
+          {summary.categories.filter(c => c.allocated > 0 || c.supplierCount > 0).map((cat, index) => (
+            <div key={cat.id} style={{ animationDelay: `${index * 0.05}s` }}>
+              <CategoryCard category={cat} />
+            </div>
           ))}
 
           {/* Categories with no allocation and no suppliers */}
