@@ -75,7 +75,7 @@ interface SettingsClientProps {
   emailVerificationRequired: boolean;
 }
 
-type Tab = "general" | "meals" | "categories" | "users" | "security" | "billing";
+type Tab = "preferences" | "wedding" | "categories" | "users" | "security" | "billing";
 
 export function SettingsClient({
   config,
@@ -91,18 +91,18 @@ export function SettingsClient({
   const tabParam = searchParams.get("tab");
 
   const [tab, setTab] = useState<Tab>(() => {
-    if (tabParam === "meals") return "meals";
+    if (tabParam === "wedding") return "wedding";
     if (tabParam === "categories") return "categories";
     if (tabParam === "users") return "users";
     if (tabParam === "security") return "security";
     if (tabParam === "billing") return "billing";
-    return "general";
+    return "preferences";
   });
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "general", label: "General" },
+    { id: "preferences", label: "Preferences" },
+    { id: "wedding", label: "Wedding" },
     { id: "categories", label: "Categories" },
-    { id: "meals", label: "Meals" },
     { id: "users", label: "Users" },
     { id: "security", label: "Security" },
     { id: "billing", label: "Billing" },
@@ -127,8 +127,46 @@ export function SettingsClient({
         ))}
       </div>
 
-      {/* General tab */}
-      {tab === "general" && (
+      {/* Preferences tab */}
+      {tab === "preferences" && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-base font-medium text-gray-900 mb-1">Wedding Colour Theme</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Choose a colour that matches your wedding palette. It will be used throughout the planner.
+            </p>
+            <ThemeColorPicker initialHue={config?.themeHue ?? 330} />
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-base font-medium text-gray-900 mb-1">Currency Symbol</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Choose the symbol shown next to monetary amounts throughout the planner.
+            </p>
+            <CurrencySymbolPicker initialSymbol={config?.currencySymbol ?? "£"} />
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-base font-medium text-gray-900 mb-1">Timezone</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Set your local timezone for accurate countdown and date calculations.
+            </p>
+            <TimezonePicker initialTimezone={config?.timezone ?? "Europe/London"} />
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="text-base font-medium text-gray-900 mb-1">Notifications</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Configure where reminder emails are delivered.
+            </p>
+            <NotificationsForm reminderEmail={config?.reminderEmail ?? null} />
+          </div>
+
+        </div>
+      )}
+
+      {/* Wedding tab */}
+      {tab === "wedding" && (
         <div className="space-y-6">
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h2 className="text-base font-medium text-gray-900 mb-4">Wedding Details</h2>
@@ -136,7 +174,7 @@ export function SettingsClient({
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Event Names</h2>
+            <h2 className="text-base font-medium text-gray-900 mb-1">Events</h2>
             <p className="text-sm text-gray-500 mb-4">
               Customise the names of events shown on RSVP forms and guest lists.
             </p>
@@ -163,52 +201,16 @@ export function SettingsClient({
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Notifications</h2>
+            <h2 className="text-base font-medium text-gray-900 mb-1">Meal Options</h2>
             <p className="text-sm text-gray-500 mb-4">
-              Configure where reminder emails are delivered.
+              Configure the meal choices shown on RSVP forms for each event.
             </p>
-            <NotificationsForm reminderEmail={config?.reminderEmail ?? null} />
+            <MealOptionsList
+              initialOptions={mealOptions}
+              mealCounts={mealCounts}
+              events={config ? getEvents(config, true) : []}
+            />
           </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Wedding Colour Theme</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Choose a colour that matches your wedding palette. It will be used throughout the planner.
-            </p>
-            <ThemeColorPicker initialHue={config?.themeHue ?? 330} />
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Currency Symbol</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Choose the symbol shown next to monetary amounts throughout the planner.
-            </p>
-            <CurrencySymbolPicker initialSymbol={config?.currencySymbol ?? "£"} />
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Timezone</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Set your local timezone for accurate countdown and date calculations.
-            </p>
-            <TimezonePicker initialTimezone={config?.timezone ?? "Europe/London"} />
-          </div>
-
-        </div>
-      )}
-
-      {/* Meals tab */}
-      {tab === "meals" && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-base font-medium text-gray-900 mb-1">Meal Options</h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Configure the meal choices shown on RSVP forms for each event.
-          </p>
-          <MealOptionsList
-            initialOptions={mealOptions}
-            mealCounts={mealCounts}
-            events={config ? getEvents(config, true) : []}
-          />
         </div>
       )}
 

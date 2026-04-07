@@ -112,7 +112,7 @@ export function MealOptionsList({ initialOptions, mealCounts, events }: Props) {
       <div className="text-sm text-gray-500">
         <p>No events have meals enabled.</p>
         <p className="mt-2">
-          Go to <strong>Settings → General → Event Names</strong> and enable meals for one or more events.
+          Go to <strong>Settings → Wedding → Events</strong> and enable meals for one or more events.
         </p>
       </div>
     );
