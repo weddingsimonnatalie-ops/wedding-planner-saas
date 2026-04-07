@@ -324,8 +324,9 @@ Three roles defined in the `UserRole` Prisma enum:
   - **Import as new** — create a second supplier with the same name
 - Global **Skip all** / **Update all** buttons above the duplicate list
 - Category matching: case-insensitive lookup against existing planning categories; unknown categories show a warning in the preview
+- **Auto-create categories**: unknown categories in CSV are created as new PlanningCategory rows during confirm; `planning-categories` cache is invalidated so they appear immediately in Settings
 - Status values accepted: Enquiry/Quoted/Booked/Cancelled/Complete (case-insensitive, common variants like "Quote" also accepted)
-- Result summary shows: created / updated / skipped / errors
+- Result summary shows: created / updated / skipped / errors / categoriesCreated
 - API: `POST /api/suppliers/import` — preview mode returns `existingSupplier` and `categoryId` for each row; confirm mode accepts `duplicateActions: Record<string, 'skip'|'update'|'create'>` keyed by CSV line number
 - Export API: `GET /api/suppliers/export` — returns CSV file with all suppliers
 
