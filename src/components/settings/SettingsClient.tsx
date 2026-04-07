@@ -47,7 +47,7 @@ import { TimezonePicker } from "./TimezonePicker";
 import { WeddingConfigForm } from "@/components/wedding-config-form";
 import { getEvents } from "@/lib/eventNames";
 import Link from "next/link";
-import { CreditCard } from "lucide-react";
+import { Palette, Coins, Clock, Bell, Heart, Calendar, Utensils, Users, Shield, Timer, Laptop, CreditCard, Tag, LayoutList } from "lucide-react";
 
 interface SettingsClientProps {
   config: WeddingConfig | null;
@@ -131,7 +131,10 @@ export function SettingsClient({
       {tab === "preferences" && (
         <div className="space-y-6">
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Wedding Colour Theme</h2>
+            <h2 className="flex items-center gap-2 text-base font-medium text-gray-900 mb-1">
+              <Palette className="w-4 h-4 text-primary/60" />
+              Wedding Colour Theme
+            </h2>
             <p className="text-sm text-gray-500 mb-4">
               Choose a colour that matches your wedding palette. It will be used throughout the planner.
             </p>
@@ -139,7 +142,10 @@ export function SettingsClient({
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Currency Symbol</h2>
+            <h2 className="flex items-center gap-2 text-base font-medium text-gray-900 mb-1">
+              <Coins className="w-4 h-4 text-primary/60" />
+              Currency Symbol
+            </h2>
             <p className="text-sm text-gray-500 mb-4">
               Choose the symbol shown next to monetary amounts throughout the planner.
             </p>
@@ -147,7 +153,10 @@ export function SettingsClient({
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Timezone</h2>
+            <h2 className="flex items-center gap-2 text-base font-medium text-gray-900 mb-1">
+              <Clock className="w-4 h-4 text-primary/60" />
+              Timezone
+            </h2>
             <p className="text-sm text-gray-500 mb-4">
               Set your local timezone for accurate countdown and date calculations.
             </p>
@@ -155,7 +164,10 @@ export function SettingsClient({
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Notifications</h2>
+            <h2 className="flex items-center gap-2 text-base font-medium text-gray-900 mb-1">
+              <Bell className="w-4 h-4 text-primary/60" />
+              Notifications
+            </h2>
             <p className="text-sm text-gray-500 mb-4">
               Configure where reminder emails are delivered.
             </p>
@@ -169,12 +181,18 @@ export function SettingsClient({
       {tab === "wedding" && (
         <div className="space-y-6">
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-4">Wedding Details</h2>
+            <h2 className="flex items-center gap-2 text-base font-medium text-gray-900 mb-4">
+              <Heart className="w-4 h-4 text-primary/60" />
+              Wedding Details
+            </h2>
             <WeddingConfigForm config={config} />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Events</h2>
+            <h2 className="flex items-center gap-2 text-base font-medium text-gray-900 mb-1">
+              <Calendar className="w-4 h-4 text-primary/60" />
+              Events
+            </h2>
             <p className="text-sm text-gray-500 mb-4">
               Customise the names of events shown on RSVP forms and guest lists.
             </p>
@@ -201,7 +219,10 @@ export function SettingsClient({
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Meal Options</h2>
+            <h2 className="flex items-center gap-2 text-base font-medium text-gray-900 mb-1">
+              <Utensils className="w-4 h-4 text-primary/60" />
+              Meal Options
+            </h2>
             <p className="text-sm text-gray-500 mb-4">
               Configure the meal choices shown on RSVP forms for each event.
             </p>
@@ -218,7 +239,10 @@ export function SettingsClient({
       {tab === "categories" && (
         <div className="space-y-6">
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Planning Categories</h2>
+            <h2 className="flex items-center gap-2 text-base font-medium text-gray-900 mb-1">
+              <Tag className="w-4 h-4 text-primary/60" />
+              Planning Categories
+            </h2>
             <p className="text-sm text-gray-500 mb-4">
               Shared categories for organising your suppliers, appointments, and tasks.
             </p>
@@ -226,7 +250,10 @@ export function SettingsClient({
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Timeline Categories</h2>
+            <h2 className="flex items-center gap-2 text-base font-medium text-gray-900 mb-1">
+              <LayoutList className="w-4 h-4 text-primary/60" />
+              Timeline Categories
+            </h2>
             <p className="text-sm text-gray-500 mb-4">
               Categories for organising your wedding day timeline events.
             </p>
@@ -238,7 +265,10 @@ export function SettingsClient({
       {/* Users tab */}
       {tab === "users" && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-base font-medium text-gray-900 mb-1">User Management</h2>
+          <h2 className="flex items-center gap-2 text-base font-medium text-gray-900 mb-1">
+            <Users className="w-4 h-4 text-primary/60" />
+            User Management
+          </h2>
           <p className="text-sm text-gray-500 mb-4">
             Add or remove admin accounts, manage roles and permissions.
           </p>
@@ -256,7 +286,8 @@ export function SettingsClient({
       {tab === "security" && (
         <div className="space-y-6">
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">
+            <h2 className="flex items-center gap-2 text-base font-medium text-gray-900 mb-1">
+              <Shield className="w-4 h-4 text-primary/60" />
               Two-factor authentication
             </h2>
             <p className="text-sm text-gray-500 mb-5">
@@ -267,7 +298,10 @@ export function SettingsClient({
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">Session Timeout</h2>
+            <h2 className="flex items-center gap-2 text-base font-medium text-gray-900 mb-1">
+              <Timer className="w-4 h-4 text-primary/60" />
+              Session Timeout
+            </h2>
             <p className="text-sm text-gray-500 mb-4">
               Configure how long users stay logged in before being timed out due to inactivity.
             </p>
@@ -278,7 +312,8 @@ export function SettingsClient({
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-base font-medium text-gray-900 mb-1">
+            <h2 className="flex items-center gap-2 text-base font-medium text-gray-900 mb-1">
+              <Laptop className="w-4 h-4 text-primary/60" />
               Trusted devices
             </h2>
             <p className="text-sm text-gray-500 mb-4">
@@ -294,7 +329,10 @@ export function SettingsClient({
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-medium text-gray-900">Billing & Subscription</h2>
+              <h2 className="flex items-center gap-2 text-base font-medium text-gray-900">
+                <CreditCard className="w-4 h-4 text-primary/60" />
+                Billing & Subscription
+              </h2>
               <p className="text-sm text-gray-500 mt-0.5">
                 Manage your subscription, payment method, and view invoices.
               </p>

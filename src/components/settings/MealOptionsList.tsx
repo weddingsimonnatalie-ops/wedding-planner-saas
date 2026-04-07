@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
-import { getEvents, type EventConfig } from "@/lib/eventNames";
+import { Plus, Pencil, Trash2, Check, X, Utensils, Calendar } from "lucide-react";
+import type { EventConfig } from "@/lib/eventNames";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface MealOption {
   id: string;
@@ -27,14 +28,9 @@ export function MealOptionsList({ initialOptions, mealCounts, events }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [options, setOptions] = useState(initialOptions);
-  const [activeEvent, setActiveEvent] = useState<string | null>(() => {
-    // Default to the first event with meals enabled
-    const eventWithMeals = events.find((e) => e.mealsEnabled);
-    return eventWithMeals?.key ?? null;
-  });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<typeof emptyOption>(emptyOption);
-  const [showAdd, setShowAdd] = useState(false);
+  const [addingToEvent, setAddingToEvent] = useState<string | null>(null);
   const [newData, setNewData] = useState<typeof emptyOption>(emptyOption);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
@@ -42,30 +38,25 @@ export function MealOptionsList({ initialOptions, mealCounts, events }: Props) {
   // Filter events to only those with meals enabled
   const eventsWithMeals = events.filter((e) => e.mealsEnabled);
 
-  // Filter options for the active event
-  const filteredOptions = activeEvent
-    ? options.filter((o) => o.eventId === activeEvent)
-    : [];
-
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(""), 3000);
   }
 
-  async function handleAdd() {
+  async function handleAdd(eventId: string) {
     setError("");
     if (!newData.name.trim()) { setError("Name is required"); return; }
-    if (!activeEvent) { setError("Select an event first"); return; }
 
+    const eventOptions = options.filter((o) => o.eventId === eventId);
     const res = await fetch("/api/meal-options", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newData, eventId: activeEvent, sortOrder: filteredOptions.length }),
+      body: JSON.stringify({ ...newData, eventId, sortOrder: eventOptions.length }),
     });
     if (res.ok) {
       const created = await res.json();
       setOptions([...options, created]);
-      setShowAdd(false);
+      setAddingToEvent(null);
       setNewData(emptyOption);
       showToast("Meal option added");
       startTransition(() => router.refresh());
@@ -109,115 +100,109 @@ export function MealOptionsList({ initialOptions, mealCounts, events }: Props) {
   // If no events have meals enabled, show a message
   if (eventsWithMeals.length === 0) {
     return (
-      <div className="text-sm text-gray-500">
-        <p>No events have meals enabled.</p>
-        <p className="mt-2">
-          Go to <strong>Settings → Wedding → Events</strong> and enable meals for one or more events.
-        </p>
-      </div>
+      <EmptyState
+        icon={Calendar}
+        title="No events with meals enabled"
+        description="Go to Settings → Wedding → Events and enable meals for one or more events to start adding meal options."
+      />
     );
   }
 
   return (
-    <div>
-      {/* Event tabs */}
-      {eventsWithMeals.length > 1 && (
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-          {eventsWithMeals.map((event) => (
-            <button
-              key={event.key}
-              onClick={() => setActiveEvent(event.key)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
-                activeEvent === event.key
-                  ? "bg-primary text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {event.name}
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="space-y-6">
+      {eventsWithMeals.map((event) => {
+        const eventOptions = options.filter((o) => o.eventId === event.key);
+        const isAdding = addingToEvent === event.key;
 
-      {/* Meal options list for selected event */}
-      {filteredOptions.length === 0 && !showAdd && (
-        <p className="text-sm text-gray-400 mb-3">
-          No meal options for {events.find((e) => e.key === activeEvent)?.name ?? "this event"}.
-        </p>
-      )}
+        return (
+          <div key={event.key}>
+            <h4 className="font-medium text-gray-700 mb-3">{event.name}</h4>
 
-      <div className="space-y-2 mb-3">
-        {filteredOptions.map((opt) =>
-          editingId === opt.id ? (
-            <div key={opt.id} className="border border-primary/30 rounded-lg p-3 space-y-2 bg-primary/5">
-              <OptionFields data={editData} onChange={setEditData} />
-              {error && <p className="text-xs text-red-600">{error}</p>}
-              <div className="flex gap-2">
-                <button onClick={() => handleUpdate(opt.id)} className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium">
-                  <Check className="w-3 h-3" /> Save
-                </button>
-                <button onClick={() => { setEditingId(null); setError(""); }} className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-600">
-                  <X className="w-3 h-3" /> Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div key={opt.id} className="flex items-center gap-3 border border-gray-200 rounded-lg px-4 py-2.5">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm font-medium ${opt.isActive ? "text-gray-900" : "text-gray-400 line-through"}`}>
-                    {opt.name}
-                  </span>
-                  {opt.course && <span className="text-xs text-gray-400">({opt.course})</span>}
-                  {!opt.isActive && <span className="text-xs text-gray-400 italic">inactive</span>}
-                </div>
-                {opt.description && <p className="text-xs text-gray-400">{opt.description}</p>}
-              </div>
-              {mealCounts[opt.id] !== undefined && (
-                <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                  {mealCounts[opt.id]} confirmed
-                </span>
+            {eventOptions.length === 0 && !isAdding && (
+              <EmptyState
+                icon={Utensils}
+                title="No meal options"
+                description="Add meal choices for guests to select on RSVP forms"
+                actionLabel="Add option"
+                onClick={() => setAddingToEvent(event.key)}
+              />
+            )}
+
+            <div className="space-y-2 mb-3">
+              {eventOptions.map((opt) =>
+                editingId === opt.id ? (
+                  <div key={opt.id} className="border border-primary/30 rounded-lg p-3 space-y-2 bg-primary/5">
+                    <OptionFields data={editData} onChange={setEditData} />
+                    {error && <p className="text-xs text-red-600">{error}</p>}
+                    <div className="flex gap-2">
+                      <button onClick={() => handleUpdate(opt.id)} className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium">
+                        <Check className="w-3 h-3" /> Save
+                      </button>
+                      <button onClick={() => { setEditingId(null); setError(""); }} className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-600">
+                        <X className="w-3 h-3" /> Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div key={opt.id} className="flex items-center gap-3 border border-gray-200 rounded-lg px-4 py-2.5">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-medium ${opt.isActive ? "text-gray-900" : "text-gray-400 line-through"}`}>
+                          {opt.name}
+                        </span>
+                        {opt.course && <span className="text-xs text-gray-400">({opt.course})</span>}
+                        {!opt.isActive && <span className="text-xs text-gray-400 italic">inactive</span>}
+                      </div>
+                      {opt.description && <p className="text-xs text-gray-400">{opt.description}</p>}
+                    </div>
+                    {mealCounts[opt.id] !== undefined && (
+                      <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                        {mealCounts[opt.id]} confirmed
+                      </span>
+                    )}
+                    <button
+                      onClick={() => { setEditingId(opt.id); setEditData({ name: opt.name, description: opt.description ?? "", course: opt.course ?? "", isActive: opt.isActive, sortOrder: opt.sortOrder }); setError(""); }}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(opt.id, opt.name)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )
               )}
-              <button
-                onClick={() => { setEditingId(opt.id); setEditData({ name: opt.name, description: opt.description ?? "", course: opt.course ?? "", isActive: opt.isActive, sortOrder: opt.sortOrder }); setError(""); }}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => handleDelete(opt.id, opt.name)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
             </div>
-          )
-        )}
-      </div>
 
-      {showAdd && (
-        <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-primary/5 mb-3">
-          <OptionFields data={newData} onChange={setNewData} />
-          {error && <p className="text-xs text-red-600">{error}</p>}
-          <div className="flex gap-2">
-            <button onClick={handleAdd} className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium">
-              <Check className="w-3 h-3" /> Add
-            </button>
-            <button onClick={() => { setShowAdd(false); setError(""); setNewData(emptyOption); }} className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-600">
-              <X className="w-3 h-3" /> Cancel
-            </button>
+            {isAdding && (
+              <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-primary/5 mb-3">
+                <OptionFields data={newData} onChange={setNewData} />
+                {error && <p className="text-xs text-red-600">{error}</p>}
+                <div className="flex gap-2">
+                  <button onClick={() => handleAdd(event.key)} className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium">
+                    <Check className="w-3 h-3" /> Add
+                  </button>
+                  <button onClick={() => { setAddingToEvent(null); setError(""); setNewData(emptyOption); }} className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-600">
+                    <X className="w-3 h-3" /> Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!isAdding && (
+              <button
+                onClick={() => { setAddingToEvent(event.key); setError(""); }}
+                className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors"
+              >
+                <Plus className="w-4 h-4" /> Add meal option
+              </button>
+            )}
           </div>
-        </div>
-      )}
-
-      {!showAdd && (
-        <button
-          onClick={() => { setShowAdd(true); setError(""); }}
-          className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors"
-        >
-          <Plus className="w-4 h-4" /> Add meal option
-        </button>
-      )}
+        );
+      })}
 
       {toast && (
         <div className="fixed right-4 px-4 py-2.5 rounded-lg text-sm text-white bg-green-600 shadow-lg" style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
