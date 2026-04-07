@@ -11,6 +11,8 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { fetchApi } from "@/lib/fetch";
 import { useWedding } from "@/context/WeddingContext";
 import { UserRole } from "@prisma/client";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -657,36 +659,6 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
-function EmptyState({
-  icon: Icon,
-  title,
-  description,
-  actionLabel,
-  href,
-}: {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  actionLabel?: string;
-  href?: string;
-}) {
-  return (
-    <div className="px-5 py-8 text-center">
-      <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
-        <Icon className="w-6 h-6 text-gray-300" />
-      </div>
-      <p className="text-sm font-medium text-gray-700 mb-1">{title}</p>
-      <p className="text-xs text-gray-400 mb-3">{description}</p>
-      {actionLabel && href && (
-        <Link href={href} className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium">
-          {actionLabel}
-          <ArrowRight className="w-3 h-3" />
-        </Link>
-      )}
-    </div>
-  );
-}
-
 function CountdownCard({ weddingDate, timezone }: { weddingDate: string | null; timezone: string }) {
   // Calculate days until wedding using the user's timezone
   const days = weddingDate
@@ -842,24 +814,6 @@ function QuickStat({ icon, label, value, sub, href }: {
         <p className="text-xs text-gray-400 truncate">{sub}</p>
       </div>
     </Link>
-  );
-}
-
-function SectionHeader({ title, href }: { title: string; href: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <div className="relative">
-        <p className="text-sm font-medium text-gray-700">{title}</p>
-        <div className="absolute -bottom-1 left-0 w-8 h-0.5 bg-primary/40 rounded-full" />
-      </div>
-      <Link
-        href={href}
-        className="text-xs text-gray-400 hover:text-primary flex items-center gap-0.5 group transition-colors"
-      >
-        View all
-        <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
-      </Link>
-    </div>
   );
 }
 

@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef, useEffect, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Edit2, Trash2, Copy, Mail, Upload, X, CheckCircle2, XCircle, ChevronDown, ChevronRight, Loader2, Pencil, Tag, Utensils, Download, Plus, SlidersHorizontal, RefreshCw, FileSpreadsheet } from "lucide-react";
+import { Edit2, Trash2, Copy, Mail, Upload, X, CheckCircle2, XCircle, ChevronDown, ChevronRight, Loader2, Pencil, Tag, Utensils, Download, Plus, SlidersHorizontal, RefreshCw, FileSpreadsheet, Users, Search } from "lucide-react";
 import { RsvpStatusBadge } from "./RsvpStatusBadge";
 import { CsvImportModal } from "./CsvImportModal";
 import { PrintGuestListButton } from "./PrintGuestListButton";
@@ -16,6 +16,7 @@ import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { SwipeableRow } from "@/components/ui/SwipeableRow";
 import { getEvents, getEventBadgeLetter } from "@/lib/eventNames";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface Guest {
   id: string;
@@ -535,7 +536,7 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
           </div>
         )}
         {/* Desktop: 6-column card grid */}
-        <div className="hidden md:grid md:grid-cols-6 md:gap-3">
+        <div className="hidden md:grid md:grid-cols-6 md:gap-3 animate-fade-in-up">
           {[
             { label: hasFilters ? "Filtered" : "Total", value: stats.total, color: hasFilters ? "text-primary" : "text-gray-900" },
             { label: "Accepted", value: stats.accepted, color: "text-green-600" },
@@ -543,12 +544,13 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
             { label: "Declined", value: stats.declined, color: "text-red-600" },
             { label: "Pending", value: stats.pending, color: "text-amber-600" },
             { label: "Unassigned", value: stats.unassigned, color: "text-blue-600" },
-          ].map(({ label, value, color }) => (
+          ].map(({ label, value, color }, index) => (
             <div
               key={label}
-              className="bg-white rounded-xl border border-gray-200 px-4 py-3 text-center min-w-0"
+              className={`bg-white rounded-xl border border-gray-200 px-4 py-3 text-center min-w-0 transition-all duration-200 hover:shadow-sm hover:border-gray-300`}
+              style={{ animationDelay: `${index * 0.05}s` }}
             >
-              <p className={`text-xl font-bold ${color} truncate`}>{value}</p>
+              <p className={`text-xl font-bold ${color} tabular-nums truncate`}>{value}</p>
               <p className="text-xs text-gray-500 leading-tight">{label}</p>
             </div>
           ))}
@@ -973,31 +975,19 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
       {/* Guest list */}
       {guests.length === 0 ? (
         hasActiveFilters ? (
-          <div className="bg-white rounded-xl border border-gray-200 py-16 text-center">
-            <p className="text-2xl mb-2">🔍</p>
-            <p className="text-gray-700 font-medium">No guests match your filters</p>
-            <p className="text-gray-400 text-sm mt-1">Try adjusting or clearing your filters.</p>
-            <button
-              type="button"
-              onClick={() => { setShowFilterPanel(false); navigateFilter("/guests"); }}
-              className="mt-4 text-sm text-primary hover:underline"
-            >
-              Clear all filters
-            </button>
-          </div>
+          <EmptyState
+            icon={Search}
+            title="No guests match your filters"
+            description="Try adjusting or clearing your filters"
+          />
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 py-16 text-center">
-            <p className="text-gray-400">No guests found</p>
-            {perms.can.editGuests && (
-              <button
-                type="button"
-                onClick={() => setAddModalOpen(true)}
-                className="mt-3 inline-block text-sm text-primary hover:underline"
-              >
-                Add the first guest
-              </button>
-            )}
-          </div>
+          <EmptyState
+            icon={Users}
+            title="No guests yet"
+            description="Start building your guest list to track RSVPs"
+            actionLabel={perms.can.editGuests ? "Add your first guest" : undefined}
+            onClick={perms.can.editGuests ? () => setAddModalOpen(true) : undefined}
+          />
         )
       ) : (
         <div className={`transition-opacity duration-150 ${isPending ? "opacity-50 pointer-events-none" : ""}`}>
