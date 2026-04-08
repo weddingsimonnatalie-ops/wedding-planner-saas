@@ -417,7 +417,7 @@ export function BudgetList() {
 
       {summary.categories.length === 0 && summary.unallocated.supplierCount === 0 ? (
         <EmptyState
-          icon={PiggyBank}
+          variant="payments"
           title="No budget categories"
           description="Add categories in Settings to track spending"
           actionLabel={can.editBudget ? "Add categories" : undefined}

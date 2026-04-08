@@ -268,7 +268,7 @@ export function PlannerEventsTab() {
       {/* Upcoming */}
       {upcoming.length === 0 && past.length === 0 && (
         <EmptyState
-          icon={CalendarDays}
+          variant="timeline"
           title="No events yet"
           description="Add appointments to stay organised"
           actionLabel={perms.editAppointments ? "Add your first event" : undefined}

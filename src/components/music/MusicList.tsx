@@ -114,7 +114,7 @@ export function MusicList({ initialPlaylists }: Props) {
           )}
         </div>
         <EmptyState
-          icon={Music}
+          variant="music"
           title="No playlists yet"
           description="Create playlists to organise your wedding music"
           actionLabel={can.editMusic ? "Create playlist" : undefined}

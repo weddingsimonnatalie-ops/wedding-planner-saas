@@ -976,13 +976,13 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
       {guests.length === 0 ? (
         hasActiveFilters ? (
           <EmptyState
-            icon={Search}
+            variant="default"
             title="No guests match your filters"
             description="Try adjusting or clearing your filters"
           />
         ) : (
           <EmptyState
-            icon={Users}
+            variant="guests"
             title="No guests yet"
             description="Start building your guest list to track RSVPs"
             actionLabel={perms.can.editGuests ? "Add your first guest" : undefined}

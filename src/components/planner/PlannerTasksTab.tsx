@@ -701,7 +701,7 @@ export function PlannerTasksTab() {
             {/* Empty: no tasks at all */}
             {allTasksEmpty && (
               <EmptyState
-                icon={CheckSquare}
+                variant="tasks"
                 title="No tasks yet"
                 description="Stay organised by adding tasks for everything you need to do before the big day"
                 actionLabel={perms.editTasks ? "Add your first task" : undefined}
@@ -712,7 +712,7 @@ export function PlannerTasksTab() {
             {/* Empty: filters active but no results */}
             {!allTasksEmpty && noGroupResults && filtersActive && (
               <EmptyState
-                icon={Search}
+                variant="default"
                 title="No tasks match your filters"
                 description="Try adjusting or clearing your filters"
               />

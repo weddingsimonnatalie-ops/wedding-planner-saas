@@ -157,7 +157,7 @@ export function TimelineList() {
       {/* Timeline */}
       {events.length === 0 ? (
         <EmptyState
-          icon={Clock}
+          variant="timeline"
           title="No timeline events"
           description="Add events to your wedding day schedule"
           actionLabel={can.editTimeline ? "Add your first event" : undefined}

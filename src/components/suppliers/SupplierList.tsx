@@ -230,7 +230,7 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
       {/* Grouped supplier cards */}
       {filtered.length === 0 ? (
         <EmptyState
-          icon={Briefcase}
+          variant="suppliers"
           title="No suppliers yet"
           description="Add vendors to track bookings and payments"
           actionLabel={perms.editSuppliers ? "Add your first supplier" : undefined}

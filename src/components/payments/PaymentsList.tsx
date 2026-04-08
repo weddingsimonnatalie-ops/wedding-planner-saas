@@ -1067,7 +1067,7 @@ export function PaymentsList() {
       {/* Empty states */}
       {payments.length === 0 && (
         <EmptyState
-          icon={CreditCard}
+          variant="payments"
           title="No payments yet"
           description="Add payments via a supplier"
           actionLabel="View suppliers"
@@ -1077,7 +1077,7 @@ export function PaymentsList() {
 
       {payments.length > 0 && filtered.length === 0 && (
         <EmptyState
-          icon={Search}
+          variant="default"
           title="No payments match your filters"
           description="Try adjusting or clearing your filters"
         />
