@@ -28,6 +28,12 @@ interface SearchResult {
   preview: string | null;
 }
 
+// Ensure URL is HTTPS to avoid mixed content issues
+function ensureHttps(url: string | null): string | null {
+  if (!url) return null;
+  return url.replace(/^http:\/\//, "https://");
+}
+
 // GET /api/music/search - Search Deezer for tracks
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -52,16 +58,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ results: [] });
     }
 
-    // Map results to our format
+    // Map results to our format, ensuring HTTPS URLs
     const results: SearchResult[] = data.data.slice(0, 10).map((track: DeezerTrack) => ({
       id: String(track.id),
       title: track.title,
       artist: track.artist?.name || "Unknown Artist",
       durationSec: track.duration || null,
       album: track.album?.title || null,
-      albumArt: track.album?.cover_medium || null,
-      deezerUrl: track.link || null,
-      preview: track.preview || null,
+      albumArt: ensureHttps(track.album?.cover_medium || null),
+      deezerUrl: ensureHttps(track.link || null),
+      preview: ensureHttps(track.preview || null),
     }));
 
     return NextResponse.json({ results });

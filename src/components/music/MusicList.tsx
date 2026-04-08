@@ -16,6 +16,8 @@ interface Track {
   durationSec: number | null;
   url: string | null;
   notes: string | null;
+  albumArt: string | null;
+  deezerUrl: string | null;
   sortOrder: number;
 }
 
@@ -232,7 +234,7 @@ function PlaylistContent({
     setTimeout(() => setToast(null), 3000);
   }
 
-  async function handleAddTrack(data: { title: string; artist: string | null; durationSec: number | null; url: string | null; notes: string | null }) {
+  async function handleAddTrack(data: { title: string; artist: string | null; durationSec: number | null; url: string | null; notes: string | null; albumArt?: string | null; deezerUrl?: string | null }) {
     const res = await fetchApi(`/api/playlists/${playlistId}/tracks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -246,7 +248,7 @@ function PlaylistContent({
     }
   }
 
-  async function handleUpdateTrack(data: { id?: string; title: string; artist: string | null; durationSec: number | null; url: string | null; notes: string | null }) {
+  async function handleUpdateTrack(data: { id?: string; title: string; artist: string | null; durationSec: number | null; url: string | null; notes: string | null; albumArt?: string | null; deezerUrl?: string | null }) {
     if (!data.id) return;
     const res = await fetchApi(`/api/tracks/${data.id}`, {
       method: "PUT",
@@ -291,18 +293,29 @@ function PlaylistContent({
         ) : (
           tracks.map((track, index) => (
             <div key={track.id} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 group">
-              <span className="text-sm text-gray-400 w-6 text-center">{index + 1}</span>
+              <span className="text-sm text-gray-400 w-6 text-center shrink-0">{index + 1}</span>
+              {track.albumArt ? (
+                <img
+                  src={track.albumArt}
+                  alt=""
+                  className="w-10 h-10 rounded object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <Music className="w-5 h-5 text-gray-400" />
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{track.title}</p>
-                {track.artist && <p className="text-xs text-gray-500">{track.artist}</p>}
+                {track.artist && <p className="text-xs text-gray-500 truncate">{track.artist}</p>}
               </div>
               {track.durationSec && (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 flex-shrink-0">
                   {Math.floor(track.durationSec / 60)}:{(track.durationSec % 60).toString().padStart(2, "0")}
                 </span>
               )}
               {canEdit && (
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                   <button
                     onClick={() => {
                       setEditingTrack(track);

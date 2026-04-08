@@ -11,6 +11,8 @@ interface Track {
   durationSec: number | null;
   url: string | null;
   notes: string | null;
+  albumArt?: string | null;
+  deezerUrl?: string | null;
 }
 
 interface SearchResult {
@@ -57,6 +59,7 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
   );
   const [url, setUrl] = useState(track?.url ?? "");
   const [notes, setNotes] = useState(track?.notes ?? "");
+  const [albumArt, setAlbumArt] = useState(track?.albumArt ?? null);
   const [error, setError] = useState<string | null>(null);
 
   // Search state
@@ -102,6 +105,9 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
     if (result.deezerUrl) {
       setUrl(result.deezerUrl);
     }
+    if (result.albumArt) {
+      setAlbumArt(result.albumArt);
+    }
     setSearchResults([]);
     setSearchQuery("");
   }
@@ -122,6 +128,7 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
       durationSec,
       url: url.trim() || null,
       notes: notes.trim() || null,
+      albumArt,
     });
   };
 

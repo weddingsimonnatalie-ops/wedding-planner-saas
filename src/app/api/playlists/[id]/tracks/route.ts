@@ -54,6 +54,8 @@ export async function POST(
         durationSec: durationSec ? parseInt(durationSec) : null,
         url: url?.trim() || null,
         notes: notes?.trim() || null,
+        albumArt: body.albumArt?.trim() || null,
+        deezerUrl: body.deezerUrl?.trim() || null,
         sortOrder: nextSortOrder,
       },
     })

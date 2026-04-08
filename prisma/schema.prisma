@@ -599,6 +599,8 @@ model Track {
   durationSec Int?
   url         String?
   notes       String?
+  albumArt    String?
+  deezerUrl   String?
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -16,7 +16,7 @@ export async function PUT(
   const { id } = await params;
 
   const body = await req.json();
-  const { title, artist, durationSec, url, notes, sortOrder } = body;
+  const { title, artist, durationSec, url, notes, sortOrder, albumArt, deezerUrl } = body;
 
   // Verify track belongs to user's wedding
   const existing = await withTenantContext(weddingId, async (tx) =>
@@ -37,6 +37,8 @@ export async function PUT(
     url?: string | null;
     notes?: string | null;
     sortOrder?: number;
+    albumArt?: string | null;
+    deezerUrl?: string | null;
   } = {};
 
   if (title !== undefined) updateData.title = title.trim();
@@ -45,6 +47,8 @@ export async function PUT(
   if (url !== undefined) updateData.url = url?.trim() || null;
   if (notes !== undefined) updateData.notes = notes?.trim() || null;
   if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
+  if (albumArt !== undefined) updateData.albumArt = albumArt?.trim() || null;
+  if (deezerUrl !== undefined) updateData.deezerUrl = deezerUrl?.trim() || null;
 
   const track = await withTenantContext(weddingId, async (tx) =>
     tx.track.update({
