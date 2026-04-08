@@ -19,9 +19,7 @@ interface SearchResult {
   artist: string;
   durationSec: number | null;
   album: string | null;
-  genre: string | null;
-  youtubeUrl: string | null;
-  thumbnail: string | null;
+  preview: string | null;
 }
 
 interface Props {
@@ -60,15 +58,14 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   // Search state
-  const [searchArtist, setSearchArtist] = useState("");
-  const [searchTrack, setSearchTrack] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
 
   async function handleSearch() {
-    if (!searchArtist.trim() || !searchTrack.trim()) {
-      setSearchError("Please enter both artist and track name");
+    if (!searchQuery.trim() || searchQuery.trim().length < 2) {
+      setSearchError("Please enter at least 2 characters");
       return;
     }
 
@@ -77,9 +74,7 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
     setSearchResults([]);
 
     try {
-      const res = await fetchApi(
-        `/api/music/search?artist=${encodeURIComponent(searchArtist)}&track=${encodeURIComponent(searchTrack)}`
-      );
+      const res = await fetchApi(`/api/music/search?q=${encodeURIComponent(searchQuery)}`);
       const data = await res.json();
 
       if (data.error) {
@@ -102,12 +97,8 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
     if (result.durationSec) {
       setDurationInput(formatDuration(result.durationSec));
     }
-    if (result.youtubeUrl) {
-      setUrl(result.youtubeUrl);
-    }
     setSearchResults([]);
-    setSearchArtist("");
-    setSearchTrack("");
+    setSearchQuery("");
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -175,34 +166,28 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
           {!track && (
             <div className="mb-6 pb-6 border-b border-gray-200">
               <h3 className="text-sm font-medium text-gray-700 mb-3">
-                Search TheAudioDB
+                Search for a song
               </h3>
               <div className="flex gap-2 mb-2">
                 <input
                   type="text"
-                  value={searchArtist}
-                  onChange={(e) => setSearchArtist(e.target.value)}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  placeholder="Artist"
-                />
-                <input
-                  type="text"
-                  value={searchTrack}
-                  onChange={(e) => setSearchTrack(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  placeholder="Song title"
+                  placeholder="Song or artist name..."
                 />
                 <button
                   type="button"
                   onClick={handleSearch}
-                  disabled={searching || !searchArtist.trim() || !searchTrack.trim()}
+                  disabled={searching || searchQuery.trim().length < 2}
                   className="px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                 >
                   {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                 </button>
               </div>
               <p className="text-xs text-gray-400">
-                Search for a song to auto-fill details
+                Search by song title, artist, or both
               </p>
 
               {/* Search results */}

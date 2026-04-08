@@ -2,18 +2,18 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 
-// TheAudioDB free API key (public test key)
-const AUDIO_DB_KEY = "2";
-
-interface AudioDbTrack {
-  idTrack: string;
-  strTrack: string;
-  strArtist: string;
-  intDuration: string;
-  strAlbum: string | null;
-  strGenre: string | null;
-  strMusicVid: string | null;
-  strTrackThumb: string | null;
+interface DeezerTrack {
+  id: number;
+  title: string;
+  artist: {
+    name: string;
+  };
+  duration: number;
+  album: {
+    title: string;
+    cover_small: string;
+  };
+  preview: string;
 }
 
 interface SearchResult {
@@ -22,51 +22,46 @@ interface SearchResult {
   artist: string;
   durationSec: number | null;
   album: string | null;
-  genre: string | null;
-  youtubeUrl: string | null;
-  thumbnail: string | null;
+  preview: string | null;
 }
 
-// GET /api/music/search - Search TheAudioDB for tracks
+// GET /api/music/search - Search Deezer for tracks
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const artist = searchParams.get("artist");
-  const track = searchParams.get("track");
+  const query = searchParams.get("q");
 
-  if (!artist || !track) {
-    return NextResponse.json({ error: "artist and track parameters required" }, { status: 400 });
+  if (!query || query.trim().length < 2) {
+    return NextResponse.json({ error: "Query must be at least 2 characters" }, { status: 400 });
   }
 
   try {
     const response = await fetch(
-      `https://theaudiodb.com/api/v1/json/${AUDIO_DB_KEY}/searchtrack.php?s=${encodeURIComponent(artist)}&t=${encodeURIComponent(track)}`
+      `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=20`
     );
 
     if (!response.ok) {
-      return NextResponse.json({ error: "Failed to search TheAudioDB" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to search Deezer" }, { status: 500 });
     }
 
     const data = await response.json();
 
-    if (!data.track || !Array.isArray(data.track)) {
+    if (!data.data || !Array.isArray(data.data)) {
       return NextResponse.json({ results: [] });
     }
 
     // Map results to our format
-    const results: SearchResult[] = data.track.map((t: AudioDbTrack) => ({
-      id: t.idTrack,
-      title: t.strTrack,
-      artist: t.strArtist,
-      durationSec: t.intDuration ? Math.floor(parseInt(t.intDuration) / 1000) : null,
-      album: t.strAlbum,
-      genre: t.strGenre,
-      youtubeUrl: t.strMusicVid,
-      thumbnail: t.strTrackThumb,
+    const results: SearchResult[] = data.data.slice(0, 10).map((track: DeezerTrack) => ({
+      id: String(track.id),
+      title: track.title,
+      artist: track.artist?.name || "Unknown Artist",
+      durationSec: track.duration || null,
+      album: track.album?.title || null,
+      preview: track.preview || null,
     }));
 
     return NextResponse.json({ results });
   } catch (error) {
-    console.error("TheAudioDB search error:", error);
+    console.error("Deezer search error:", error);
     return NextResponse.json({ error: "Failed to search for tracks" }, { status: 500 });
   }
 }
