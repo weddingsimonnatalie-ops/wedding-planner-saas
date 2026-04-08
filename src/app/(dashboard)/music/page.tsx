@@ -17,8 +17,7 @@ export default async function MusicPage() {
   });
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Music</h1>
+    <div className="flex flex-col">
       <MusicList initialPlaylists={playlists} />
       <a
         href="https://www.deezer.com"

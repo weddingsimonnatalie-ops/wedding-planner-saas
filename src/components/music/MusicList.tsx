@@ -102,6 +102,17 @@ export function MusicList({ initialPlaylists }: Props) {
   if (playlists.length === 0) {
     return (
       <>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-semibold text-gray-900">Music</h1>
+          {can.editMusic && (
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
+            >
+              <Plus className="w-4 h-4" /> Add Playlist
+            </button>
+          )}
+        </div>
         <EmptyState
           icon={Music}
           title="No playlists yet"
@@ -125,41 +136,50 @@ export function MusicList({ initialPlaylists }: Props) {
   }
 
   return (
-    <div className="space-y-3">
-      {/* Import/Export buttons */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        <a
-          href={csvTemplateHref}
-          download="music-import-template.csv"
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <Download className="w-4 h-4" />
-          Template
-        </a>
-        <a
-          href="/api/music/export"
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <Download className="w-4 h-4" />
-          Export
-        </a>
-        {can.editMusic && (
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-semibold text-gray-900">Music</h1>
+        <div className="flex items-center gap-2">
+          <a
+            href={csvTemplateHref}
+            download="music-import-template.csv"
+            className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            <Upload className="w-4 h-4" />
-            Import
-          </button>
-        )}
+            <Download className="w-4 h-4" /> Template
+          </a>
+          <a
+            href="/api/music/export"
+            className="hidden md:flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            <Download className="w-4 h-4" /> Export
+          </a>
+          {can.editMusic && (
+            <>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="hidden md:flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                <Upload className="w-4 h-4" /> Import
+              </button>
+              <button
+                onClick={() => setShowModal(true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
+              >
+                <Plus className="w-4 h-4" /> Add Playlist
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      {playlists.map((playlist) => (
-        <div key={playlist.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <button
-            onClick={() => toggleExpand(playlist.id)}
-            className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
-          >
+      <div className="space-y-3">
+        {playlists.map((playlist) => (
+          <div key={playlist.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-sm hover:border-gray-300 transition-all">
+            <button
+              onClick={() => toggleExpand(playlist.id)}
+              className="w-full flex items-center justify-between p-4 text-left"
+            >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <Music className="w-5 h-5 text-primary" />
@@ -196,16 +216,7 @@ export function MusicList({ initialPlaylists }: Props) {
           )}
         </div>
       ))}
-
-      {can.editMusic && (
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add playlist
-        </button>
-      )}
+      </div>
 
       {showModal && can.editMusic && (
         <PlaylistModal
