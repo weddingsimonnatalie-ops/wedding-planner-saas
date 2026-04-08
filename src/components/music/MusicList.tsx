@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Music, Plus, ChevronDown, ChevronUp, Pencil, Trash2, Upload, Download } from "lucide-react";
+import { Music, Plus, ChevronDown, ChevronUp, Pencil, Trash2, Upload, Download, Copy, Info } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { fetchApi } from "@/lib/fetch";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -317,6 +317,21 @@ function PlaylistContent({
     }
   }
 
+  function copyIsrcList() {
+    const isrcList = tracks
+      .filter((t) => t.isrc)
+      .map((t) => t.isrc)
+      .join("\n");
+
+    if (!isrcList) {
+      showToast("No ISRC codes in this playlist");
+      return;
+    }
+
+    navigator.clipboard.writeText(isrcList);
+    showToast(`${isrcList.split("\n").length} ISRC codes copied`);
+  }
+
   if (loading) {
     return (
       <div className="border-t border-gray-100 p-4">
@@ -404,6 +419,34 @@ function PlaylistContent({
             >
               Delete
             </button>
+          </div>
+        )}
+
+        {/* Copy ISRC button - shown when tracks have ISRC codes */}
+        {tracks.some((t) => t.isrc) && (
+          <div className="pt-3 mt-3 border-t border-gray-100">
+            <button
+              onClick={copyIsrcList}
+              className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <Copy className="w-4 h-4" />
+              Copy ISRC list
+            </button>
+            <p className="mt-1.5 text-xs text-gray-400 flex items-start gap-1">
+              <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+              <span>
+                Use ISRC codes to import tracks into Spotify, Apple Music, or other services via{" "}
+                <a
+                  href="https://soundiiz.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Soundiiz
+                </a>{" "}
+                (free account required)
+              </span>
+            </p>
           </div>
         )}
       </div>
