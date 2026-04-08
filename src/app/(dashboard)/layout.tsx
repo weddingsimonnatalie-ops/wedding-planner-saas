@@ -68,6 +68,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   };
 
   const themeHue = weddingBilling?.themeHue ?? 330;
+  // Defense-in-depth: clamp to valid HSL hue range before injecting into CSS
+  const safeHue = Math.max(0, Math.min(359, Number(themeHue) || 330));
   const currencySymbol = weddingBilling?.currencySymbol ?? "£";
 
   const eventNames: EventNamesConfig = {
@@ -87,7 +89,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <>
-    <style dangerouslySetInnerHTML={{ __html: `:root { --primary: ${themeHue} 60% 55%; --ring: ${themeHue} 60% 55%; }` }} />
+    <style dangerouslySetInnerHTML={{ __html: `:root { --primary: ${safeHue} 60% 55%; --ring: ${safeHue} 60% 55%; }` }} />
     <WeddingProvider weddingId={ctx.weddingId} role={ctx.role} subscriptionStatus={weddingBilling?.subscriptionStatus ?? "TRIALING"} currencySymbol={currencySymbol} eventNames={eventNames}>
       <RefreshProvider>
         <FormDirtyProvider>

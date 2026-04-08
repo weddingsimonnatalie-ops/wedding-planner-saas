@@ -65,6 +65,8 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
     : null;
 
   const themeHue = wedding?.themeHue ?? 330;
+  // Defense-in-depth: clamp to valid HSL hue range before injecting into CSS
+  const safeHue = Math.max(0, Math.min(359, Number(themeHue) || 330));
 
   const eventNames = {
     ceremonyEnabled: wedding?.ceremonyEnabled ?? true,
@@ -93,7 +95,7 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
 
   return (
     <>
-    <style dangerouslySetInnerHTML={{ __html: `:root { --primary: ${themeHue} 60% 55%; --ring: ${themeHue} 60% 55%; }` }} />
+    <style dangerouslySetInnerHTML={{ __html: `:root { --primary: ${safeHue} 60% 55%; --ring: ${safeHue} 60% 55%; }` }} />
     <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-lg w-full max-w-lg">
         <div className="flex flex-col items-center pt-6 pb-4 px-4 sm:px-8">
