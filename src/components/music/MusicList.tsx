@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Music, Plus, ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react";
+import { Music, Plus, ChevronDown, ChevronUp, Pencil, Trash2, Upload, Download } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { fetchApi } from "@/lib/fetch";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlaylistModal } from "./PlaylistModal";
 import { TrackModal } from "./TrackModal";
+import { MusicCsvImportModal } from "./MusicCsvImportModal";
+import { CSV_TEMPLATE_HEADERS, CSV_TEMPLATE_EXAMPLE } from "@/lib/music-csv";
 
 interface Track {
   id: string;
@@ -41,7 +43,10 @@ export function MusicList({ initialPlaylists }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(CSV_TEMPLATE_HEADERS + CSV_TEMPLATE_EXAMPLE)}`;
 
   function showToast(msg: string) {
     setToast(msg);
@@ -121,6 +126,34 @@ export function MusicList({ initialPlaylists }: Props) {
 
   return (
     <div className="space-y-3">
+      {/* Import/Export buttons */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <a
+          href={csvTemplateHref}
+          download="music-import-template.csv"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          Template
+        </a>
+        <a
+          href="/api/music/export"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          Export
+        </a>
+        {can.editMusic && (
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            Import
+          </button>
+        )}
+      </div>
+
       {playlists.map((playlist) => (
         <div key={playlist.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <button
@@ -187,6 +220,16 @@ export function MusicList({ initialPlaylists }: Props) {
             } else {
               handleCreate(data);
             }
+          }}
+        />
+      )}
+
+      {showImportModal && can.editMusic && (
+        <MusicCsvImportModal
+          onClose={() => setShowImportModal(false)}
+          onImported={() => {
+            setShowImportModal(false);
+            router.refresh();
           }}
         />
       )}
