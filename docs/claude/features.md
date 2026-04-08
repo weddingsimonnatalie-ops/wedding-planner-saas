@@ -421,6 +421,55 @@ Unified view combining appointments (Events) and tasks. `/appointments` and `/ta
 | VIEWER | ✅ | ❌ |
 | RSVP_MANAGER | ✅ | ❌ |
 
+## Music (`/music`)
+
+Music playlist management for wedding planning. Create custom playlists, add tracks via Deezer search or manual entry.
+
+**Playlist features:**
+- Create/delete playlists with custom names (e.g., "Ceremony entrance", "First dance", "Party hits")
+- Optional description for each playlist
+- Tracks sorted by `sortOrder` within each playlist
+
+**Track features:**
+- Add tracks manually or via Deezer search
+- **Deezer integration**: Free API, no authentication required; search returns title, artist, duration, album art, ISRC
+- Fields: title (required), artist, duration (MM:SS or seconds), URL, notes, album art, Deezer URL, ISRC
+- Album art thumbnails displayed in track list (40x40)
+- Edit/delete individual tracks
+
+**CSV Import/Export:**
+- **Export**: Downloads all playlists and tracks as CSV
+- **Import**: Upload CSV with preview showing new tracks, duplicates (existing tracks), and errors
+- CSV format: `Playlist Name, Playlist Description, Track Title, Artist, Duration (seconds), URL, Notes`
+- Duration accepts seconds (`200`) or MM:SS format (`3:20`)
+- Duplicate detection: tracks matched by title + artist within playlist
+
+**Deezer attribution:**
+- Logo displayed on music page (required by Deezer API guidelines)
+- Links to deezer.com
+
+**Role permissions for music:**
+| Role | View | Add/Edit/Delete |
+|------|------|-----------------|
+| ADMIN | ✅ | ✅ |
+| VIEWER | ✅ | ❌ |
+| RSVP_MANAGER | ✅ | ❌ |
+
+**Components:** `src/components/music/MusicList.tsx`, `src/components/music/PlaylistModal.tsx`, `src/components/music/TrackModal.tsx`, `src/components/music/MusicCsvImportModal.tsx`
+
+**API routes:**
+- `GET /api/playlists` — list all playlists with track counts
+- `POST /api/playlists` — create playlist
+- `GET /api/playlists/[id]` — get playlist with tracks
+- `PUT /api/playlists/[id]` — update playlist
+- `DELETE /api/playlists/[id]` — delete playlist
+- `POST /api/playlists/[id]/tracks` — add track
+- `PUT /api/tracks/[id]` — update track
+- `DELETE /api/tracks/[id]` — delete track
+- `GET /api/music/search` — Deezer search (`?q=query`)
+- `GET /api/music/export` — export CSV
+- `POST /api/music/import` — import CSV (preview + confirm)
+
 ## Settings
 
 Organized into 4 tabs accessible to ADMIN only:

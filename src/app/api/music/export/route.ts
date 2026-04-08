@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
             durationSec: true,
             url: true,
             notes: true,
+            isrc: true,
             sortOrder: true,
           },
           orderBy: { sortOrder: "asc" },

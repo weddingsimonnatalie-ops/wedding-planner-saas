@@ -240,6 +240,7 @@ export async function POST(req: NextRequest) {
                 durationSec: row.durationSec ?? null,
                 url: row.url ?? null,
                 notes: row.notes ?? null,
+                isrc: row.isrc ?? null,
               },
             });
             tracksUpdated++;
@@ -258,6 +259,7 @@ export async function POST(req: NextRequest) {
             durationSec: row.durationSec ?? null,
             url: row.url ?? null,
             notes: row.notes ?? null,
+            isrc: row.isrc ?? null,
             sortOrder: nextTrackSort,
           },
         });

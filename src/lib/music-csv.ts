@@ -6,11 +6,24 @@ export interface CsvTrackRow {
   durationSec?: number;
   url?: string;
   notes?: string;
+  isrc?: string;
 }
 
 export interface CsvParseResult {
   rows: (CsvTrackRow & { _error?: string; _line: number })[];
   errors: string[];
+}
+
+// ISRC format: 2 letters + 3 letters/digits + 2 digits + 5 digits (e.g., USWB11200587)
+const ISRC_REGEX = /^[A-Z]{2}[A-Z0-9]{3}\d{2}\d{5}$/;
+
+function validateIsrc(val: string | undefined): string | undefined {
+  if (!val) return undefined;
+  const cleaned = val.trim().toUpperCase();
+  if (!ISRC_REGEX.test(cleaned)) {
+    return undefined; // Invalid format, ignore
+  }
+  return cleaned;
 }
 
 /** Parse duration string - accepts "200", "3:20", "03:20" */
@@ -61,6 +74,7 @@ export function parseMusicCsv(content: string): CsvParseResult {
   const durationIdx = col(["duration (seconds)", "duration", "durationsec", "length", "duration (secs)"]);
   const urlIdx = col(["url", "link", "spotify url", "youtube url"]);
   const notesIdx = col(["notes", "note", "comments"]);
+  const isrcIdx = col(["isrc", "isrc code", "recording code"]);
 
   const rows: CsvParseResult["rows"] = [];
   const errors: string[] = [];
@@ -81,6 +95,7 @@ export function parseMusicCsv(content: string): CsvParseResult {
         durationSec: parseDuration(vals[durationIdx]),
         url: vals[urlIdx]?.trim() || undefined,
         notes: vals[notesIdx]?.trim() || undefined,
+        isrc: validateIsrc(vals[isrcIdx]),
         _error: !playlistName ? "Playlist name is required" : "Track title is required",
         _line: lineNum,
       });
@@ -95,6 +110,7 @@ export function parseMusicCsv(content: string): CsvParseResult {
       durationSec: parseDuration(vals[durationIdx]),
       url: vals[urlIdx]?.trim() || undefined,
       notes: vals[notesIdx]?.trim() || undefined,
+      isrc: validateIsrc(vals[isrcIdx]),
       _line: lineNum,
     });
   }
@@ -128,12 +144,12 @@ function splitCsvLine(line: string): string[] {
 }
 
 export const CSV_TEMPLATE_HEADERS =
-  "Playlist Name,Playlist Description,Track Title,Artist,Duration (seconds),URL,Notes\n";
+  "Playlist Name,Playlist Description,Track Title,Artist,Duration (seconds),URL,Notes,ISRC\n";
 
 export const CSV_TEMPLATE_EXAMPLE =
-  "Reception,Dance floor hits,Blinding Lights,The Weeknd,200,https://open.spotify.com/track/xxx,Opening track\n" +
-  "Reception,Dance floor hits,Happy,Pharrell Williams,233,,\n" +
-  "Ceremony,,Canon in D,Pachelbel,360,,\n";
+  "Reception,Dance floor hits,Blinding Lights,The Weeknd,200,https://open.spotify.com/track/xxx,Opening track,USWB11200587\n" +
+  "Reception,Dance floor hits,Happy,Pharrell Williams,233,,,\n" +
+  "Ceremony,,Canon in D,Pachelbel,360,,,\n";
 
 export function tracksToCsv(
   playlists: {
@@ -146,11 +162,12 @@ export function tracksToCsv(
       durationSec?: number | null;
       url?: string | null;
       notes?: string | null;
+      isrc?: string | null;
       sortOrder: number;
     }[];
   }[]
 ): string {
-  const header = "Playlist Name,Playlist Description,Track Title,Artist,Duration (seconds),URL,Notes";
+  const header = "Playlist Name,Playlist Description,Track Title,Artist,Duration (seconds),URL,Notes,ISRC";
   const rows: string[] = [];
 
   // Sort playlists by sortOrder, then tracks within each playlist
@@ -169,6 +186,7 @@ export function tracksToCsv(
           track.durationSec?.toString() ?? "",
           track.url ?? "",
           track.notes ?? "",
+          track.isrc ?? "",
         ]
           .map(csvEscape)
           .join(",")
