@@ -11,9 +11,10 @@ interface DeezerTrack {
   duration: number;
   album: {
     title: string;
-    cover_small: string;
+    cover_medium: string;
   };
   preview: string;
+  link: string;
 }
 
 interface SearchResult {
@@ -22,6 +23,8 @@ interface SearchResult {
   artist: string;
   durationSec: number | null;
   album: string | null;
+  albumArt: string | null;
+  deezerUrl: string | null;
   preview: string | null;
 }
 
@@ -56,6 +59,8 @@ export async function GET(req: NextRequest) {
       artist: track.artist?.name || "Unknown Artist",
       durationSec: track.duration || null,
       album: track.album?.title || null,
+      albumArt: track.album?.cover_medium || null,
+      deezerUrl: track.link || null,
       preview: track.preview || null,
     }));
 

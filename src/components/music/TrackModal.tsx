@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Search, Loader2 } from "lucide-react";
+import { X, Search, Loader2, Music } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 
 interface Track {
@@ -19,6 +19,8 @@ interface SearchResult {
   artist: string;
   durationSec: number | null;
   album: string | null;
+  albumArt: string | null;
+  deezerUrl: string | null;
   preview: string | null;
 }
 
@@ -96,6 +98,9 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
     setArtist(result.artist);
     if (result.durationSec) {
       setDurationInput(formatDuration(result.durationSec));
+    }
+    if (result.deezerUrl) {
+      setUrl(result.deezerUrl);
     }
     setSearchResults([]);
     setSearchQuery("");
@@ -196,20 +201,33 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
               )}
 
               {searchResults.length > 0 && (
-                <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
+                <div className="mt-3 space-y-2 max-h-64 overflow-y-auto">
                   {searchResults.map((result) => (
                     <button
                       key={result.id}
                       type="button"
                       onClick={() => handleSelectResult(result)}
-                      className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left"
                     >
-                      <p className="font-medium text-gray-900">{result.title}</p>
-                      <p className="text-sm text-gray-500">
-                        {result.artist}
-                        {result.durationSec && ` · ${formatDuration(result.durationSec)}`}
-                        {result.album && ` · ${result.album}`}
-                      </p>
+                      {result.albumArt ? (
+                        <img
+                          src={result.albumArt}
+                          alt=""
+                          className="w-12 h-12 rounded object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
+                          <Music className="w-6 h-6 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{result.title}</p>
+                        <p className="text-sm text-gray-500 truncate">
+                          {result.artist}
+                          {result.durationSec && ` · ${formatDuration(result.durationSec)}`}
+                          {result.album && ` · ${result.album}`}
+                        </p>
+                      </div>
                     </button>
                   ))}
                 </div>
