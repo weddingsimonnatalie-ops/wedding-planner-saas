@@ -56,6 +56,7 @@ export async function POST(
         notes: notes?.trim() || null,
         albumArt: body.albumArt?.trim() || null,
         deezerUrl: body.deezerUrl?.trim() || null,
+        isrc: body.isrc?.trim() || null,
         sortOrder: nextSortOrder,
       },
     })

@@ -15,6 +15,7 @@ interface DeezerTrack {
   };
   preview: string;
   link: string;
+  isrc: string;
 }
 
 interface SearchResult {
@@ -26,6 +27,7 @@ interface SearchResult {
   albumArt: string | null;
   deezerUrl: string | null;
   preview: string | null;
+  isrc: string | null;
 }
 
 // Ensure URL is HTTPS to avoid mixed content issues
@@ -68,6 +70,7 @@ export async function GET(req: NextRequest) {
       albumArt: ensureHttps(track.album?.cover_medium || null),
       deezerUrl: ensureHttps(track.link || null),
       preview: ensureHttps(track.preview || null),
+      isrc: track.isrc || null,
     }));
 
     return NextResponse.json({ results });

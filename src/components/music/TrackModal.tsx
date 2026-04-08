@@ -13,6 +13,7 @@ interface Track {
   notes: string | null;
   albumArt?: string | null;
   deezerUrl?: string | null;
+  isrc?: string | null;
 }
 
 interface SearchResult {
@@ -24,6 +25,7 @@ interface SearchResult {
   albumArt: string | null;
   deezerUrl: string | null;
   preview: string | null;
+  isrc: string | null;
 }
 
 interface Props {
@@ -60,6 +62,7 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
   const [url, setUrl] = useState(track?.url ?? "");
   const [notes, setNotes] = useState(track?.notes ?? "");
   const [albumArt, setAlbumArt] = useState(track?.albumArt ?? null);
+  const [isrc, setIsrc] = useState(track?.isrc ?? null);
   const [error, setError] = useState<string | null>(null);
 
   // Search state
@@ -108,6 +111,9 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
     if (result.albumArt) {
       setAlbumArt(result.albumArt);
     }
+    if (result.isrc) {
+      setIsrc(result.isrc);
+    }
     setSearchResults([]);
     setSearchQuery("");
   }
@@ -129,6 +135,7 @@ export function TrackModal({ playlistId, track, onClose, onSubmit }: Props) {
       url: url.trim() || null,
       notes: notes.trim() || null,
       albumArt,
+      isrc,
     });
   };
 

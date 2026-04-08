@@ -18,6 +18,7 @@ interface Track {
   notes: string | null;
   albumArt: string | null;
   deezerUrl: string | null;
+  isrc: string | null;
   sortOrder: number;
 }
 
@@ -234,7 +235,7 @@ function PlaylistContent({
     setTimeout(() => setToast(null), 3000);
   }
 
-  async function handleAddTrack(data: { title: string; artist: string | null; durationSec: number | null; url: string | null; notes: string | null; albumArt?: string | null; deezerUrl?: string | null }) {
+  async function handleAddTrack(data: { title: string; artist: string | null; durationSec: number | null; url: string | null; notes: string | null; albumArt?: string | null; deezerUrl?: string | null; isrc?: string | null }) {
     const res = await fetchApi(`/api/playlists/${playlistId}/tracks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -248,7 +249,7 @@ function PlaylistContent({
     }
   }
 
-  async function handleUpdateTrack(data: { id?: string; title: string; artist: string | null; durationSec: number | null; url: string | null; notes: string | null; albumArt?: string | null; deezerUrl?: string | null }) {
+  async function handleUpdateTrack(data: { id?: string; title: string; artist: string | null; durationSec: number | null; url: string | null; notes: string | null; albumArt?: string | null; deezerUrl?: string | null; isrc?: string | null }) {
     if (!data.id) return;
     const res = await fetchApi(`/api/tracks/${data.id}`, {
       method: "PUT",
