@@ -69,7 +69,7 @@ wedding-planner-saas/
 ├── prisma/
 │   ├── schema.prisma          — Full data model (authoritative source)
 │   ├── seed.ts                — Creates admin users from SEED_ADMIN_* env vars
-│   └── migrations/            — Numbered migrations (0–24)
+│   └── migrations/            — Numbered migrations (0–25)
 ├── src/
 │   ├── instrumentation.ts     — Next.js startup hook; validates environment variables
 │   ├── middleware.ts          — Auth guard for all routes except login/rsvp/api-auth
@@ -119,7 +119,10 @@ wedding-planner-saas/
 │   │   └── api/               — All API routes
 │   └── components/
 │       ├── LayoutShell.tsx              — Main layout: sidebar nav + mobile bottom nav
-│       ├── dashboard/DashboardClient.tsx
+│       ├── dashboard/DashboardClient.tsx  — Main dashboard; preset-driven section rendering
+│       ├── dashboard/DashboardPresets.tsx  — 4 preset configs (Classic, Actions First, Budget Focus, Organized)
+│       ├── dashboard/LayoutPicker.tsx    — Popover to select dashboard layout; persists via PATCH /api/profile
+│       ├── dashboard/sections/           — 9 extracted dashboard section components (QuickStats, GuestSummary, BudgetOverview, etc.)
 │       ├── guests/
 │       │   ├── GuestList.tsx            — Guest list table + filters
 │       │   ├── GuestModal.tsx           — Add guest modal

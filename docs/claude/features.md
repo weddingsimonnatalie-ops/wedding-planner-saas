@@ -69,6 +69,14 @@ Three roles defined in the `UserRole` Prisma enum:
 
 ## Dashboard (`/`)
 
+- **Layout presets**: 4 selectable layouts via LayoutPicker popover (grid icon in header)
+  - Classic (default): summary stats first, then details
+  - Actions First: payments + tasks/appointments at top
+  - Budget Focus: countdown hero + budget overview lead
+  - Organized: section headers ("At a Glance" / "Needs Attention" / "Progress")
+  - Persisted per-user in `User.dashboardLayout` (default "classic")
+  - Accessible to all roles (not just admin) — picker is on the dashboard itself, not in Settings
+- **Architecture**: Section-based — 9 extracted components in `src/components/dashboard/sections/`; preset is an ordered array of rows with section IDs; `DashboardPresets.tsx` defines layouts declaratively
 - Countdown to wedding day
 - **Design**: Entrance animations (`animate-fade-in-up` with staggered delays), hover effects on cards, circular progress ring on countdown, section headers with accent underlines
 - Quick stats:
