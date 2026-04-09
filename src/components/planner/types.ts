@@ -32,6 +32,8 @@ export interface EventData {
   supplierId: string | null;
   reminderDays: number | null;
   supplier: PlannerSupplier | null;
+  isCompleted: boolean;
+  completedAt: string | null;
 }
 
 // ── Task Types ────────────────────────────────────────────────────────────────

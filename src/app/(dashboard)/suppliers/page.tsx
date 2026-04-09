@@ -4,9 +4,14 @@ import { SupplierList } from "@/components/suppliers/SupplierList";
 import { requireServerContext } from "@/lib/server-context";
 import { withTenantContext } from "@/lib/tenant";
 
-export default async function SuppliersPage() {
+interface PageProps {
+  searchParams: Promise<{ status?: string }>;
+}
+
+export default async function SuppliersPage({ searchParams }: PageProps) {
   const ctx = await requireServerContext(["ADMIN", "VIEWER"]);
   const { weddingId } = ctx;
+  const { status } = await searchParams;
 
   // Auto-mark overdue payments across all suppliers for this wedding
   await withTenantContext(weddingId, (tx) =>
@@ -26,7 +31,7 @@ export default async function SuppliersPage() {
 
   return (
     <div className="flex flex-col">
-      <SupplierList initialSuppliers={suppliers as any} />
+      <SupplierList initialSuppliers={suppliers as any} initialStatus={status ?? ""} />
     </div>
   );
 }

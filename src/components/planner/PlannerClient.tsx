@@ -74,22 +74,26 @@ function PriorityBadge({ priority }: { priority: TaskPriority }) {
 
 function EventCard({
   event,
+  canComplete,
+  onToggleComplete,
   onEdit,
   onDelete,
   dimmed = false,
 }: {
   event: EventData;
+  canComplete: boolean;
+  onToggleComplete: (e: EventData) => void;
   onEdit?: () => void;
   onDelete?: () => void;
   dimmed?: boolean;
 }) {
   return (
-    <div className={`bg-white rounded-xl border border-blue-100 p-4 border-l-4 border-l-blue-400 ${dimmed ? "opacity-65" : ""}`}>
+    <div className={`bg-white rounded-xl border border-blue-100 p-4 border-l-4 ${event.isCompleted ? "border-l-gray-300" : "border-l-blue-400"} ${dimmed ? "opacity-65" : ""}`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           {/* Type label + category */}
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${event.isCompleted ? "text-gray-500 bg-gray-50 border-gray-200" : "text-blue-600 bg-blue-50 border-blue-100"}`}>
               <CalendarDays className="w-3 h-3" /> Event
             </span>
             {event.category && (
@@ -102,7 +106,9 @@ function EventCard({
             )}
           </div>
 
-          <p className="text-sm font-semibold text-gray-900 mb-1">{event.title}</p>
+          <p className={`text-sm font-semibold mb-1 ${event.isCompleted ? "line-through text-gray-400" : "text-gray-900"}`}>
+            {event.title}
+          </p>
           <p className="text-xs text-gray-500 font-medium mb-1">{fmtDateTime(event.date)}</p>
 
           {event.location && (
@@ -121,6 +127,9 @@ function EventCard({
           )}
           {event.notes && (
             <p className="text-xs text-gray-400 line-clamp-2 mt-1">{event.notes}</p>
+          )}
+          {event.isCompleted && event.completedAt && (
+            <p className="text-xs text-gray-400 mt-0.5">Completed {fmtDate(event.completedAt)}</p>
           )}
         </div>
 
@@ -145,6 +154,28 @@ function EventCard({
               </button>
             )}
           </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 flex-wrap">
+        {canComplete && !event.isCompleted && (
+          <button
+            type="button"
+            onClick={() => onToggleComplete(event)}
+            className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
+          >
+            <Check className="w-3 h-3" /> Mark as Done
+          </button>
+        )}
+        {canComplete && event.isCompleted && (
+          <button
+            type="button"
+            onClick={() => onToggleComplete(event)}
+            className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] bg-gray-50 text-gray-600 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-100 transition-colors"
+          >
+            <RotateCcw className="w-3 h-3" /> Mark not done
+          </button>
         )}
       </div>
     </div>
@@ -394,6 +425,34 @@ export function PlannerClient() {
     setDeleteEventId(null);
   }
 
+  async function handleEventToggleComplete(event: EventData) {
+    if (!perms.completeTasks) return;
+    const completing = !event.isCompleted;
+    const now = new Date().toISOString();
+
+    setEvents(prev => prev.map(e =>
+      e.id === event.id ? { ...e, isCompleted: completing, completedAt: completing ? now : null } : e
+    ));
+
+    const res = await fetch(`/api/appointments/${event.id}/complete`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: completing }),
+    });
+
+    if (!res.ok) {
+      setEvents(prev => prev.map(e => e.id === event.id ? event : e));
+      showToast("Failed to update event", false);
+      return;
+    }
+
+    const { appointment } = await res.json();
+    setEvents(prev => prev.map(e => e.id === event.id ? appointment : e));
+
+    showToast(completing ? "Event completed ✓" : "Event marked incomplete");
+    triggerRefresh();
+  }
+
   // ── Task handlers ──────────────────────────────────────────────────────────
 
   function handleTaskSave(task: TaskData) {
@@ -486,10 +545,10 @@ export function PlannerClient() {
     t => !t.isCompleted && t.dueDate && new Date(t.dueDate) < today
   );
 
-  // Upcoming: future events + future-due tasks (not completed), sorted chronologically
+  // Upcoming: future events (not completed) + future-due tasks (not completed), sorted chronologically
   const upcomingItems: UnifiedItem[] = [
     ...events
-      .filter(e => new Date(e.date) >= today)
+      .filter(e => !e.isCompleted && new Date(e.date) >= today)
       .map(e => ({ kind: "event" as const, data: e, sortDate: new Date(e.date) })),
     ...tasks
       .filter(t => !t.isCompleted && t.dueDate && new Date(t.dueDate) >= today)
@@ -499,19 +558,23 @@ export function PlannerClient() {
   // No due date: tasks without a due date, not completed
   const noDueDateTasks = tasks.filter(t => !t.isCompleted && !t.dueDate);
 
-  // Past & completed: past events (sorted newest first) + completed tasks (sorted by completedAt desc)
-  const pastEvents = events
-    .filter(e => new Date(e.date) < today)
-    .map(e => ({ kind: "event" as const, data: e, sortDate: new Date(e.date) }));
-  const completedTasks = tasks
-    .filter(t => t.isCompleted)
-    .map(t => ({
-      kind: "task" as const,
-      data: t,
-      sortDate: t.completedAt ? new Date(t.completedAt) : new Date(t.updatedAt),
-    }));
-  const pastAndCompleted: UnifiedItem[] = [...pastEvents, ...completedTasks]
-    .sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
+  // Past & completed: past events + completed events + completed tasks (sorted by completedAt/date desc)
+  const pastAndCompleted: UnifiedItem[] = [
+    ...events
+      .filter(e => e.isCompleted || new Date(e.date) < today)
+      .map(e => ({
+        kind: "event" as const,
+        data: e,
+        sortDate: e.completedAt ? new Date(e.completedAt) : new Date(e.date),
+      })),
+    ...tasks
+      .filter(t => t.isCompleted)
+      .map(t => ({
+        kind: "task" as const,
+        data: t,
+        sortDate: t.completedAt ? new Date(t.completedAt) : new Date(t.updatedAt),
+      })),
+  ].sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime());
 
   const isEmpty =
     overdueTasks.length === 0 &&
@@ -537,6 +600,8 @@ export function PlannerClient() {
         <EventCard
           event={event}
           dimmed={dimmed}
+          canComplete={perms.completeTasks}
+          onToggleComplete={handleEventToggleComplete}
           onEdit={perms.editAppointments ? () => openEditEvent(event) : undefined}
           onDelete={perms.editAppointments ? () => setDeleteEventId(event.id) : undefined}
         />

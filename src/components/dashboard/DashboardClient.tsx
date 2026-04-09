@@ -210,25 +210,30 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
               {stats.guests.total}{" "}
               <span className="text-sm font-normal text-gray-400">guests</span>
             </p>
-            <div className="space-y-2.5">
+            <div className="space-y-1">
               {[
-                { label: "Accepted", value: stats.guests.accepted, dotClass: "bg-green-500", barClass: "from-green-500 to-green-400" },
-                { label: "Partial",  value: stats.guests.partial,  dotClass: "bg-orange-500", barClass: "from-orange-500 to-orange-400" },
-                { label: "Declined", value: stats.guests.declined, dotClass: "bg-red-500", barClass: "from-red-500 to-red-400" },
-                { label: "Pending",  value: stats.guests.pending,  dotClass: "bg-amber-500", barClass: "from-amber-500 to-amber-400" },
-                { label: "Dietary req.", value: stats.guests.dietary, dotClass: "bg-purple-500", barClass: "from-purple-500 to-purple-400" },
-              ].map(({ label, value, dotClass, barClass }) => (
-                <div key={label} className="flex items-center gap-3">
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dotClass}`} />
-                  <span className="text-xs text-gray-500 w-14 shrink-0">{label}</span>
-                  <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                { label: "Accepted", value: stats.guests.accepted, dotClass: "bg-green-500", barClass: "from-green-500 to-green-400", filter: "status=ACCEPTED" },
+                { label: "Partial",  value: stats.guests.partial,  dotClass: "bg-orange-500", barClass: "from-orange-500 to-orange-400", filter: "status=PARTIAL" },
+                { label: "Declined", value: stats.guests.declined, dotClass: "bg-red-500", barClass: "from-red-500 to-red-400", filter: "status=DECLINED" },
+                { label: "Pending",  value: stats.guests.pending,  dotClass: "bg-amber-500", barClass: "from-amber-500 to-amber-400", filter: "status=PENDING" },
+                { label: "Dietary req.", value: stats.guests.dietary, dotClass: "bg-purple-500", barClass: "from-purple-500 to-purple-400", filter: "dietary=has_notes" },
+              ].map(({ label, value, dotClass, barClass, filter }) => (
+                <Link
+                  key={label}
+                  href={`/guests?${filter}`}
+                  className="flex items-center gap-3 group -mx-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-all duration-200"
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dotClass} group-hover:scale-110 transition-transform`} />
+                  <span className="text-xs text-gray-500 w-14 shrink-0 group-hover:text-gray-900 font-medium transition-colors">{label}</span>
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden group-hover:bg-gray-200 transition-colors">
                     <div
-                      className={`h-full rounded-full bg-gradient-to-r ${barClass} transition-all duration-500`}
+                      className={`h-full rounded-full bg-gradient-to-r ${barClass} transition-all duration-300 group-hover:shadow-sm`}
                       style={{ width: stats.guests.total > 0 ? `${(value / stats.guests.total) * 100}%` : "0%" }}
                     />
                   </div>
-                  <span className="text-xs font-semibold text-gray-900 w-6 text-right tabular-nums">{value}</span>
-                </div>
+                  <span className="text-xs font-semibold text-gray-900 w-5 text-right tabular-nums group-hover:text-primary transition-colors">{value}</span>
+                  <ArrowRight className="w-3 h-3 text-gray-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200 opacity-0 group-hover:opacity-100" />
+                </Link>
               ))}
             </div>
             {stats.guests.total === 0 && (
@@ -300,18 +305,25 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
         {showFinance && (
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <SectionHeader title="Suppliers" href="/suppliers" />
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-1">
               {(["BOOKED", "QUOTED", "ENQUIRY", "COMPLETE", "CANCELLED"] as const).map(status => {
                 const count = stats.suppliers[status];
                 const cfg = SUPPLIER_STATUS[status];
                 if (count === 0) return null;
                 return (
-                  <div key={status} className="flex items-center justify-between">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cfg.cls}`}>
+                  <Link
+                    key={status}
+                    href={`/suppliers?status=${status}`}
+                    className="flex items-center justify-between group -mx-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-all duration-200"
+                  >
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cfg.cls} group-hover:shadow-sm transition-shadow`}>
                       {cfg.label}
                     </span>
-                    <span className="text-sm font-semibold text-gray-800">{count}</span>
-                  </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-semibold text-gray-800 group-hover:text-primary transition-colors">{count}</span>
+                      <ArrowRight className="w-3 h-3 text-gray-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200 opacity-0 group-hover:opacity-100" />
+                    </div>
+                  </Link>
                 );
               })}
               {Object.values(stats.suppliers).every(v => v === 0) && (

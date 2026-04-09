@@ -44,7 +44,7 @@ function supplierTotals(s: Supplier) {
   return { contracted, paid, remaining };
 }
 
-export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[] }) {
+export function SupplierList({ initialSuppliers, initialStatus = "" }: { initialSuppliers: Supplier[]; initialStatus?: string }) {
   const { can: perms } = usePermissions();
   const { currencySymbol } = useWedding();
   const router = useRouter();
@@ -52,7 +52,7 @@ export function SupplierList({ initialSuppliers }: { initialSuppliers: Supplier[
   const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
   const [categories, setCategories] = useState<SupplierCategory[]>([]);
   const [catFilter, setCatFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [error, setError] = useState("");
