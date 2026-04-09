@@ -81,8 +81,9 @@ Three roles defined in the `UserRole` Prisma enum:
 - Supplier status breakdown
 - Upcoming and overdue payments list (with inline "Mark as Paid" and email reminder button) — "View all payments →" links to `/payments`
 - Upcoming appointments and tasks in unified 2-column layout (appointments left, tasks right)
-  - Both show icon container with type badge, title, metadata, category badge
-  - Tasks show priority badge and due date; appointments show date/time and location
+  - Both show icon container with type badge, title, category badge, metadata
+  - Appointments: date/time, location (MapPin icon), supplier link
+  - Tasks: priority badge, due date, supplier link, assignee name (bold)
   - "Mark as Done" button with confirmation modal for both
   - Tasks include email reminder button
 - Overdue payments auto-marked on page load
