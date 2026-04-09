@@ -1,18 +1,23 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import {
-  Heart, Clock, AlertCircle, Check, Mail, TrendingUp,
-  Users, LayoutGrid, ArrowRight, CalendarDays, MapPin, CheckSquare,
-  Briefcase, Utensils,
-} from "lucide-react";
+import { Heart } from "lucide-react";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { fetchApi } from "@/lib/fetch";
 import { useWedding } from "@/context/WeddingContext";
 import { UserRole } from "@prisma/client";
-import { SectionHeader } from "@/components/ui/SectionHeader";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { DashboardPresetId, DASHBOARD_PRESETS } from "./DashboardPresets";
+import { DashboardQuickStats } from "./sections/DashboardQuickStats";
+import { DashboardGuestSummary } from "./sections/DashboardGuestSummary";
+import { DashboardBudgetOverview } from "./sections/DashboardBudgetOverview";
+import { DashboardBudgetCategories } from "./sections/DashboardBudgetCategories";
+import { DashboardMeals } from "./sections/DashboardMeals";
+import { DashboardSuppliers } from "./sections/DashboardSuppliers";
+import { DashboardPayments } from "./sections/DashboardPayments";
+import { DashboardAppointments } from "./sections/DashboardAppointments";
+import { DashboardTasks } from "./sections/DashboardTasks";
+import { LayoutPicker } from "./LayoutPicker";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -48,6 +53,7 @@ interface DashStats {
 
 export function DashboardClient({ userName, role, dashboardLayout }: { userName?: string; role?: UserRole; dashboardLayout?: string }) {
   const { currencySymbol } = useWedding();
+  const [layout, setLayout] = useState<DashboardPresetId>((dashboardLayout as DashboardPresetId) || "classic");
   const showFinance = role === "ADMIN" || role === "VIEWER" || role === undefined;
   const [stats, setStats] = useState<DashStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -168,565 +174,102 @@ export function DashboardClient({ userName, role, dashboardLayout }: { userName?
     }
   };
 
+  // ── Section registry ───────────────────────────────────────────────────────────
+  const sectionRegistry: Record<string, React.ReactNode> = {
+    quickStats: (
+      <DashboardQuickStats
+        weddingDate={stats.wedding.weddingDate}
+        timezone={stats.wedding.timezone}
+        guestsAccepted={stats.guests.accepted}
+        guestsTotal={stats.guests.total}
+        guestsAssigned={stats.guests.assigned}
+        receptionEligible={stats.guests.receptionEligible}
+        budgetPaid={stats.budget.paid}
+        budgetContracted={stats.budget.contracted}
+        budgetRemaining={stats.budget.remaining}
+        currencySymbol={currencySymbol}
+        showFinance={showFinance}
+      />
+    ),
+    guestSummary: <DashboardGuestSummary total={stats.guests.total} accepted={stats.guests.accepted} partial={stats.guests.partial} declined={stats.guests.declined} pending={stats.guests.pending} dietary={stats.guests.dietary} />,
+    budgetOverview: showFinance ? <DashboardBudgetOverview contracted={stats.budget.contracted} paid={stats.budget.paid} remaining={stats.budget.remaining} currencySymbol={currencySymbol} /> : null,
+    budgetCategories: showFinance && stats.budgetCategories.length > 0 ? <DashboardBudgetCategories categories={stats.budgetCategories} currencySymbol={currencySymbol} /> : null,
+    meals: <DashboardMeals meals={stats.meals} />,
+    suppliers: showFinance ? <DashboardSuppliers suppliers={stats.suppliers} /> : null,
+    payments: showFinance ? <DashboardPayments payments={stats.payments} currencySymbol={currencySymbol} onMarkPaid={(p) => setMarkPaidConfirm(p)} onSendReminder={handleSendReminder} /> : null,
+    appointments: <DashboardAppointments appointments={stats.appointments} onMarkDone={(a) => setMarkApptDoneConfirm({ id: a.id, title: a.title } as DashStats["appointments"][0])} />,
+    tasks: <DashboardTasks overdue={stats.tasks.overdue} dueSoon={stats.tasks.dueSoon} upcoming={stats.tasks.upcoming} onMarkDone={(t) => setMarkDoneConfirm({ id: t.id, title: t.title } as DashStats["tasks"]["upcoming"][0])} onSendReminder={handleSendTaskReminder} />,
+    countdownHero: <CountdownHeroCard weddingDate={stats.wedding.weddingDate} timezone={stats.wedding.timezone} />,
+  };
+
   return (
     <div className="space-y-6">
-      {/* Welcome */}
+      {/* Welcome header + Layout picker */}
       <div className="relative">
-        {/* Decorative accent line */}
         <div className="absolute -left-4 top-0 bottom-0 w-1 rounded-full bg-gradient-to-b from-primary/40 to-primary/10" />
-        <p className="text-sm text-gray-500 mb-0.5">{stats.wedding.coupleName}</p>
-        <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">
-          Welcome back, {userName ?? "there"}
-        </h1>
-        {stats.wedding.weddingDate && (
-          <p className="text-sm text-primary mt-1 font-medium">
-            {formatDateWithTimezone(stats.wedding.weddingDate)}
-          </p>
-        )}
-      </div>
-
-      {/* Row 1 — quick-stat cards */}
-      <div className={`grid gap-3 animate-fade-in-up stagger-1 ${showFinance ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 lg:grid-cols-3"}`}>
-        <CountdownCard weddingDate={stats.wedding.weddingDate} timezone={stats.wedding.timezone} />
-        <QuickStat
-          icon={<Users className="w-5 h-5 text-indigo-500" />}
-          label="Guests accepted"
-          value={`${stats.guests.accepted} / ${stats.guests.total}`}
-          sub={stats.guests.total > 0 ? `${Math.round(((stats.guests.total - stats.guests.pending) / stats.guests.total) * 100)}% responded` : "No guests yet"}
-          href="/guests"
-        />
-        <QuickStat
-          icon={<LayoutGrid className="w-5 h-5 text-violet-500" />}
-          label="Seated"
-          value={`${stats.guests.assigned} / ${stats.guests.receptionEligible}`}
-          sub={stats.guests.receptionEligible > 0 ? `${Math.round((stats.guests.assigned / stats.guests.receptionEligible) * 100)}% assigned` : "No reception guests"}
-          href="/seating"
-        />
-        {showFinance && (
-          <QuickStat
-            icon={<TrendingUp className="w-5 h-5 text-emerald-500" />}
-            label="Budget paid"
-            value={stats.budget.contracted > 0
-              ? `${Math.round((stats.budget.paid / stats.budget.contracted) * 100)}%`
-              : "—"}
-            sub={stats.budget.contracted > 0
-              ? `${fmt(currencySymbol, stats.budget.remaining)} remaining`
-              : "No suppliers yet"}
-            href="/suppliers"
-          />
-        )}
-      </div>
-
-      {/* Row 2 — Guest breakdown + Budget */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-in-up stagger-2">
-        {/* Guest summary */}
-        <div className={`${showFinance ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-xl border border-gray-200 p-5`}>
-          <SectionHeader title="Guest summary" href="/guests" />
-          <div className="mt-4">
-            <p className="text-2xl font-bold text-gray-900 mb-4">
-              {stats.guests.total}{" "}
-              <span className="text-sm font-normal text-gray-400">guests</span>
-            </p>
-            <div className="space-y-1">
-              {[
-                { label: "Accepted", value: stats.guests.accepted, dotClass: "bg-green-500", barClass: "from-green-500 to-green-400", filter: "status=ACCEPTED" },
-                { label: "Partial",  value: stats.guests.partial,  dotClass: "bg-orange-500", barClass: "from-orange-500 to-orange-400", filter: "status=PARTIAL" },
-                { label: "Declined", value: stats.guests.declined, dotClass: "bg-red-500", barClass: "from-red-500 to-red-400", filter: "status=DECLINED" },
-                { label: "Pending",  value: stats.guests.pending,  dotClass: "bg-amber-500", barClass: "from-amber-500 to-amber-400", filter: "status=PENDING" },
-                { label: "Dietary req.", value: stats.guests.dietary, dotClass: "bg-purple-500", barClass: "from-purple-500 to-purple-400", filter: "dietary=has_notes" },
-              ].map(({ label, value, dotClass, barClass, filter }) => (
-                <Link
-                  key={label}
-                  href={`/guests?${filter}`}
-                  className="flex items-center gap-3 group -mx-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-all duration-200"
-                >
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dotClass} group-hover:scale-110 transition-transform`} />
-                  <span className="text-xs text-gray-500 w-14 shrink-0 group-hover:text-gray-900 font-medium transition-colors">{label}</span>
-                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden group-hover:bg-gray-200 transition-colors">
-                    <div
-                      className={`h-full rounded-full bg-gradient-to-r ${barClass} transition-all duration-300 group-hover:shadow-sm`}
-                      style={{ width: stats.guests.total > 0 ? `${(value / stats.guests.total) * 100}%` : "0%" }}
-                    />
-                  </div>
-                  <span className="text-xs font-semibold text-gray-900 w-5 text-right tabular-nums group-hover:text-primary transition-colors">{value}</span>
-                  <ArrowRight className="w-3 h-3 text-gray-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200 opacity-0 group-hover:opacity-100" />
-                </Link>
-              ))}
-            </div>
-            {stats.guests.total === 0 && (
-              <EmptyState
-                icon={Users}
-                title="No guests yet"
-                description="Start building your guest list to track RSVPs"
-                actionLabel="Add your first guest"
-                href="/guests"
-              />
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm text-gray-500 mb-0.5">{stats.wedding.coupleName}</p>
+            <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">
+              Welcome back, {userName ?? "there"}
+            </h1>
+            {stats.wedding.weddingDate && (
+              <p className="text-sm text-primary mt-1 font-medium">
+                {formatDateWithTimezone(stats.wedding.weddingDate)}
+              </p>
             )}
           </div>
+          <LayoutPicker currentLayout={layout} onLayoutChange={setLayout} />
         </div>
-
-        {/* Budget overview */}
-        {showFinance && (
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <SectionHeader title="Budget overview" href="/suppliers" />
-            <div className="mt-4 space-y-3">
-              {[
-                { label: "Contracted", value: stats.budget.contracted, cls: "text-gray-900" },
-                { label: "Paid",       value: stats.budget.paid,       cls: "text-green-700" },
-                { label: "Remaining",  value: stats.budget.remaining,  cls: "text-amber-700" },
-              ].map(({ label, value, cls }) => (
-                <div key={label} className="flex justify-between items-baseline">
-                  <span className="text-xs text-gray-500">{label}</span>
-                  <span className={`text-sm font-semibold tabular-nums ${cls}`}>{fmt(currencySymbol, value)}</span>
-                </div>
-              ))}
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden mt-2">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-500"
-                  style={{ width: `${stats.budget.contracted > 0 ? Math.min(100, (stats.budget.paid / stats.budget.contracted) * 100) : 0}%` }}
-                />
-              </div>
-              {stats.budget.contracted === 0 && (
-                <EmptyState
-                  icon={Briefcase}
-                  title="No suppliers yet"
-                  description="Add suppliers to track your budget"
-                  actionLabel="Add your first supplier"
-                  href="/suppliers"
-                />
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Row 3 — Meals + Supplier status */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-fade-in-up stagger-3">
-        {/* Meal choices */}
-        <div className={`${showFinance ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-xl border border-gray-200 p-5`}>
-          <SectionHeader title="Meal choices" href="/guests" />
-          <div className="mt-4">
-            {stats.meals.length === 0 ? (
-              <EmptyState
-                icon={Utensils}
-                title="No meal choices yet"
-                description="Meal selections will appear as guests RSVP"
-              />
-            ) : (
-              <MealBars meals={stats.meals} />
-            )}
-          </div>
-        </div>
+      {/* Preset-driven rows */}
+      {DASHBOARD_PRESETS.find(p => p.id === layout)?.rows.map((row, rowIdx) => {
+        const visibleSections = row.sections
+          .map(id => ({ id, node: sectionRegistry[id] }))
+          .filter(s => s.node !== null && s.node !== undefined);
 
-        {/* Supplier status */}
-        {showFinance && (
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <SectionHeader title="Suppliers" href="/suppliers" />
-            <div className="mt-4 space-y-1">
-              {(["BOOKED", "QUOTED", "ENQUIRY", "COMPLETE", "CANCELLED"] as const).map(status => {
-                const count = stats.suppliers[status];
-                const cfg = SUPPLIER_STATUS[status];
-                if (count === 0) return null;
+        if (visibleSections.length === 0) return null;
+
+        const totalCols = row.spans?.reduce((a, b) => a + b, 0) ?? visibleSections.length;
+        const gridColsClass = totalCols <= 2 ? "grid-cols-1 lg:grid-cols-2" : `grid-cols-1 lg:grid-cols-${totalCols}`;
+
+        return (
+          <div key={rowIdx} className={`animate-fade-in-up stagger-${rowIdx + 1}`}>
+            {row.header && (
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2 mt-2">
+                {row.header}
+              </h2>
+            )}
+            <div className={`grid gap-4 ${gridColsClass}`}>
+              {visibleSections.map((s, i) => {
+                const span = row.spans?.[row.sections.indexOf(s.id)] ?? 1;
                 return (
-                  <Link
-                    key={status}
-                    href={`/suppliers?status=${status}`}
-                    className="flex items-center justify-between group -mx-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-all duration-200"
-                  >
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cfg.cls} group-hover:shadow-sm transition-shadow`}>
-                      {cfg.label}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-semibold text-gray-800 group-hover:text-primary transition-colors">{count}</span>
-                      <ArrowRight className="w-3 h-3 text-gray-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200 opacity-0 group-hover:opacity-100" />
-                    </div>
-                  </Link>
-                );
-              })}
-              {Object.values(stats.suppliers).every(v => v === 0) && (
-                <EmptyState
-                  icon={Briefcase}
-                  title="No suppliers yet"
-                  description="Track your vendors and bookings"
-                  actionLabel="Add your first supplier"
-                  href="/suppliers"
-                />
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Row 3.5 — Budget categories (admin only) */}
-      {showFinance && stats.budgetCategories.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 animate-fade-in-up stagger-4">
-          <SectionHeader title="Budget by category" href="/budget" />
-          <div className="mt-4 space-y-3">
-            {stats.budgetCategories.slice(0, 4).map(cat => {
-              const percent = cat.allocated > 0 ? Math.min(100, (cat.paid / cat.allocated) * 100) : 0;
-              const isOver = cat.paid > cat.allocated && cat.allocated > 0;
-              const progressGradient = isOver
-                ? "from-red-500 to-red-400"
-                : percent > 90
-                  ? "from-amber-500 to-amber-400"
-                  : percent > 70
-                    ? "from-yellow-500 to-yellow-400"
-                    : "from-green-500 to-green-400";
-              return (
-                <div key={cat.id} className="flex items-center gap-3">
-                  <div
-                    className="w-3 h-3 rounded-full shrink-0"
-                    style={{ backgroundColor: cat.colour }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-baseline mb-1">
-                      <span className="text-sm font-medium text-gray-800 truncate">{cat.name}</span>
-                      <span className={`text-xs tabular-nums ${isOver ? "text-red-600 font-medium" : "text-gray-500"}`}>
-                        {fmt(currencySymbol, cat.paid)} / {fmt(currencySymbol, cat.allocated)}
-                      </span>
-                    </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full bg-gradient-to-r ${progressGradient} transition-all duration-500`}
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            {stats.budgetCategories.length > 4 && (
-              <Link href="/budget" className="text-xs text-primary hover:underline flex items-center gap-1 mt-2">
-                View all {stats.budgetCategories.length} categories <ArrowRight className="w-3 h-3" />
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Row 4 — Upcoming payments (full width, admin only) */}
-      {showFinance && <div className="bg-white rounded-xl border border-gray-200 animate-fade-in-up stagger-5">
-        <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-gray-400" />
-            <p className="text-sm font-medium text-gray-700">Upcoming &amp; overdue payments</p>
-          </div>
-          <Link href="/payments" className="text-xs text-primary hover:underline flex items-center gap-1">
-            All payments <ArrowRight className="w-3 h-3" />
-          </Link>
-        </div>
-
-        {stats.payments.length === 0 ? (
-          <div className="px-5 py-10 text-center">
-            <Clock className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-            <p className="text-sm text-gray-400">No payments due in the next 60 days</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {stats.payments.map(p => {
-              const overdue = p.status === "OVERDUE";
-              const due = p.dueDate
-                ? new Date(p.dueDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
-                : "No date set";
-              return (
-                <div key={p.id} className={`px-5 py-3 flex items-center gap-3 flex-wrap sm:flex-nowrap ${overdue ? "bg-red-50/40" : ""}`}>
-                  <div className="shrink-0">
-                    {overdue
-                      ? <AlertCircle className="w-4 h-4 text-red-500" />
-                      : <Clock className="w-4 h-4 text-amber-400" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">
-                      {p.supplierName} — {p.label}
-                    </p>
-                    <p className={`text-xs ${overdue ? "text-red-600" : "text-gray-500"}`}>
-                      {overdue ? "Overdue · " : "Due "}
-                      {due}
-                    </p>
-                  </div>
-                  <p className="text-sm font-semibold text-gray-800 shrink-0">{fmt(currencySymbol, p.amount)}</p>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => setMarkPaidConfirm(p)}
-                      className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
-                    >
-                      <Check className="w-3 h-3" /> Mark as Paid
-                    </button>
-                    <button
-                      onClick={() => handleSendReminder(p.id)}
-                      title="Send reminder email"
-                      className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-primary rounded-lg hover:bg-primary/5 transition-colors"
-                    >
-                      <Mail className="w-3.5 h-3.5" />
-                    </button>
-                    <Link
-                      href={`/suppliers/${p.supplierId}`}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      View
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>}
-
-      {/* Row 5 — Upcoming appointments & tasks (unified layout) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fade-in-up stagger-5">
-        {/* Appointments */}
-        <div className="bg-white rounded-xl border border-gray-200">
-          <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="w-4 h-4 text-blue-500" />
-              <p className="text-sm font-semibold text-gray-800">Appointments</p>
-              {stats.appointments.length > 0 && (
-                <span className="text-xs text-gray-400 ml-1">({stats.appointments.length})</span>
-              )}
-            </div>
-            <Link href="/appointments" className="text-xs text-primary hover:underline flex items-center gap-1">
-              View all <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-
-          {stats.appointments.length === 0 ? (
-            <div className="px-5 py-8 text-center">
-              <CalendarDays className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">No upcoming appointments</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-50">
-              {stats.appointments.map(a => (
-                <div key={a.id} className="px-5 py-3">
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 mt-0.5">
-                      <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                        <CalendarDays className="w-4 h-4 text-blue-500" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                        <Link
-                          href="/appointments"
-                          className="text-sm font-medium text-gray-900 hover:text-primary transition-colors truncate"
-                        >
-                          {a.title}
-                        </Link>
-                        {a.categoryName && a.categoryColour && (
-                          <span
-                            className="px-2 py-0.5 rounded-full text-xs font-medium border shrink-0"
-                            style={{ color: a.categoryColour, borderColor: a.categoryColour, backgroundColor: "transparent" }}
-                          >
-                            {a.categoryName}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500 font-medium">
-                        {new Date(a.date).toLocaleDateString("en-GB", {
-                          weekday: "short", day: "numeric", month: "short",
-                        }) + " at " + new Date(a.date).toLocaleTimeString("en-GB", {
-                          hour: "numeric", minute: "2-digit", hour12: true,
-                        })}
-                      </p>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                        {a.location && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />{a.location}
-                          </span>
-                        )}
-                        {a.supplierName && a.supplierId && (
-                          <Link
-                            href={`/suppliers/${a.supplierId}`}
-                            className="text-primary hover:underline font-medium"
-                          >
-                            {a.supplierName}
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2.5 ml-11 justify-end">
-                    <button
-                      onClick={() => setMarkApptDoneConfirm(a)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
-                    >
-                      <Check className="w-3.5 h-3.5" /> Done
-                    </button>
-                    <Link
-                      href="/appointments"
-                      className="text-xs text-primary hover:underline font-medium"
-                    >
-                      View
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Tasks */}
-        <div className="bg-white rounded-xl border border-gray-200">
-          <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckSquare className="w-4 h-4 text-slate-500" />
-              <p className="text-sm font-semibold text-gray-800">Tasks</p>
-              {(stats.tasks.overdue > 0 || stats.tasks.dueSoon > 0) && (
-                <span className="text-xs">
-                  {stats.tasks.overdue > 0 && (
-                    <span className="text-red-600 font-medium">{stats.tasks.overdue} overdue</span>
-                  )}
-                  {stats.tasks.overdue > 0 && stats.tasks.dueSoon > 0 && " · "}
-                  {stats.tasks.dueSoon > 0 && <span className="text-gray-400">{stats.tasks.dueSoon} due soon</span>}
-                </span>
-              )}
-            </div>
-            <Link href="/tasks" className="text-xs text-primary hover:underline flex items-center gap-1">
-              View all <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-
-          {stats.tasks.upcoming.length === 0 ? (
-            <div className="px-5 py-8 text-center">
-              <CheckSquare className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">All caught up!</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-50">
-              {stats.tasks.upcoming.map(t => {
-                const now = new Date();
-                now.setHours(0, 0, 0, 0);
-                const dueDate = t.dueDate ? new Date(t.dueDate) : null;
-                if (dueDate) dueDate.setHours(0, 0, 0, 0);
-                const diffDays = dueDate
-                  ? Math.round((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-                  : null;
-                const isOverdue = diffDays !== null && diffDays < 0;
-
-                let dueLabel: string | null = null;
-                let dueCls = "text-gray-500";
-                if (diffDays !== null) {
-                  if (diffDays < 0) {
-                    const n = Math.abs(diffDays);
-                    dueLabel = `${n} day${n !== 1 ? "s" : ""} overdue`;
-                    dueCls = "text-red-600 font-medium";
-                  } else if (diffDays === 0) {
-                    dueLabel = "Due today";
-                    dueCls = "text-amber-600 font-medium";
-                  } else if (diffDays === 1) {
-                    dueLabel = "Due tomorrow";
-                    dueCls = "text-amber-600 font-medium";
-                  } else {
-                    dueLabel = "Due " + dueDate!.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-                  }
-                }
-
-                const priorityCls =
-                  t.priority === "HIGH"   ? { bg: "bg-red-50", text: "text-red-600", dot: "bg-red-500" } :
-                  t.priority === "MEDIUM" ? { bg: "bg-amber-50", text: "text-amber-600", dot: "bg-amber-400" } :
-                                            { bg: "bg-gray-50", text: "text-gray-500", dot: "bg-gray-400" };
-
-                return (
-                  <div key={t.id} className={`px-5 py-3 ${isOverdue ? "bg-red-50/30" : ""}`}>
-                    <div className="flex items-start gap-3">
-                      <div className={`shrink-0 mt-0.5 w-8 h-8 rounded-lg flex items-center justify-center ${priorityCls.bg}`}>
-                        {isOverdue ? (
-                          <AlertCircle className={`w-4 h-4 text-red-500`} />
-                        ) : (
-                          <CheckSquare className={`w-4 h-4 ${priorityCls.text}`} />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                          <p className={`text-sm font-medium truncate ${isOverdue ? "text-red-700" : "text-gray-900"}`}>
-                            {t.title}
-                          </p>
-                          {t.categoryName && t.categoryColour && (
-                            <span
-                              className="px-2 py-0.5 rounded-full text-xs font-medium border shrink-0"
-                              style={{ color: t.categoryColour, borderColor: t.categoryColour, backgroundColor: "transparent" }}
-                            >
-                              {t.categoryName}
-                            </span>
-                          )}
-                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium uppercase ${priorityCls.text} ${priorityCls.bg}`}>
-                            {t.priority.toLowerCase()}
-                          </span>
-                        </div>
-                        {dueLabel && (
-                          <p className={`text-xs ${dueCls}`}>{dueLabel}</p>
-                        )}
-                        {t.supplierName && t.supplierId && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            <Link
-                              href={`/suppliers/${t.supplierId}`}
-                              className="text-primary hover:underline"
-                            >
-                              {t.supplierName}
-                            </Link>
-                          </p>
-                        )}
-                        {t.assignedToName && (
-                          <p className="text-xs text-gray-700 font-medium mt-0.5">{t.assignedToName}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 mt-2.5 ml-11 justify-end">
-                      <button
-                        onClick={() => setMarkDoneConfirm(t)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
-                      >
-                        <Check className="w-3.5 h-3.5" /> Done
-                      </button>
-                      <button
-                        onClick={() => handleSendTaskReminder(t.id)}
-                        title="Send reminder email"
-                        className="min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-primary rounded-lg hover:bg-primary/5 transition-colors"
-                      >
-                        <Mail className="w-3.5 h-3.5" />
-                      </button>
-                      <Link
-                        href="/tasks"
-                        className="text-xs text-primary hover:underline font-medium"
-                      >
-                        View
-                      </Link>
-                    </div>
+                  <div key={s.id} className={span > 1 ? `lg:col-span-${span}` : undefined}>
+                    {s.node}
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        );
+      })}
 
+      {/* Confirm modals */}
       {markDoneConfirm && (
         <ConfirmModal
-          message={
-            <span>Mark <strong>{markDoneConfirm.title}</strong> as done?</span>
-          }
-          onConfirm={() => {
-            handleMarkTaskDone(markDoneConfirm.id);
-            setMarkDoneConfirm(null);
-          }}
+          message={<span>Mark <strong>{markDoneConfirm.title}</strong> as done?</span>}
+          onConfirm={() => { handleMarkTaskDone(markDoneConfirm.id); setMarkDoneConfirm(null); }}
           onCancel={() => setMarkDoneConfirm(null)}
         />
       )}
-
       {markApptDoneConfirm && (
         <ConfirmModal
-          message={
-            <span>Mark <strong>{markApptDoneConfirm.title}</strong> as done?</span>
-          }
-          onConfirm={() => {
-            handleMarkApptDone(markApptDoneConfirm.id);
-            setMarkApptDoneConfirm(null);
-          }}
+          message={<span>Mark <strong>{markApptDoneConfirm.title}</strong> as done?</span>}
+          onConfirm={() => { handleMarkApptDone(markApptDoneConfirm.id); setMarkApptDoneConfirm(null); }}
           onCancel={() => setMarkApptDoneConfirm(null)}
         />
       )}
-
       {markPaidConfirm && (
         <ConfirmModal
           message={
@@ -735,10 +278,7 @@ export function DashboardClient({ userName, role, dashboardLayout }: { userName?
               ({fmt(currencySymbol, markPaidConfirm.amount)}) as paid?
             </span>
           }
-          onConfirm={() => {
-            handleMarkPaid(markPaidConfirm.id, markPaidConfirm.supplierId);
-            setMarkPaidConfirm(null);
-          }}
+          onConfirm={() => { handleMarkPaid(markPaidConfirm.id, markPaidConfirm.supplierId); setMarkPaidConfirm(null); }}
           onCancel={() => setMarkPaidConfirm(null)}
         />
       )}
@@ -879,6 +419,50 @@ export function CountdownCard({ weddingDate, timezone }: { weddingDate: string |
           <p className="text-lg font-medium text-gray-500">{Math.abs(days)} days ago</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function CountdownHeroCard({ weddingDate, timezone }: { weddingDate: string | null; timezone: string }) {
+  const days = weddingDate
+    ? (() => {
+        try {
+          const now = new Date();
+          const todayStr = now.toLocaleDateString("en-CA", { timeZone: timezone });
+          const today = new Date(todayStr + "T00:00:00");
+          const weddingStr = new Date(weddingDate).toLocaleDateString("en-CA", { timeZone: timezone });
+          const wedding = new Date(weddingStr + "T00:00:00");
+          const diffMs = wedding.getTime() - today.getTime();
+          return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        } catch {
+          const wedding = new Date(weddingDate);
+          const today = new Date();
+          today.setUTCHours(0, 0, 0, 0);
+          const weddingMidnight = new Date(Date.UTC(wedding.getUTCFullYear(), wedding.getUTCMonth(), wedding.getUTCDate()));
+          return Math.ceil((weddingMidnight.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        }
+      })()
+    : null;
+
+  return (
+    <div className="bg-gradient-to-br from-primary/5 to-white rounded-xl border border-primary/10 p-6 flex flex-col items-center justify-center text-center min-h-[180px]">
+      <Heart className="w-8 h-8 text-primary fill-primary/20 mb-3" />
+      {days === null ? (
+        <Link href="/settings" className="text-sm text-primary hover:underline font-medium">
+          Set date in Settings
+        </Link>
+      ) : days > 0 ? (
+        <>
+          <p className="text-4xl md:text-5xl font-bold text-primary leading-none">
+            {days}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">days to go</p>
+        </>
+      ) : days === 0 ? (
+        <p className="text-2xl font-bold text-primary">Today!</p>
+      ) : (
+        <p className="text-lg font-medium text-gray-500">{Math.abs(days)} days ago</p>
+      )}
     </div>
   );
 }
