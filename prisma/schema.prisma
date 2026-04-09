@@ -31,6 +31,7 @@ model User {
   verificationTokenExpires DateTime?
   createdAt                DateTime        @default(now())
   updatedAt                DateTime        @updatedAt
+  dashboardLayout          String          @default("classic")
 
   weddings       WeddingMember[]
   backupCodes    BackupCode[]
