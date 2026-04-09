@@ -90,7 +90,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <>
     <style dangerouslySetInnerHTML={{ __html: `:root { --primary: ${safeHue} 60% 55%; --ring: ${safeHue} 60% 55%; }` }} />
-    <WeddingProvider weddingId={ctx.weddingId} role={ctx.role} subscriptionStatus={weddingBilling?.subscriptionStatus ?? "TRIALING"} currencySymbol={currencySymbol} eventNames={eventNames} dashboardLayout={ctx.dashboardLayout}>
+    <WeddingProvider weddingId={ctx.weddingId} role={ctx.role} subscriptionStatus={weddingBilling?.subscriptionStatus ?? "TRIALING"} currencySymbol={currencySymbol} eventNames={eventNames}>
       <RefreshProvider>
         <FormDirtyProvider>
           {weddingBilling && (

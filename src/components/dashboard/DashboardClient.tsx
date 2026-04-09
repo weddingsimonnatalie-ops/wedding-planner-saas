@@ -49,6 +49,21 @@ interface DashStats {
   };
 }
 
+// ── Static Tailwind class maps (avoid dynamic class names) ────────────────────────
+
+const GRID_COLS: Record<number, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-1 lg:grid-cols-2",
+  3: "grid-cols-1 lg:grid-cols-3",
+  4: "grid-cols-1 lg:grid-cols-4",
+};
+
+const COL_SPAN: Record<number, string> = {
+  1: "",
+  2: "lg:col-span-2",
+  3: "lg:col-span-3",
+};
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function DashboardClient({ userName, role, dashboardLayout }: { userName?: string; role?: UserRole; dashboardLayout?: string }) {
@@ -227,30 +242,27 @@ export function DashboardClient({ userName, role, dashboardLayout }: { userName?
       {/* Preset-driven rows */}
       {DASHBOARD_PRESETS.find(p => p.id === layout)?.rows.map((row, rowIdx) => {
         const visibleSections = row.sections
-          .map(id => ({ id, node: sectionRegistry[id] }))
+          .map((id, i) => ({ id, node: sectionRegistry[id], span: row.spans?.[i] ?? 1 }))
           .filter(s => s.node !== null && s.node !== undefined);
 
         if (visibleSections.length === 0) return null;
 
-        const totalCols = row.spans?.reduce((a, b) => a + b, 0) ?? visibleSections.length;
-        const gridColsClass = totalCols <= 2 ? "grid-cols-1 lg:grid-cols-2" : `grid-cols-1 lg:grid-cols-${totalCols}`;
+        const totalCols = visibleSections.reduce((a, s) => a + s.span, 0);
+        const gridColsClass = GRID_COLS[totalCols] ?? GRID_COLS[3];
 
         return (
-          <div key={rowIdx} className={`animate-fade-in-up stagger-${rowIdx + 1}`}>
+          <div key={rowIdx} className={`animate-fade-in-up stagger-${Math.min(rowIdx + 1, 6)}`}>
             {row.header && (
               <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2 mt-2">
                 {row.header}
               </h2>
             )}
             <div className={`grid gap-4 ${gridColsClass}`}>
-              {visibleSections.map((s, i) => {
-                const span = row.spans?.[row.sections.indexOf(s.id)] ?? 1;
-                return (
-                  <div key={s.id} className={span > 1 ? `lg:col-span-${span}` : undefined}>
-                    {s.node}
-                  </div>
-                );
-              })}
+              {visibleSections.map((s) => (
+                <div key={s.id} className={COL_SPAN[s.span]}>
+                  {s.node}
+                </div>
+              ))}
             </div>
           </div>
         );

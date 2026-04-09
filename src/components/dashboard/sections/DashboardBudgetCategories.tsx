@@ -15,7 +15,7 @@ export function DashboardBudgetCategories({
   currencySymbol,
 }: DashboardBudgetCategoriesProps) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 animate-fade-in-up stagger-4">
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
       <SectionHeader title="Budget by category" href="/budget" />
       <div className="mt-4 space-y-3">
         {categories.slice(0, 4).map(cat => {

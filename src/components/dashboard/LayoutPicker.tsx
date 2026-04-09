@@ -24,14 +24,19 @@ export function LayoutPicker({ currentLayout, onLayoutChange }: LayoutPickerProp
   }, [open]);
 
   async function handleSelect(id: DashboardPresetId) {
+    const previous = currentLayout;
     onLayoutChange(id);
     setOpen(false);
-    // Persist to server
-    await fetch("/api/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dashboardLayout: id }),
-    });
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dashboardLayout: id }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      onLayoutChange(previous); // rollback on failure
+    }
   }
 
   return (

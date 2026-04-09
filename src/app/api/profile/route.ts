@@ -36,6 +36,11 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   try {
     const { name, email, password, dashboardLayout } = await req.json();
 
+    const VALID_LAYOUTS = ["classic", "actions-first", "budget-focus", "organized"];
+    if (dashboardLayout !== undefined && !VALID_LAYOUTS.includes(dashboardLayout)) {
+      return NextResponse.json({ error: "Invalid dashboard layout" }, { status: 400 });
+    }
+
     // Track if email is being changed (requires session invalidation)
     let emailChanged = false;
 
