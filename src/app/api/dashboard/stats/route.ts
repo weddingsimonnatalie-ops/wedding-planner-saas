@@ -119,6 +119,8 @@ export async function GET(req: NextRequest) {
           },
           include: {
             assignedTo: { select: { id: true, name: true, email: true } },
+            category: { select: { name: true, colour: true } },
+            supplier: { select: { id: true, name: true } },
           },
           orderBy: { dueDate: "asc" },
           take: 5,
@@ -238,6 +240,10 @@ export async function GET(req: NextRequest) {
             dueDate: t.dueDate,
             isCompleted: t.isCompleted,
             assignedToName: t.assignedTo?.name ?? t.assignedTo?.email ?? null,
+            categoryName: t.category?.name ?? null,
+            categoryColour: t.category?.colour ?? null,
+            supplierId: t.supplier?.id ?? null,
+            supplierName: t.supplier?.name ?? null,
           })),
         },
     });

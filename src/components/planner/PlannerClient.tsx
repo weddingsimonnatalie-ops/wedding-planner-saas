@@ -70,6 +70,59 @@ function PriorityBadge({ priority }: { priority: TaskPriority }) {
   );
 }
 
+// ── Unified card design ─────────────────────────────────────────────────────────
+
+const typeConfig = {
+  event: {
+    icon: CalendarDays,
+    label: "Event",
+    colour: "text-blue-600 bg-blue-50 border-blue-200",
+    accent: "border-l-blue-400",
+    accentDone: "border-l-gray-300",
+  },
+  task: {
+    icon: CheckSquare,
+    label: "Task",
+    colour: "text-slate-600 bg-slate-50 border-slate-200",
+    accent: "border-l-slate-300",
+    accentDone: "border-l-gray-300",
+  },
+};
+
+function TypeBadge({ type, isCompleted }: { type: "event" | "task"; isCompleted: boolean }) {
+  const config = typeConfig[type];
+  const Icon = config.icon;
+  const cls = isCompleted
+    ? "text-gray-400 bg-gray-50 border-gray-200"
+    : config.colour;
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border ${cls}`}>
+      <Icon className="w-3 h-3" />
+      {config.label}
+    </span>
+  );
+}
+
+function CategoryBadge({ name, colour }: { name: string; colour: string }) {
+  return (
+    <span
+      className="px-2 py-0.5 rounded-full text-xs font-medium border"
+      style={{ color: colour, borderColor: colour, backgroundColor: "transparent" }}
+    >
+      {name}
+    </span>
+  );
+}
+
+function MetaItem({ icon: Icon, children }: { icon?: React.ElementType; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+      {Icon && <Icon className="w-3 h-3 shrink-0 text-gray-400" />}
+      {children}
+    </span>
+  );
+}
+
 // ── Event card ─────────────────────────────────────────────────────────────────
 
 function EventCard({
@@ -87,96 +140,100 @@ function EventCard({
   onDelete?: () => void;
   dimmed?: boolean;
 }) {
+  const config = typeConfig.event;
+  const accentCls = event.isCompleted ? config.accentDone : config.accent;
+  const borderCls = event.isCompleted ? "border-gray-200" : "border-gray-100";
+
   return (
-    <div className={`bg-white rounded-xl border border-blue-100 p-4 border-l-4 ${event.isCompleted ? "border-l-gray-300" : "border-l-blue-400"} ${dimmed ? "opacity-65" : ""}`}>
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-          {/* Type label + category */}
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${event.isCompleted ? "text-gray-500 bg-gray-50 border-gray-200" : "text-blue-600 bg-blue-50 border-blue-100"}`}>
-              <CalendarDays className="w-3 h-3" /> Event
-            </span>
-            {event.category && (
-              <span
-                className="px-2 py-0.5 rounded-full text-xs font-medium border"
-                style={{ color: event.category.colour, borderColor: event.category.colour }}
-              >
-                {event.category.name}
-              </span>
-            )}
-          </div>
+    <div
+      role={onEdit ? "button" : undefined}
+      tabIndex={onEdit ? 0 : undefined}
+      onClick={onEdit}
+      onKeyDown={e => { if (onEdit && (e.key === "Enter" || e.key === " ")) onEdit(); }}
+      className={`group bg-white rounded-xl border border-l-[3px] p-4 transition-all duration-200 ${accentCls} ${borderCls} ${dimmed ? "opacity-60" : ""} ${onEdit ? "cursor-pointer hover:shadow-sm hover:border-gray-200" : ""}`}
+    >
+      {/* Badge row */}
+      <div className="flex items-center gap-2 flex-wrap mb-2">
+        <TypeBadge type="event" isCompleted={event.isCompleted} />
+        {event.category && <CategoryBadge name={event.category.name} colour={event.category.colour} />}
+      </div>
 
-          <p className={`text-sm font-semibold mb-1 ${event.isCompleted ? "line-through text-gray-400" : "text-gray-900"}`}>
-            {event.title}
-          </p>
-          <p className="text-xs text-gray-500 font-medium mb-1">{fmtDateTime(event.date)}</p>
+      {/* Title */}
+      <p className={`text-sm font-semibold mb-1.5 ${event.isCompleted ? "line-through text-gray-400" : "text-gray-900"}`}>
+        {event.title}
+      </p>
 
-          {event.location && (
-            <p className="text-xs text-gray-400 flex items-center gap-1 mb-1">
-              <MapPin className="w-3 h-3 shrink-0" />
-              {event.location}
-            </p>
-          )}
-          {event.supplier && (
-            <p className="text-xs text-gray-400">
-              Supplier:{" "}
-              <Link href={`/suppliers/${event.supplier.id}`} className="text-primary hover:underline font-medium">
-                {event.supplier.name}
-              </Link>
-            </p>
-          )}
-          {event.notes && (
-            <p className="text-xs text-gray-400 line-clamp-2 mt-1">{event.notes}</p>
-          )}
-          {event.isCompleted && event.completedAt && (
-            <p className="text-xs text-gray-400 mt-0.5">Completed {fmtDate(event.completedAt)}</p>
-          )}
-        </div>
-
-        {(onEdit || onDelete) && (
-          <div className="flex items-center gap-1 shrink-0">
-            {onEdit && (
-              <button
-                onClick={onEdit}
-                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
-                title="Edit"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-            {onDelete && (
-              <button
-                onClick={onDelete}
-                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                title="Delete"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+      {/* Meta row */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+        <MetaItem>
+          <span className="font-medium">{fmtDateTime(event.date)}</span>
+        </MetaItem>
+        {event.location && <MetaItem icon={MapPin}>{event.location}</MetaItem>}
+        {event.supplier && (
+          <MetaItem>
+            <Link
+              href={`/suppliers/${event.supplier.id}`}
+              className="text-primary hover:underline font-medium"
+              onClick={e => e.stopPropagation()}
+            >
+              {event.supplier.name}
+            </Link>
+          </MetaItem>
         )}
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 flex-wrap">
+      {/* Notes */}
+      {event.notes && (
+        <p className="text-xs text-gray-400 mt-2 line-clamp-1">{event.notes}</p>
+      )}
+
+      {/* Completion status */}
+      {event.isCompleted && event.completedAt && (
+        <p className="text-xs text-gray-400 mt-1.5">Completed {fmtDate(event.completedAt)}</p>
+      )}
+
+      {/* Action bar */}
+      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 flex-wrap" onClick={e => e.stopPropagation()}>
         {canComplete && !event.isCompleted && (
           <button
             type="button"
             onClick={() => onToggleComplete(event)}
-            className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
           >
-            <Check className="w-3 h-3" /> Mark as Done
+            <Check className="w-3.5 h-3.5" /> Mark as Done
           </button>
         )}
         {canComplete && event.isCompleted && (
           <button
             type="button"
             onClick={() => onToggleComplete(event)}
-            className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] bg-gray-50 text-gray-600 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-gray-50 text-gray-600 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-100 transition-colors"
           >
-            <RotateCcw className="w-3 h-3" /> Mark not done
+            <RotateCcw className="w-3.5 h-3.5" /> Undo
           </button>
         )}
+        <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:p-2 flex items-center justify-center rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
+              title="Edit"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:p-2 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -215,102 +272,118 @@ function TaskCard({
   }
 
   const dueLabel = dueDateLabel(task.dueDate ?? null, task.isCompleted);
-  const dueCls   = dueDateCls(task.dueDate ?? null, task.isCompleted);
+  const dueCls = dueDateCls(task.dueDate ?? null, task.isCompleted);
+  const isOverdue = !task.isCompleted && !!task.dueDate && new Date(task.dueDate) < new Date();
+
+  // Determine accent and border styling
+  const config = typeConfig.task;
+  const accentCls = task.isCompleted
+    ? config.accentDone
+    : isOverdue
+      ? "border-l-red-400"
+      : config.accent;
+  const borderCls = task.isCompleted || isOverdue ? "border-gray-200" : "border-gray-100";
 
   return (
     <div
       role={onEdit ? "button" : undefined}
       tabIndex={onEdit ? 0 : undefined}
-      onClick={() => onEdit?.()}
+      onClick={onEdit}
       onKeyDown={e => { if (onEdit && (e.key === "Enter" || e.key === " ")) onEdit(); }}
-      className={`bg-white rounded-xl border border-gray-200 p-4 ${dimmed ? "opacity-65" : ""} ${onEdit ? "cursor-pointer" : ""}`}
+      className={`group bg-white rounded-xl border border-l-[3px] p-4 transition-all duration-200 ${accentCls} ${borderCls} ${dimmed ? "opacity-60" : ""} ${onEdit ? "cursor-pointer hover:shadow-sm hover:border-gray-200" : ""}`}
     >
-      {/* Top row: type label + priority + category + recurring */}
-      <div className="flex items-center gap-2 flex-wrap mb-1" onClick={e => e.stopPropagation()}>
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-200">
-          <CheckSquare className="w-3 h-3" /> Task
-        </span>
+      {/* Badge row */}
+      <div className="flex items-center gap-2 flex-wrap mb-2">
+        <TypeBadge type="task" isCompleted={task.isCompleted} />
+        {task.category && <CategoryBadge name={task.category.name} colour={task.category.colour} />}
         <PriorityBadge priority={task.priority} />
-        {task.category && (
-          <span className="flex items-center gap-1 text-xs font-medium text-gray-700">
-            <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: task.category.colour }} />
-            {task.category.name}
-          </span>
-        )}
         {task.isRecurring && (
-          <span title="Recurring"><RefreshCw className="w-3 h-3 text-gray-400" /></span>
+          <span className="inline-flex items-center text-xs text-gray-400" title="Recurring">
+            <RefreshCw className="w-3 h-3" />
+          </span>
         )}
       </div>
 
       {/* Title */}
-      <p className={`text-sm font-semibold mb-0.5 ${task.isCompleted ? "line-through text-gray-400" : "text-gray-900"}`}>
+      <p className={`text-sm font-semibold mb-1.5 ${task.isCompleted ? "line-through text-gray-400" : "text-gray-900"}`}>
         {task.title}
       </p>
 
-      {/* Meta */}
-      <p className={`text-xs ${dueCls}`} onClick={e => e.stopPropagation()}>
-        {dueLabel}
+      {/* Meta row */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {dueLabel && (
+          <span className={`text-xs font-medium ${dueCls}`}>{dueLabel}</span>
+        )}
         {task.assignedTo && (
-          <span className="text-gray-500">{dueLabel ? " · " : ""}{task.assignedTo.name ?? task.assignedTo.email}</span>
+          <MetaItem>
+            {task.assignedTo.name ?? task.assignedTo.email}
+          </MetaItem>
         )}
         {task.supplier && (
-          <>
-            {(dueLabel || task.assignedTo) && <span className="text-gray-400"> · </span>}
-            <Link href={`/suppliers/${task.supplier.id}`} className="text-primary hover:underline" onClick={e => e.stopPropagation()}>
+          <MetaItem>
+            <Link
+              href={`/suppliers/${task.supplier.id}`}
+              className="text-primary hover:underline font-medium"
+              onClick={e => e.stopPropagation()}
+            >
               {task.supplier.name}
             </Link>
-          </>
+          </MetaItem>
         )}
-      </p>
+      </div>
+
+      {/* Completion status */}
       {task.isCompleted && task.completedAt && (
-        <p className="text-xs text-gray-400 mt-0.5">Completed {fmtDate(task.completedAt)}</p>
-      )}
-      {task.notes && (
-        <p className="text-xs text-gray-400 mt-1 line-clamp-1 italic">{task.notes}</p>
+        <p className="text-xs text-gray-400 mt-1.5">Completed {fmtDate(task.completedAt)}</p>
       )}
 
-      {/* Actions */}
+      {/* Notes */}
+      {task.notes && (
+        <p className="text-xs text-gray-400 mt-2 line-clamp-1 italic">{task.notes}</p>
+      )}
+
+      {/* Action bar */}
       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 flex-wrap" onClick={e => e.stopPropagation()}>
         {canComplete && !task.isCompleted && (
           <button
             type="button"
             onClick={() => onToggleComplete(task)}
-            className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
           >
-            <Check className="w-3 h-3" /> Mark as Done
+            <Check className="w-3.5 h-3.5" /> Mark as Done
           </button>
         )}
         {canComplete && task.isCompleted && (
           <button
             type="button"
             onClick={() => onToggleComplete(task)}
-            className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] bg-gray-50 text-gray-600 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 bg-gray-50 text-gray-600 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-100 transition-colors"
           >
-            <RotateCcw className="w-3 h-3" /> Mark not done
+            <RotateCcw className="w-3.5 h-3.5" /> Undo
           </button>
         )}
         {!task.isCompleted && (
           reminded ? (
-            <span className="flex items-center gap-1 text-xs text-green-600">
-              <Check className="w-3 h-3" /> Sent
+            <span className="flex items-center gap-1.5 text-xs text-green-600 px-2 py-1">
+              <Check className="w-3.5 h-3.5" /> Sent
             </span>
           ) : (
             <button
               type="button"
               onClick={handleRemind}
               disabled={reminding}
-              className="flex items-center gap-1 px-2.5 py-1 min-h-[44px] text-gray-500 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 text-gray-500 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
-              <Mail className="w-3 h-3" /> {reminding ? "…" : "Reminder"}
+              <Mail className="w-3.5 h-3.5" /> {reminding ? "Sending…" : "Reminder"}
             </button>
           )
         )}
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {onEdit && (
             <button
               type="button"
-              onClick={() => onEdit()}
-              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
+              onClick={onEdit}
+              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:p-2 flex items-center justify-center rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
               title="Edit"
             >
               <Edit2 className="w-3.5 h-3.5" />
@@ -319,8 +392,8 @@ function TaskCard({
           {onDelete && (
             <button
               type="button"
-              onClick={() => onDelete()}
-              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              onClick={onDelete}
+              className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:p-2 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
               title="Delete"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -334,11 +407,19 @@ function TaskCard({
 
 // ── Section header ─────────────────────────────────────────────────────────────
 
-function SectionHeader({ label, count, cls }: { label: string; count: number; cls: string }) {
+const sectionStyles: Record<string, { text: string; bg: string; dot: string }> = {
+  Overdue: { text: "text-red-700", bg: "bg-red-50", dot: "bg-red-400" },
+  Upcoming: { text: "text-blue-700", bg: "bg-blue-50", dot: "bg-blue-400" },
+  "No due date": { text: "text-gray-600", bg: "bg-gray-100", dot: "bg-gray-400" },
+};
+
+function SectionHeader({ label, count }: { label: string; count: number }) {
+  const style = sectionStyles[label] ?? { text: "text-gray-600", bg: "bg-gray-100", dot: "bg-gray-400" };
   return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg mb-2 ${cls}`}>
-      <span className="text-xs font-semibold uppercase tracking-wide">{label}</span>
-      <span className="text-xs opacity-70">({count})</span>
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-3 ${style.bg}`}>
+      <span className={`w-2 h-2 rounded-full ${style.dot}`} />
+      <span className={`text-xs font-semibold uppercase tracking-wide ${style.text}`}>{label}</span>
+      <span className={`text-xs ${style.text} opacity-70`}>({count})</span>
     </div>
   );
 }
@@ -668,17 +749,23 @@ export function PlannerClient() {
 
       {/* Empty state */}
       {!loading && isEmpty && (
-        <div className="py-20 text-center">
-          <div className="flex items-center justify-center gap-2 text-gray-200 mb-3">
-            <CalendarDays className="w-8 h-8" />
-            <CheckSquare className="w-8 h-8" />
+        <div className="py-16 text-center">
+          <div className="w-24 h-16 mx-auto mb-4">
+            <svg viewBox="0 0 120 80" className="w-full h-full" fill="none">
+              <rect x="15" y="15" width="90" height="50" rx="4" className="fill-primary/5 stroke-primary/20" strokeWidth="1.5" />
+              <rect x="25" y="28" width="40" height="4" rx="1" className="fill-primary/20" />
+              <rect x="25" y="38" width="55" height="4" rx="1" className="fill-primary/15" />
+              <rect x="25" y="48" width="30" height="4" rx="1" className="fill-primary/10" />
+              <circle cx="85" cy="52" r="10" className="fill-primary/10 stroke-primary/20" strokeWidth="1.5" />
+              <path d="M82 52l2 2 4-4" className="stroke-primary/40" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </div>
-          <p className="text-sm font-medium text-gray-600 mb-1">Nothing here yet</p>
-          <p className="text-sm text-gray-400 mb-4">Add events and tasks to start planning.</p>
+          <h3 className="text-base font-semibold text-gray-900 mb-1 font-display">No items yet</h3>
+          <p className="text-sm text-gray-500 mb-5 max-w-xs mx-auto">Add events and tasks to start planning your wedding.</p>
           {canAdd && (
             <button
               onClick={openAdd}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
             >
               <Plus className="w-4 h-4" /> Add your first item
             </button>
@@ -689,7 +776,7 @@ export function PlannerClient() {
       {/* ── Overdue ─────────────────────────────────────────────────────────── */}
       {!loading && overdueTasks.length > 0 && (
         <div>
-          <SectionHeader label="Overdue" count={overdueTasks.length} cls="text-red-700 bg-red-50" />
+          <SectionHeader label="Overdue" count={overdueTasks.length} />
           <div className="space-y-3">
             {overdueTasks.map(t => renderTask(t))}
           </div>
@@ -699,7 +786,7 @@ export function PlannerClient() {
       {/* ── Upcoming ────────────────────────────────────────────────────────── */}
       {!loading && upcomingItems.length > 0 && (
         <div>
-          <SectionHeader label="Upcoming" count={upcomingItems.length} cls="text-blue-700 bg-blue-50" />
+          <SectionHeader label="Upcoming" count={upcomingItems.length} />
           <div className="space-y-3">
             {upcomingItems.map(item =>
               item.kind === "event"
@@ -713,7 +800,7 @@ export function PlannerClient() {
       {/* ── No due date ─────────────────────────────────────────────────────── */}
       {!loading && noDueDateTasks.length > 0 && (
         <div>
-          <SectionHeader label="No due date" count={noDueDateTasks.length} cls="text-gray-600 bg-gray-50" />
+          <SectionHeader label="No due date" count={noDueDateTasks.length} />
           <div className="space-y-3">
             {noDueDateTasks.map(t => renderTask(t))}
           </div>

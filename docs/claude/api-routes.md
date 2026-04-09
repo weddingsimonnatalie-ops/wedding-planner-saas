@@ -26,6 +26,7 @@ DELETE     /api/suppliers/[id]/attachments/[attachmentId]
 GET        /api/uploads/[supplierId]/[filename] — Protected file serving
 GET/POST   /api/appointments            — Appointments (ADMIN + VIEWER only)
 GET/PUT/DELETE /api/appointments/[id]   — (ADMIN + VIEWER only)
+PATCH      /api/appointments/[id]/complete — Toggle complete (ADMIN + RSVP_MANAGER); body: `{ completed: boolean }`
 GET        /api/appointments/count      — Upcoming appointments in next 7 days for sidebar badge (ADMIN + VIEWER)
 GET        /api/appointments/check-reminders — Manual trigger (used by daemon)
 GET/POST   /api/planning-categories     — Shared category list for suppliers, appointments and tasks; GET returns all, POST creates; cache key: `${weddingId}:planning-categories`

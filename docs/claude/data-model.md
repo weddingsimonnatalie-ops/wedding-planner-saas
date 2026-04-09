@@ -107,7 +107,10 @@ Belongs to Supplier. `storedAs` is the UUID-renamed filename on disk. `filename`
 
 ## Appointment
 
-Appointments have date, location, notes, optional supplier link, optional reminderDays, optional `categoryId` FK to `PlanningCategory`. `reminderSent` prevents double-sending.
+Appointments have date, location, notes, optional supplier link, optional reminderDays, optional `categoryId` FK to `PlanningCategory`. Key fields:
+- `isCompleted` / `completedAt` — completion state (added 2026-04-09)
+- `reminderSent` — prevents double-sending reminders
+- `categoryId` — optional FK to `PlanningCategory`
 
 ## Task
 

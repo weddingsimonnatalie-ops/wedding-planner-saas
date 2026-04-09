@@ -37,6 +37,7 @@ Three roles defined in the `UserRole` Prisma enum:
 - `accessSuppliers` / `accessPayments` — ADMIN + VIEWER (page-level access; RSVP_MANAGER redirected away)
 - `editTasks` — ADMIN only (add / edit / delete tasks)
 - `completeTasks` — ADMIN + RSVP_MANAGER (check off tasks)
+- `completeAppointments` — ADMIN + RSVP_MANAGER (mark appointments as done)
 - `viewTasks` — all roles
 - `accessSettings` — ADMIN only
 - `accessPlanner` / `editPlannerEvents` / `editPlannerTasks` / `completePlannerTasks` — planner-specific aliases
@@ -79,7 +80,11 @@ Three roles defined in the `UserRole` Prisma enum:
 - Budget overview (contracted/paid/remaining with progress bar)
 - Supplier status breakdown
 - Upcoming and overdue payments list (with inline "Mark as Paid" and email reminder button) — "View all payments →" links to `/payments`
-- Upcoming appointments list (next 60 days)
+- Upcoming appointments and tasks in unified 2-column layout (appointments left, tasks right)
+  - Both show icon container with type badge, title, metadata, category badge
+  - Tasks show priority badge and due date; appointments show date/time and location
+  - "Mark as Done" button with confirmation modal for both
+  - Tasks include email reminder button
 - Overdue payments auto-marked on page load
 
 ## Guests (`/guests`)
