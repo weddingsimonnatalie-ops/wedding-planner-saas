@@ -34,7 +34,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   if (!auth.authorized) return auth.response;
 
   try {
-    const { name, email, password } = await req.json();
+    const { name, email, password, dashboardLayout } = await req.json();
 
     // Track if email is being changed (requires session invalidation)
     let emailChanged = false;
@@ -71,8 +71,9 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       data: {
         ...(name !== undefined && { name: name || null }),
         ...(email && { email }),
+        ...(dashboardLayout !== undefined && { dashboardLayout }),
       },
-      select: { id: true, name: true, email: true },
+      select: { id: true, name: true, email: true, dashboardLayout: true },
     });
 
     // Invalidate all sessions if email was changed
