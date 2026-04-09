@@ -182,6 +182,7 @@ export function DashboardClient({ userName, role, dashboardLayout }: { userName?
         timezone={stats.wedding.timezone}
         guestsAccepted={stats.guests.accepted}
         guestsTotal={stats.guests.total}
+        guestsPending={stats.guests.pending}
         guestsAssigned={stats.guests.assigned}
         receptionEligible={stats.guests.receptionEligible}
         budgetPaid={stats.budget.paid}

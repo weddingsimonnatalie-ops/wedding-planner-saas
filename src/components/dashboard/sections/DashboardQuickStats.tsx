@@ -8,6 +8,7 @@ interface DashboardQuickStatsProps {
   timezone: string;
   guestsAccepted: number;
   guestsTotal: number;
+  guestsPending: number;
   guestsAssigned: number;
   receptionEligible: number;
   budgetPaid: number;
@@ -22,6 +23,7 @@ export function DashboardQuickStats({
   timezone,
   guestsAccepted,
   guestsTotal,
+  guestsPending,
   guestsAssigned,
   receptionEligible,
   budgetPaid,
@@ -40,7 +42,7 @@ export function DashboardQuickStats({
         icon={<Users className="w-5 h-5 text-indigo-500" />}
         label="Guests accepted"
         value={`${guestsAccepted} / ${guestsTotal}`}
-        sub={guestsTotal > 0 ? `${Math.round(((guestsTotal - guestsAccepted) / guestsTotal) * 100)}% responded` : "No guests yet"}
+        sub={guestsTotal > 0 ? `${Math.round(((guestsTotal - guestsPending) / guestsTotal) * 100)}% responded` : "No guests yet"}
         href="/guests"
       />
       <QuickStat
