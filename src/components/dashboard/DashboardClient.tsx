@@ -906,7 +906,7 @@ export function QuickStat({ icon, label, value, sub, href }: {
   );
 }
 
-function MealBars({ meals }: { meals: { name: string; count: number }[] }) {
+export function MealBars({ meals }: { meals: { name: string; count: number }[] }) {
   const max = Math.max(...meals.map(m => m.count), 1);
   const colors = [
     "from-indigo-500 to-indigo-400",
@@ -964,11 +964,11 @@ function DashboardSkeleton() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmt(symbol: string, n: number) {
+export function fmt(symbol: string, n: number) {
   return symbol + n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const SUPPLIER_STATUS: Record<string, { label: string; cls: string }> = {
+export const SUPPLIER_STATUS: Record<string, { label: string; cls: string }> = {
   ENQUIRY:   { label: "Enquiry",   cls: "bg-gray-100 text-gray-700" },
   QUOTED:    { label: "Quoted",    cls: "bg-blue-100 text-blue-700" },
   BOOKED:    { label: "Booked",    cls: "bg-green-100 text-green-700" },
