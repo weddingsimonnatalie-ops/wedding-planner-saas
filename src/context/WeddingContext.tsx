@@ -24,6 +24,7 @@ type WeddingContextValue = {
   subscriptionStatus: SubStatus;
   currencySymbol: string;
   eventNames: EventNamesConfig;
+  dashboardLayout: string;
 };
 
 const WeddingContext = createContext<WeddingContextValue | null>(null);
@@ -34,6 +35,7 @@ export function WeddingProvider({
   subscriptionStatus,
   currencySymbol,
   eventNames,
+  dashboardLayout,
   children,
 }: {
   weddingId: string;
@@ -41,10 +43,11 @@ export function WeddingProvider({
   subscriptionStatus: SubStatus;
   currencySymbol: string;
   eventNames: EventNamesConfig;
+  dashboardLayout: string;
   children: React.ReactNode;
 }) {
   return (
-    <WeddingContext.Provider value={{ weddingId, role, subscriptionStatus, currencySymbol, eventNames }}>
+    <WeddingContext.Provider value={{ weddingId, role, subscriptionStatus, currencySymbol, eventNames, dashboardLayout }}>
       {children}
     </WeddingContext.Provider>
   );
@@ -69,6 +72,7 @@ export function useWedding(): WeddingContextValue {
         rehearsalDinnerEnabled: false,
         rehearsalDinnerName: "Rehearsal Dinner",
       },
+      dashboardLayout: "classic",
     };
   }
   return ctx;

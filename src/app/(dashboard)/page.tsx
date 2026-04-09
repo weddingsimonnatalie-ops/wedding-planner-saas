@@ -11,6 +11,7 @@ export default async function DashboardPage() {
       <DashboardClient
         userName={ctx.userName ?? ctx.userEmail ?? undefined}
         role={ctx.role}
+        dashboardLayout={ctx.dashboardLayout}
       />
     </ErrorBoundary>
   );

@@ -11,6 +11,7 @@ export type ServerContext = {
   userName: string | null;
   weddingId: string;
   role: UserRole;
+  dashboardLayout: string;
 };
 
 /**
@@ -37,12 +38,18 @@ export async function getServerContext(): Promise<ServerContext | null> {
   });
   if (!member) return null;
 
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { dashboardLayout: true },
+  });
+
   return {
     userId: session.user.id,
     userEmail: session.user.email,
     userName: session.user.name,
     weddingId,
     role: member.role,
+    dashboardLayout: user?.dashboardLayout ?? "classic",
   };
 }
 

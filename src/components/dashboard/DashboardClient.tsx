@@ -46,7 +46,7 @@ interface DashStats {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function DashboardClient({ userName, role }: { userName?: string; role?: UserRole }) {
+export function DashboardClient({ userName, role, dashboardLayout }: { userName?: string; role?: UserRole; dashboardLayout?: string }) {
   const { currencySymbol } = useWedding();
   const showFinance = role === "ADMIN" || role === "VIEWER" || role === undefined;
   const [stats, setStats] = useState<DashStats | null>(null);
@@ -748,7 +748,7 @@ export function DashboardClient({ userName, role }: { userName?: string; role?: 
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
-function CountdownCard({ weddingDate, timezone }: { weddingDate: string | null; timezone: string }) {
+export function CountdownCard({ weddingDate, timezone }: { weddingDate: string | null; timezone: string }) {
   // Calculate days until wedding using the user's timezone
   const days = weddingDate
     ? (() => {
@@ -883,7 +883,7 @@ function CountdownCard({ weddingDate, timezone }: { weddingDate: string | null; 
   );
 }
 
-function QuickStat({ icon, label, value, sub, href }: {
+export function QuickStat({ icon, label, value, sub, href }: {
   icon: React.ReactNode; label: string; value: string; sub: string; href: string;
 }) {
   return (
