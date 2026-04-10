@@ -23,33 +23,6 @@ function OnboardingWeddingContent() {
   const [customCurrency, setCustomCurrency] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [paypalCaptureDone, setPaypalCaptureDone] = useState(false);
-
-  // Capture PayPal subscription ID from redirect URL
-  useEffect(() => {
-    const paypalSuccess = searchParams.get("paypal");
-    const subscriptionId = searchParams.get("subscription_id");
-
-    if (paypalSuccess === "success" && subscriptionId && !paypalCaptureDone) {
-      setPaypalCaptureDone(true);
-      fetch("/api/billing/paypal-capture", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscriptionId }),
-      })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.ok) {
-            console.log("[onboarding] PayPal subscription captured");
-          } else {
-            console.error("[onboarding] PayPal capture failed:", data.error);
-          }
-        })
-        .catch((err) => {
-          console.error("[onboarding] PayPal capture error:", err);
-        });
-    }
-  }, [searchParams, paypalCaptureDone]);
 
   // Pre-populate from existing wedding config if any
   useEffect(() => {

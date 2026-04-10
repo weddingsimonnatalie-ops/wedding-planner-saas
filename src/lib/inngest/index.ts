@@ -2,7 +2,6 @@ export { inngest } from "@/lib/inngest/client";
 export { appointmentReminders } from "@/lib/inngest/functions/appointment-reminders";
 export { markOverduePayments } from "@/lib/inngest/functions/mark-overdue-payments";
 export { gracePeriodExpiry } from "@/lib/inngest/functions/grace-period-expiry";
-export { trialEndingReminder } from "@/lib/inngest/functions/trial-ending-reminder";
 export { paymentFailureEmail } from "@/lib/inngest/functions/payment-failure-email";
 export { welcomeEmail } from "@/lib/inngest/functions/welcome-email";
 export { cancellationDataExport } from "@/lib/inngest/functions/cancellation-data-export";
@@ -10,4 +9,3 @@ export { purgeExpiredWeddings } from "@/lib/inngest/functions/purge-expired-wedd
 export { preDeletionWarning } from "@/lib/inngest/functions/pre-deletion-warning";
 export { stripeReconcile } from "@/lib/inngest/functions/stripe-reconcile";
 export { stripeSyncDelayed } from "@/lib/inngest/functions/stripe-sync-delayed";
-export { paypalReconcile } from "@/lib/inngest/functions/paypal-reconcile";

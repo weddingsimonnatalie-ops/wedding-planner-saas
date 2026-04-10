@@ -9,8 +9,9 @@ import { handleDbError } from "@/lib/db-error";
 /**
  * POST /api/billing/checkout
  *
- * Creates a Stripe Checkout session for an existing customer who hasn't
- * completed their initial checkout. Used when stripeSubscriptionId is null.
+ * Creates a Stripe Checkout session for a Free Tier user to upgrade to paid.
+ * If the user doesn't have a Stripe customer yet, one is created.
+ * No trial period — immediate payment.
  *
  * Returns: { checkoutUrl: string }
  */
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const wedding = await prisma.wedding.findUnique({
       where: { id: auth.weddingId },
-      select: { stripeCustomerId: true, stripeSubscriptionId: true },
+      select: { stripeCustomerId: true, stripeSubscriptionId: true, subscriptionStatus: true },
     });
 
     if (!wedding) {
@@ -36,24 +37,38 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // If no Stripe customer, something is wrong — they need to re-register
-    if (!wedding.stripeCustomerId) {
-      return NextResponse.json(
-        { error: "No Stripe customer found. Please contact support." },
-        { status: 422 }
-      );
-    }
-
     const priceId = process.env.STRIPE_PRICE_ID_STANDARD;
     if (!priceId) {
       return NextResponse.json({ error: "Billing not configured" }, { status: 503 });
     }
 
-    const trialDays = parseInt(process.env.TRIAL_DAYS ?? "14", 10);
     const appUrl = (process.env.NEXTAUTH_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
+    // Create Stripe customer if they don't have one
+    let customerId = wedding.stripeCustomerId;
+    if (!customerId) {
+      // Get user email for Stripe customer
+      const user = await prisma.user.findFirst({
+        where: { weddings: { some: { weddingId: auth.weddingId, role: "ADMIN" } } },
+        select: { email: true, name: true },
+      });
+
+      const customer = await stripe.customers.create({
+        email: user?.email,
+        name: user?.name ?? undefined,
+        metadata: { weddingId: auth.weddingId },
+      });
+
+      customerId = customer.id;
+
+      await prisma.wedding.update({
+        where: { id: auth.weddingId },
+        data: { stripeCustomerId: customerId },
+      });
+    }
+
     const checkoutSession = await stripe.checkout.sessions.create({
-      customer: wedding.stripeCustomerId,
+      customer: customerId,
       payment_method_types: ["card"],
       mode: "subscription",
       line_items: [
@@ -62,17 +77,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           quantity: 1,
         },
       ],
-      subscription_data: {
-        trial_period_days: trialDays,
-        metadata: { weddingId: auth.weddingId },
-      },
       success_url: `${appUrl}/billing?checkout=success`,
       cancel_url: `${appUrl}/billing?checkout=cancelled`,
       metadata: { weddingId: auth.weddingId },
     });
 
     console.log(
-      `billing/checkout: created session for wedding ${auth.weddingId} (customer ${wedding.stripeCustomerId})`
+      `billing/checkout: created session for wedding ${auth.weddingId} (customer ${customerId})`
     );
 
     return NextResponse.json({ checkoutUrl: checkoutSession.url });

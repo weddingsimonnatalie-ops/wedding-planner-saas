@@ -3,11 +3,7 @@
 import { useState } from "react";
 import { RefreshCw, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
-interface Props {
-  provider: "STRIPE" | "PAYPAL";
-}
-
-export function SyncFromProviderButton({ provider }: Props) {
+export function SyncFromProviderButton({ provider }: { provider: "stripe" }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<"idle" | "success" | "unchanged" | "error">();
   const [errorMsg, setErrorMsg] = useState("");
@@ -19,9 +15,7 @@ export function SyncFromProviderButton({ provider }: Props) {
     setErrorMsg("");
 
     try {
-      const endpoint =
-        provider === "STRIPE" ? "/api/billing/sync" : "/api/billing/paypal-sync";
-      const res = await fetch(endpoint, { method: "POST" });
+      const res = await fetch("/api/billing/sync", { method: "POST" });
       const data = await res.json();
 
       if (!res.ok) {
@@ -43,7 +37,7 @@ export function SyncFromProviderButton({ provider }: Props) {
     return (
       <div className="flex items-center gap-2 text-sm text-green-600 mb-4">
         <CheckCircle2 className="w-4 h-4" />
-        Subscription synced with {provider === "PAYPAL" ? "PayPal" : "Stripe"}
+        Subscription synced with Stripe
       </div>
     );
   }
@@ -52,7 +46,7 @@ export function SyncFromProviderButton({ provider }: Props) {
     return (
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
         <CheckCircle2 className="w-4 h-4" />
-        Already in sync with {provider === "PAYPAL" ? "PayPal" : "Stripe"}
+        Already in sync with Stripe
       </div>
     );
   }
@@ -90,7 +84,7 @@ export function SyncFromProviderButton({ provider }: Props) {
       ) : (
         <RefreshCw className="w-4 h-4" />
       )}
-      {loading ? "Syncing…" : `Sync with ${provider === "PAYPAL" ? "PayPal" : "Stripe"}`}
+      {loading ? "Syncing…" : "Sync with Stripe"}
     </button>
   );
 }

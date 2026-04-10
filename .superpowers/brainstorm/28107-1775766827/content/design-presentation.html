@@ -1,0 +1,80 @@
+<h2>Dashboard Presets: Design</h2>
+<p class="subtitle">4 selectable layouts, one codebase — sections are modular components, presets define ordering</p>
+
+<div class="section">
+  <h3>Architecture: Section-based, not layout-based</h3>
+  <p>Each dashboard section (Countdown, Guest Summary, Budget Overview, Payments, etc.) is a standalone component. A preset is just an ordered list of section IDs. This means:</p>
+  <ul>
+    <li>Each section coded once, shared across all presets</li>
+    <li>Adding a new section automatically available to all presets</li>
+    <li>Persisted per-user in the database (User.dashboardLayout)</li>
+    <li>Picker in Settings → General, with live preview</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h3>The 4 Presets</h3>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px;">
+
+    <!-- Preset 1: Classic -->
+    <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px;">
+      <div style="font-weight: 700; font-size: 14px; color: #334155; margin-bottom: 8px;">1. Classic (current default)</div>
+      <div style="font-size: 11px; color: #64748b; line-height: 1.6;">
+        Quick Stats (4-col) → Guest Summary + Budget Overview → Meal Choices + Suppliers → Budget by Category → Upcoming Payments → Appointments + Tasks
+      </div>
+    </div>
+
+    <!-- Preset 2: Actions First -->
+    <div style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 12px;">
+      <div style="font-weight: 700; font-size: 14px; color: #991b1b; margin-bottom: 8px;">2. Actions First</div>
+      <div style="font-size: 11px; color: #64748b; line-height: 1.6;">
+        Upcoming Payments → Tasks + Appointments → Budget Overview + Budget by Category → Quick Stats (4-col) → Guest Summary + Meals + Suppliers
+      </div>
+    </div>
+
+    <!-- Preset 3: Countdown + Budget Lead -->
+    <div style="background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 12px; padding: 12px;">
+      <div style="font-weight: 700; font-size: 14px; color: #166534; margin-bottom: 8px;">3. Budget Focus</div>
+      <div style="font-size: 11px; color: #64748b; line-height: 1.6;">
+        Countdown + Budget Overview (2-col) → Upcoming Payments + Budget by Category → Tasks + Appointments → Quick Stats (3-col: Guests/Seated/%Paid) → Guest Summary + Meals + Suppliers
+      </div>
+    </div>
+
+    <!-- Preset 4: Three-Section -->
+    <div style="background: #eef2ff; border: 2px solid #c7d2fe; border-radius: 12px; padding: 12px;">
+      <div style="font-weight: 700; font-size: 14px; color: #3730a3; margin-bottom: 8px;">4. Organized</div>
+      <div style="font-size: 11px; color: #64748b; line-height: 1.6;">
+        <strong style="color: #6366f1;">AT A GLANCE</strong> — Quick Stats (4-col)<br>
+        <strong style="color: #dc2626;">NEEDS ATTENTION</strong> — Payments + Tasks + Appointments<br>
+        <strong style="color: #059669;">PROGRESS</strong> — Budget + Suppliers + Guest Summary + Meals
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Data model change</h3>
+  <p>Add <code>dashboardLayout</code> field to User model (string, default "classic"). Values: <code>classic</code>, <code>actions-first</code>, <code>budget-focus</code>, <code>organized</code>.</p>
+</div>
+
+<div class="section">
+  <h3>Settings picker</h3>
+  <p>In Settings → General, a dropdown or radio group to select layout. Each option has a name and short description. The dashboard re-renders immediately on change (no page reload needed — just update state).</p>
+</div>
+
+<div class="section">
+  <h3>Section components</h3>
+  <p>Extract from DashboardClient into standalone components:</p>
+  <ul>
+    <li><code>DashboardQuickStats</code> — Countdown + Guests + Seated + Budget% (adapts: 4-col or 3-col)</li>
+    <li><code>DashboardGuestSummary</code> — Guest RSVP breakdown bars</li>
+    <li><code>DashboardBudgetOverview</code> — Contracted/Paid/Remaining</li>
+    <li><code>DashboardBudgetCategories</code> — Category progress bars</li>
+    <li><code>DashboardMeals</code> — Meal choice bars</li>
+    <li><code>DashboardSuppliers</code> — Status pill list</li>
+    <li><code>DashboardPayments</code> — Overdue/upcoming payments list</li>
+    <li><code>DashboardAppointments</code> — Upcoming appointments list</li>
+    <li><code>DashboardTasks</code> — Overdue/due-soon tasks list</li>
+  </ul>
+</div>

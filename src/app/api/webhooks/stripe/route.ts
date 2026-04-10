@@ -8,6 +8,25 @@ import { inngest } from "@/lib/inngest/client";
 // do not use NextResponse.json() body parsing before this route runs.
 export const dynamic = "force-dynamic";
 
+/**
+ * Calculate when a wedding's data should be purged.
+ * - If weddingDate is in the future: 60 days after weddingDate
+ * - If weddingDate is in the past: 60 days from now
+ * - If no weddingDate: retentionDays from now (default 365)
+ */
+function calculateDeleteScheduledAt(weddingDate: Date | null, retentionDays: number): Date {
+  if (weddingDate) {
+    const purgeDate = new Date(weddingDate);
+    purgeDate.setDate(purgeDate.getDate() + 60);
+    // If wedding date is in the past, use 60 days from now instead
+    if (purgeDate < new Date()) {
+      return new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000);
+    }
+    return purgeDate;
+  }
+  return new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000);
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
@@ -66,15 +85,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           break;
         }
 
+        // When a Free user upgrades via checkout, they become ACTIVE immediately
+        // (no trial period in the new model)
         await prisma.wedding.update({
           where: { id: weddingId },
           data: {
             stripeSubscriptionId: subscriptionId,
-            subscriptionStatus: "TRIALING",
+            subscriptionStatus: "ACTIVE",
           },
         });
         if (useInngest) await inngest.send({ name: "wedding/created", data: { weddingId } });
-        console.log(`checkout.session.completed: wedding ${weddingId} trialing`);
+        console.log(`checkout.session.completed: wedding ${weddingId} active`);
         break;
       }
 
@@ -104,7 +125,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           data: {
             subscriptionStatus: "ACTIVE",
             currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
-            gracePeriodEndsAt: null,
           },
         });
         console.log(`invoice.payment_succeeded: subscription ${subscriptionId} active`);
@@ -119,7 +139,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         const subscriptionId = typeof rawFailedSub === "string" ? rawFailedSub : rawFailedSub?.id;
         if (!subscriptionId) break;
 
-        const graceDays = parseInt(process.env.GRACE_PERIOD_DAYS ?? "7", 10);
         const failedWedding = await prisma.wedding.findUnique({
           where: { stripeSubscriptionId: subscriptionId },
           select: { id: true },
@@ -132,44 +151,35 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           where: { id: failedWedding.id },
           data: {
             subscriptionStatus: "PAST_DUE",
-            gracePeriodEndsAt: new Date(Date.now() + graceDays * 24 * 60 * 60 * 1000),
           },
         });
         if (useInngest) await inngest.send({ name: "stripe/payment.failed", data: { subscriptionId } });
-        console.log(`invoice.payment_failed: subscription ${subscriptionId} past_due, grace period set`);
+        console.log(`invoice.payment_failed: subscription ${subscriptionId} past_due`);
         break;
       }
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
-        const retentionDays = parseInt(process.env.DATA_RETENTION_DAYS ?? "90", 10);
+        const retentionDays = parseInt(process.env.DATA_RETENTION_DAYS ?? "365", 10);
         const cancelledWedding = await prisma.wedding.findUnique({
           where: { stripeSubscriptionId: subscription.id },
-          select: { id: true },
+          select: { id: true, weddingDate: true },
         });
         if (!cancelledWedding) {
           console.warn(`customer.subscription.deleted: no wedding found for subscription ${subscription.id} — skipping`);
           break;
         }
+        const deleteScheduledAt = calculateDeleteScheduledAt(cancelledWedding.weddingDate, retentionDays);
         await prisma.wedding.update({
           where: { id: cancelledWedding.id },
           data: {
-            subscriptionStatus: "CANCELLED",
+            subscriptionStatus: "FREE",
             cancelledAt: new Date(),
-            deleteScheduledAt: new Date(
-              Date.now() + retentionDays * 24 * 60 * 60 * 1000
-            ),
+            deleteScheduledAt,
           },
         });
         if (useInngest) await inngest.send({ name: "wedding/cancelled", data: { weddingId: cancelledWedding.id } });
-        console.log(`customer.subscription.deleted: subscription ${subscription.id} cancelled`);
-        break;
-      }
-
-      case "customer.subscription.trial_will_end": {
-        const subscription = event.data.object as Stripe.Subscription;
-        if (useInngest) await inngest.send({ name: "stripe/trial.will_end", data: { subscriptionId: subscription.id } });
-        console.log(`customer.subscription.trial_will_end: subscription ${subscription.id}`);
+        console.log(`customer.subscription.deleted: subscription ${subscription.id} downgraded to FREE`);
         break;
       }
 

@@ -2,23 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Heart, Eye, EyeOff, CreditCard, Wallet } from "lucide-react";
+import { Heart, Eye, EyeOff } from "lucide-react";
 import { signIn } from "@/lib/auth-client";
 
-type PaymentProvider = "stripe" | "paypal";
-
 interface Props {
-  paypalConfigured: boolean;
   registrationsEnabled: boolean;
 }
 
-export default function RegisterClient({ paypalConfigured, registrationsEnabled }: Props) {
+export default function RegisterClient({ registrationsEnabled }: Props) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [provider, setProvider] = useState<PaymentProvider>("stripe");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -37,11 +33,11 @@ export default function RegisterClient({ paypalConfigured, registrationsEnabled 
 
     setLoading(true);
     try {
-      // Step 1: create account, wedding, and checkout session
+      // Create account and wedding on Free Tier
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, provider }),
+        body: JSON.stringify({ name, email, password }),
       });
       const data = await res.json();
 
@@ -51,8 +47,7 @@ export default function RegisterClient({ paypalConfigured, registrationsEnabled 
         return;
       }
 
-      // Step 2: sign in with Better Auth to establish the session cookie
-      // (required so the user is authenticated when redirected back)
+      // Sign in with Better Auth to establish the session cookie
       const signInResult = await signIn.email({ email, password });
       if (signInResult.error) {
         setError("Account created but sign-in failed. Please sign in manually.");
@@ -60,8 +55,8 @@ export default function RegisterClient({ paypalConfigured, registrationsEnabled 
         return;
       }
 
-      // Step 3: redirect to checkout (Stripe or PayPal approval URL)
-      window.location.href = data.checkoutUrl;
+      // Redirect to dashboard
+      window.location.href = "/";
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
@@ -101,8 +96,8 @@ export default function RegisterClient({ paypalConfigured, registrationsEnabled 
             <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center mb-4">
               <Heart className="w-7 h-7 text-white fill-white" />
             </div>
-            <h1 className="text-2xl font-semibold text-gray-900">Start your free trial</h1>
-            <p className="text-sm text-gray-500 mt-1">14 days free · No charge until day 7</p>
+            <h1 className="text-2xl font-semibold text-gray-900">Create your account</h1>
+            <p className="text-sm text-gray-500 mt-1">Start planning with up to 30 guests for free</p>
           </div>
 
           {error && (
@@ -185,64 +180,17 @@ export default function RegisterClient({ paypalConfigured, registrationsEnabled 
               />
             </div>
 
-            {/* Payment provider selection - only show PayPal option if configured */}
-            {paypalConfigured && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Payment method
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setProvider("stripe")}
-                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-                      provider === "stripe"
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    <CreditCard className="w-4 h-4" />
-                    Card (Stripe)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setProvider("paypal")}
-                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-                      provider === "paypal"
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    <Wallet className="w-4 h-4" />
-                    PayPal
-                  </button>
-                </div>
-              </div>
-            )}
-
             <button
               type="submit"
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed mt-2"
             >
-              {loading
-                ? "Setting up your account…"
-                : provider === "stripe" || !paypalConfigured
-                  ? "Create account & continue to payment"
-                  : "Create account & continue to PayPal"}
+              {loading ? "Creating your account…" : "Create account"}
             </button>
           </form>
 
           <p className="text-xs text-gray-400 text-center mt-4">
-            {provider === "stripe" || !paypalConfigured ? (
-              <>
-                You&apos;ll be redirected to Stripe to add your card. Your 14-day trial starts immediately — you won&apos;t be charged until day 7.
-              </>
-            ) : (
-              <>
-                You&apos;ll be redirected to PayPal to approve the subscription. Your 14-day trial starts immediately — you won&apos;t be charged until day 7.
-              </>
-            )}
+            Free for up to 30 guests. Upgrade anytime for unlimited access.
           </p>
 
           <p className="text-sm text-center text-gray-500 mt-6">

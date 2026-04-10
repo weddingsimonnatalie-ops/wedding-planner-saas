@@ -9,7 +9,7 @@ export const purgeExpiredWeddings = inngest.createFunction(
 
     const expiredWeddings = await prisma.wedding.findMany({
       where: {
-        subscriptionStatus: "CANCELLED",
+        subscriptionStatus: "FREE",
         deleteScheduledAt: { lte: now },
       },
       select: { id: true, coupleName: true },

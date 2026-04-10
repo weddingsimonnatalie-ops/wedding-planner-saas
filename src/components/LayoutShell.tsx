@@ -10,23 +10,24 @@ import { MobileMenu } from "@/components/MobileMenu";
 import {
   LayoutDashboard, Users, LayoutGrid, Briefcase, Settings,
   Heart, LogOut, User, X, CalendarCheck, CreditCard,
-  Clock, PiggyBank, Music,
+  Clock, PiggyBank, Music, Lock,
 } from "lucide-react";
-import { UserRole } from "@prisma/client";
+import { UserRole, SubStatus } from "@prisma/client";
 import { fetchApi } from "@/lib/fetch";
 import { useRefresh } from "@/context/RefreshContext";
+import { useWedding } from "@/context/WeddingContext";
 
 const allNavItems = [
-  { href: "/",                  label: "Dashboard",    icon: LayoutDashboard, roles: null },
-  { href: "/guests",            label: "Guests",       icon: Users,           roles: null },
-  { href: "/seating",           label: "Seating",      icon: LayoutGrid,      roles: null },
-  { href: "/planner",           label: "Planner",      icon: CalendarCheck,   roles: null },
-  { href: "/suppliers",         label: "Suppliers",    icon: Briefcase,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
-  { href: "/payments",          label: "Payments",     icon: CreditCard,      roles: ["ADMIN", "VIEWER"] as UserRole[] },
-  { href: "/budget",            label: "Budget",       icon: PiggyBank,       roles: ["ADMIN", "VIEWER"] as UserRole[] },
-  { href: "/timeline",          label: "Timeline",     icon: Clock,           roles: null },
-  { href: "/music",             label: "Music",        icon: Music,           roles: null },
-  { href: "/settings",          label: "Settings",     icon: Settings,        roles: ["ADMIN"] as UserRole[] },
+  { href: "/",                  label: "Dashboard",    icon: LayoutDashboard, roles: null, premium: false },
+  { href: "/guests",            label: "Guests",       icon: Users,           roles: null, premium: false },
+  { href: "/seating",           label: "Seating",      icon: LayoutGrid,      roles: null, premium: false },
+  { href: "/planner",           label: "Planner",      icon: CalendarCheck,   roles: null, premium: false },
+  { href: "/suppliers",         label: "Suppliers",    icon: Briefcase,       roles: ["ADMIN", "VIEWER"] as UserRole[], premium: false },
+  { href: "/payments",          label: "Payments",     icon: CreditCard,      roles: ["ADMIN", "VIEWER"] as UserRole[], premium: false },
+  { href: "/budget",            label: "Budget",       icon: PiggyBank,       roles: ["ADMIN", "VIEWER"] as UserRole[], premium: false },
+  { href: "/timeline",          label: "Timeline",     icon: Clock,           roles: null, premium: true },
+  { href: "/music",             label: "Music",        icon: Music,           roles: null, premium: true },
+  { href: "/settings",          label: "Settings",     icon: Settings,        roles: ["ADMIN"] as UserRole[], premium: false },
 ];
 
 interface LayoutShellProps {
@@ -37,6 +38,8 @@ interface LayoutShellProps {
 
 export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShellProps) {
   const role = user?.role ?? "ADMIN";
+  const { subscriptionStatus } = useWedding();
+  const isFree = subscriptionStatus === "FREE";
   const navItems = allNavItems.filter(item => item.roles === null || item.roles.includes(role));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -96,7 +99,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {navItems.map(({ href, label, icon: Icon, premium }) => {
             const active =
               href === "/"
                 ? pathname === "/"
@@ -109,6 +112,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
             const badgeCount =
               href === "/planner" ? plannerBadge :
               paymentBadge;
+            const locked = premium && isFree;
             return (
               <Link
                 key={href}
@@ -117,11 +121,15 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
                   "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors min-h-[44px]",
                   active
                     ? "bg-primary/10 text-primary font-medium"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
+                  locked && !active && "opacity-60"
                 )}
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 <span className="flex-1">{label}</span>
+                {locked && (
+                  <Lock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                )}
                 {showBadge && (
                   <span className="ml-auto text-xs bg-primary/15 text-primary rounded-full px-1.5 py-0.5 font-medium min-w-[20px] text-center leading-tight">
                     {badgeCount}

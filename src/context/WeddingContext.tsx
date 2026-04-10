@@ -57,7 +57,7 @@ export function useWedding(): WeddingContextValue {
     return {
       weddingId: "",
       role: "VIEWER",
-      subscriptionStatus: "TRIALING",
+      subscriptionStatus: "FREE",
       currencySymbol: "£",
       eventNames: {
         ceremonyEnabled: true,
@@ -81,7 +81,7 @@ export function useWedding(): WeddingContextValue {
  */
 export function getEmailBlockReason(status: SubStatus): string | null {
   if (status === "ACTIVE" || status === "PAST_DUE") return null;
-  if (status === "TRIALING") return "Upgrade to a paid plan to send emails";
+  if (status === "FREE") return "Upgrade to a paid plan to send emails";
   return "Email sending requires an active subscription";
 }
 
@@ -92,6 +92,26 @@ export function getEmailBlockReason(status: SubStatus): string | null {
  */
 export function getUploadBlockReason(status: SubStatus): string | null {
   if (status === "ACTIVE" || status === "PAST_DUE") return null;
-  if (status === "TRIALING") return "Upgrade to a paid plan to upload files";
+  if (status === "FREE") return "Upgrade to a paid plan to upload files";
   return "File uploads require an active subscription";
+}
+
+/**
+ * Returns a user-facing tooltip message explaining why Timeline is blocked,
+ * or null when the subscription allows access.
+ */
+export function getTimelineBlockReason(status: SubStatus): string | null {
+  if (status === "ACTIVE" || status === "PAST_DUE") return null;
+  if (status === "FREE") return "Upgrade to a paid plan to access Timeline";
+  return "Timeline requires an active subscription";
+}
+
+/**
+ * Returns a user-facing tooltip message explaining why Music is blocked,
+ * or null when the subscription allows access.
+ */
+export function getMusicBlockReason(status: SubStatus): string | null {
+  if (status === "ACTIVE" || status === "PAST_DUE") return null;
+  if (status === "FREE") return "Upgrade to a paid plan to access Music";
+  return "Music requires an active subscription";
 }

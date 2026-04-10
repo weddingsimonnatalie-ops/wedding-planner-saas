@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrRsvpManager } from "@/lib/api-auth";
+import { prisma } from "@/lib/prisma";
 import { withTenantContext } from "@/lib/tenant";
 import { parseGuestCsv } from "@/lib/csv";
 
@@ -14,6 +15,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const auth = await requireAdminOrRsvpManager(req);
     if (!auth.authorized) return auth.response;
     const { weddingId } = auth;
+
+    // Free Tier guest cap: max 30 guests
+    if (auth.wedding.subscriptionStatus === "FREE") {
+      const guestCount = await prisma.guest.count({ where: { weddingId } });
+      if (guestCount >= 30) {
+        return NextResponse.json(
+          { error: "Free Tier allows a maximum of 30 guests. Upgrade to import more." },
+          { status: 403 }
+        );
+      }
+    }
 
     const body = await req.json();
     const { csv, confirm, duplicateActions } = body;

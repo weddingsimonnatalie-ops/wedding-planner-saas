@@ -8,7 +8,7 @@ import { syncWeddingFromStripe } from "@/lib/stripe-sync";
  * without Stripe CLI, etc.).
  *
  * Runs at 2 AM UTC daily. Only processes weddings with a Stripe customer ID
- * that are not already cancelled (CANCELLED is terminal).
+ * that still have an active or past-due subscription (FREE tier has no Stripe subscription).
  */
 export const stripeReconcile = inngest.createFunction(
   { id: "stripe-reconcile", name: "Stripe Reconciliation", triggers: [{ cron: "0 2 * * *" }] },
@@ -17,7 +17,7 @@ export const stripeReconcile = inngest.createFunction(
     const weddings = await prisma.wedding.findMany({
       where: {
         stripeCustomerId: { not: null },
-        subscriptionStatus: { notIn: ["CANCELLED"] },
+        subscriptionStatus: { in: ["ACTIVE", "PAST_DUE"] },
       },
       select: { id: true },
     });

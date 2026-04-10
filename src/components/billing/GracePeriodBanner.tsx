@@ -3,14 +3,14 @@ import { AlertTriangle } from "lucide-react";
 
 interface Props {
   subscriptionStatus: string;
-  gracePeriodEndsAt: Date | null;
+  currentPeriodEnd: Date | null;
 }
 
-export function GracePeriodBanner({ subscriptionStatus, gracePeriodEndsAt }: Props) {
+export function GracePeriodBanner({ subscriptionStatus, currentPeriodEnd }: Props) {
   if (subscriptionStatus !== "PAST_DUE") return null;
 
-  const endsAt = gracePeriodEndsAt
-    ? gracePeriodEndsAt.toLocaleDateString("en-GB", {
+  const endsAt = currentPeriodEnd
+    ? currentPeriodEnd.toLocaleDateString("en-GB", {
         day: "numeric",
         month: "long",
         year: "numeric",

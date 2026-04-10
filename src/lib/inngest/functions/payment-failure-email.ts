@@ -9,7 +9,7 @@ export const paymentFailureEmail = inngest.createFunction(
 
     const wedding = await prisma.wedding.findFirst({
       where: { stripeSubscriptionId: subscriptionId },
-      select: { id: true, coupleName: true, gracePeriodEndsAt: true, reminderEmail: true },
+      select: { id: true, coupleName: true, currentPeriodEnd: true, reminderEmail: true },
     });
 
     if (!wedding) {
@@ -39,8 +39,8 @@ export const paymentFailureEmail = inngest.createFunction(
     });
 
     const appUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-    const graceEnd = wedding.gracePeriodEndsAt
-      ? wedding.gracePeriodEndsAt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+    const graceEnd = wedding.currentPeriodEnd
+      ? wedding.currentPeriodEnd.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
       : "soon";
 
     await transporter.sendMail({

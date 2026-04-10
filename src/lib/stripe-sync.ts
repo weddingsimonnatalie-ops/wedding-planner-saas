@@ -7,9 +7,8 @@ type SyncableFields = {
   subscriptionStatus: SubStatus;
   stripeSubscriptionId: string | null;
   currentPeriodEnd: Date | null;
-  trialEndsAt: Date | null;
   cancelledAt: Date | null;
-  gracePeriodEndsAt: Date | null;
+  deleteScheduledAt: Date | null;
 };
 
 export type SyncResult = {
@@ -27,7 +26,6 @@ type StripeSubscriptionData = {
   id: string;
   status: Stripe.Subscription.Status;
   current_period_end: number;
-  trial_end: number | null;
   canceled_at: number | null;
   created: number;
 };
@@ -36,18 +34,25 @@ type StripeSubscriptionData = {
  * Maps a Stripe subscription status to our SubStatus enum.
  * Returns null for statuses that should not overwrite the current DB value
  * (e.g. "incomplete" — checkout still in progress).
+ *
+ * Mapping:
+ * - trialing            → FREE
+ * - active              → ACTIVE
+ * - past_due / unpaid   → PAST_DUE
+ * - canceled / paused / incomplete_expired → FREE
+ * - incomplete          → null (checkout in progress — do not overwrite)
  */
 function stripeStatusToSubStatus(
   stripeStatus: Stripe.Subscription.Status
 ): SubStatus | null {
   switch (stripeStatus) {
-    case "trialing":            return "TRIALING";
     case "active":              return "ACTIVE";
     case "past_due":            return "PAST_DUE";
-    case "canceled":            return "CANCELLED";
-    case "paused":              return "PAUSED";
-    case "incomplete_expired":  return "CANCELLED";
     case "unpaid":              return "PAST_DUE";
+    case "trialing":            return "FREE";
+    case "canceled":            return "FREE";
+    case "paused":              return "FREE";
+    case "incomplete_expired":  return "FREE";
     case "incomplete":          return null; // checkout in progress — do not overwrite
     default:                    return null;
   }
@@ -55,14 +60,15 @@ function stripeStatusToSubStatus(
 
 /**
  * Picks the most relevant subscription from a list.
- * Prefers active/trialing over terminal states, then most recently created.
+ * Active takes priority over trialing (since trialing now maps to FREE).
+ * Then prefers most recently created.
  */
 function pickBestSubscription(
   subscriptions: Stripe.Subscription[]
 ): Stripe.Subscription | null {
   if (subscriptions.length === 0) return null;
   const priority: Stripe.Subscription.Status[] = [
-    "trialing", "active", "past_due", "paused", "unpaid",
+    "active", "trialing", "past_due", "paused", "unpaid",
     "incomplete", "incomplete_expired", "canceled",
   ];
   return subscriptions.sort(
@@ -73,6 +79,30 @@ function pickBestSubscription(
 }
 
 /**
+ * Calculates the deleteScheduledAt date based on the wedding date.
+ * - If weddingDate is in the future: weddingDate + 60 days
+ * - If weddingDate is in the past: now + 60 days
+ * - If no weddingDate: now + 365 days
+ */
+function calculateDeleteScheduledAt(
+  weddingDate: Date | null,
+  retentionDays: number
+): Date {
+  if (weddingDate) {
+    const now = new Date();
+    if (weddingDate > now) {
+      // Wedding in the future — retain until 60 days after
+      return new Date(weddingDate.getTime() + 60 * 24 * 60 * 60 * 1000);
+    } else {
+      // Wedding in the past — retain for 60 more days from now
+      return new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+    }
+  }
+  // No wedding date — retain for a long fallback period
+  return new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000);
+}
+
+/**
  * Fetches the current Stripe subscription state for a wedding and reconciles
  * it with the DB. Safe to call at any time — idempotent and non-destructive.
  *
@@ -80,10 +110,8 @@ function pickBestSubscription(
  * - Missing stripeSubscriptionId (checkout webhook never fired)
  * - Status drift (payment_succeeded / payment_failed / cancellation missed)
  * - Upgrade / downgrade (currentPeriodEnd stale)
- * - Trial end date changes
  *
- * Does NOT modify: deleteScheduledAt (business logic), subscriptionPlan (not
- * mapped from Stripe price), or any non-billing Wedding fields.
+ * Does NOT modify any non-billing Wedding fields.
  *
  * @returns SyncResult with changed flag and before/after snapshots for logging.
  */
@@ -95,10 +123,9 @@ export async function syncWeddingFromStripe(weddingId: string): Promise<SyncResu
       stripeSubscriptionId: true,
       subscriptionStatus: true,
       currentPeriodEnd: true,
-      trialEndsAt: true,
       cancelledAt: true,
-      gracePeriodEndsAt: true,
       deleteScheduledAt: true,
+      weddingDate: true,
     },
   });
 
@@ -157,43 +184,29 @@ export async function syncWeddingFromStripe(weddingId: string): Promise<SyncResu
     };
   }
 
-  const graceDays = parseInt(process.env.GRACE_PERIOD_DAYS ?? "7", 10);
   const retentionDays = parseInt(process.env.DATA_RETENTION_DAYS ?? "90", 10);
 
   const newCurrentPeriodEnd = sub.current_period_end
     ? new Date(sub.current_period_end * 1000)
     : null;
 
-  // Prefer Stripe's trial_end; fall back to keeping the existing DB value
-  const newTrialEndsAt =
-    sub.trial_end != null
-      ? new Date(sub.trial_end * 1000)
-      : wedding.trialEndsAt;
+  const oldStatus = wedding.subscriptionStatus;
 
-  // gracePeriodEndsAt: only set if newly PAST_DUE and not already set;
-  // clear on ACTIVE (payment recovered); preserve in all other cases
-  let newGracePeriodEndsAt = wedding.gracePeriodEndsAt;
-  if (newStatus === "PAST_DUE" && !wedding.gracePeriodEndsAt) {
-    newGracePeriodEndsAt = new Date(
-      Date.now() + graceDays * 24 * 60 * 60 * 1000
-    );
-  } else if (newStatus === "ACTIVE") {
-    newGracePeriodEndsAt = null;
+  // cancelledAt: set to now when transitioning to FREE from a paid status
+  // (ACTIVE or PAST_DUE). Use Stripe's canceled_at timestamp when available.
+  let newCancelledAt = wedding.cancelledAt;
+  if (newStatus === "FREE" && (oldStatus === "ACTIVE" || oldStatus === "PAST_DUE")) {
+    newCancelledAt = sub.canceled_at
+      ? new Date(sub.canceled_at * 1000)
+      : new Date();
   }
 
-  // cancelledAt: use Stripe's canceled_at if available, else now; preserve existing
-  const newCancelledAt =
-    newStatus === "CANCELLED"
-      ? (sub.canceled_at
-          ? new Date(sub.canceled_at * 1000)
-          : wedding.cancelledAt ?? new Date())
-      : wedding.cancelledAt;
-
-  // deleteScheduledAt: set only if transitioning to CANCELLED and not already set
-  const newDeleteScheduledAt =
-    newStatus === "CANCELLED" && !wedding.deleteScheduledAt
-      ? new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000)
-      : wedding.deleteScheduledAt;
+  // deleteScheduledAt: set when transitioning to FREE from a paid status
+  // and not already set.
+  let newDeleteScheduledAt = wedding.deleteScheduledAt;
+  if (newStatus === "FREE" && (oldStatus === "ACTIVE" || oldStatus === "PAST_DUE") && !wedding.deleteScheduledAt) {
+    newDeleteScheduledAt = calculateDeleteScheduledAt(wedding.weddingDate, retentionDays);
+  }
 
   // ── Diff ───────────────────────────────────────────────────────────────────
 
@@ -201,27 +214,24 @@ export async function syncWeddingFromStripe(weddingId: string): Promise<SyncResu
     subscriptionStatus: wedding.subscriptionStatus,
     stripeSubscriptionId: wedding.stripeSubscriptionId,
     currentPeriodEnd: wedding.currentPeriodEnd,
-    trialEndsAt: wedding.trialEndsAt,
     cancelledAt: wedding.cancelledAt,
-    gracePeriodEndsAt: wedding.gracePeriodEndsAt,
+    deleteScheduledAt: wedding.deleteScheduledAt,
   };
 
   const after: SyncableFields = {
     subscriptionStatus: newStatus,
     stripeSubscriptionId: subscription.id,
     currentPeriodEnd: newCurrentPeriodEnd,
-    trialEndsAt: newTrialEndsAt,
     cancelledAt: newCancelledAt,
-    gracePeriodEndsAt: newGracePeriodEndsAt,
+    deleteScheduledAt: newDeleteScheduledAt,
   };
 
   const changed =
     before.subscriptionStatus !== after.subscriptionStatus ||
     before.stripeSubscriptionId !== after.stripeSubscriptionId ||
     before.currentPeriodEnd?.getTime() !== after.currentPeriodEnd?.getTime() ||
-    before.trialEndsAt?.getTime() !== after.trialEndsAt?.getTime() ||
     before.cancelledAt?.getTime() !== after.cancelledAt?.getTime() ||
-    before.gracePeriodEndsAt?.getTime() !== after.gracePeriodEndsAt?.getTime();
+    before.deleteScheduledAt?.getTime() !== after.deleteScheduledAt?.getTime();
 
   // ── Write ──────────────────────────────────────────────────────────────────
 
@@ -232,9 +242,7 @@ export async function syncWeddingFromStripe(weddingId: string): Promise<SyncResu
         subscriptionStatus: newStatus,
         stripeSubscriptionId: subscription.id,
         currentPeriodEnd: newCurrentPeriodEnd,
-        trialEndsAt: newTrialEndsAt,
         cancelledAt: newCancelledAt,
-        gracePeriodEndsAt: newGracePeriodEndsAt,
         deleteScheduledAt: newDeleteScheduledAt,
       },
     });

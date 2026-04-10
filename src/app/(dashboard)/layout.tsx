@@ -28,7 +28,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       where: { id: ctx.weddingId },
       select: {
         subscriptionStatus: true,
-        gracePeriodEndsAt: true,
+        currentPeriodEnd: true,
         themeHue: true,
         currencySymbol: true,
         ceremonyEnabled: true,
@@ -47,15 +47,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }),
   ]);
 
-  // Subscription gate — redirect lapsed users to billing/suspended
-  // (runs in Node.js runtime, so Prisma works here unlike in middleware)
+  // Subscription gate — redirect lapsed PAST_DUE users (past their billing period end) to billing/suspended
+  // FREE users have dashboard access with feature gates applied at the page level
   if (weddingBilling) {
-    const { subscriptionStatus, gracePeriodEndsAt } = weddingBilling;
+    const { subscriptionStatus, currentPeriodEnd } = weddingBilling;
     const lapsed =
-      subscriptionStatus === "CANCELLED" ||
-      (subscriptionStatus === "PAST_DUE" &&
-        gracePeriodEndsAt !== null &&
-        gracePeriodEndsAt < new Date());
+      subscriptionStatus === "PAST_DUE" &&
+      currentPeriodEnd !== null &&
+      currentPeriodEnd < new Date();
     if (lapsed) redirect("/billing/suspended");
   }
 
@@ -90,13 +89,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <>
     <style dangerouslySetInnerHTML={{ __html: `:root { --primary: ${safeHue} 60% 55%; --ring: ${safeHue} 60% 55%; }` }} />
-    <WeddingProvider weddingId={ctx.weddingId} role={ctx.role} subscriptionStatus={weddingBilling?.subscriptionStatus ?? "TRIALING"} currencySymbol={currencySymbol} eventNames={eventNames}>
+    <WeddingProvider weddingId={ctx.weddingId} role={ctx.role} subscriptionStatus={weddingBilling?.subscriptionStatus ?? "FREE"} currencySymbol={currencySymbol} eventNames={eventNames}>
       <RefreshProvider>
         <FormDirtyProvider>
           {weddingBilling && (
             <GracePeriodBanner
               subscriptionStatus={weddingBilling.subscriptionStatus}
-              gracePeriodEndsAt={weddingBilling.gracePeriodEndsAt}
+              currentPeriodEnd={weddingBilling.currentPeriodEnd}
             />
           )}
           <LayoutShell user={user} failedLoginCount={failedLoginCount}>

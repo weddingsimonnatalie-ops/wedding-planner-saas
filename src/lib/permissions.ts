@@ -1,4 +1,31 @@
-import { UserRole } from "@prisma/client";
+import { UserRole, SubStatus } from "@prisma/client";
+
+// --- Subscription-tier feature gates ---
+
+export const tier = {
+  /** Timeline and Music require a paid subscription */
+  canAccessTimeline: (status: SubStatus) => status === "ACTIVE" || status === "PAST_DUE",
+  canAccessMusic: (status: SubStatus) => status === "ACTIVE" || status === "PAST_DUE",
+  canSendEmail: (status: SubStatus) => status === "ACTIVE" || status === "PAST_DUE",
+  canUpload: (status: SubStatus) => status === "ACTIVE" || status === "PAST_DUE",
+  canAddGuest: (status: SubStatus, guestCount: number) =>
+    status === "ACTIVE" || status === "PAST_DUE" || guestCount < 30,
+  isFreeTier: (status: SubStatus) => status === "FREE",
+} as const;
+
+/** Returns a user-facing tooltip for why Timeline is blocked, or null when allowed. */
+export function getTimelineBlockReason(status: SubStatus): string | null {
+  if (status === "ACTIVE" || status === "PAST_DUE") return null;
+  if (status === "FREE") return "Upgrade to a paid plan to access Timeline";
+  return "Timeline requires an active subscription";
+}
+
+/** Returns a user-facing tooltip for why Music is blocked, or null when allowed. */
+export function getMusicBlockReason(status: SubStatus): string | null {
+  if (status === "ACTIVE" || status === "PAST_DUE") return null;
+  if (status === "FREE") return "Upgrade to a paid plan to access Music";
+  return "Music requires an active subscription";
+}
 
 export const can = {
   // Page access

@@ -4,11 +4,6 @@ import RegisterClient from "./RegisterClient";
 export const dynamic = "force-dynamic";
 
 export default async function RegisterPage() {
-  const paypalConfigured = !!(
-    process.env.PAYPAL_CLIENT_ID &&
-    process.env.PAYPAL_CLIENT_SECRET
-  );
-
   let registrationsEnabled = true;
   try {
     const config = await prisma.appConfig.findUnique({ where: { id: "global" } });
@@ -18,9 +13,6 @@ export default async function RegisterPage() {
   }
 
   return (
-    <RegisterClient
-      paypalConfigured={paypalConfigured}
-      registrationsEnabled={registrationsEnabled}
-    />
+    <RegisterClient registrationsEnabled={registrationsEnabled} />
   );
 }

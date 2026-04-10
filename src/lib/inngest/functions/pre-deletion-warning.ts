@@ -17,7 +17,7 @@ export const preDeletionWarning = inngest.createFunction(
 
     const weddingsToWarn = await prisma.wedding.findMany({
       where: {
-        subscriptionStatus: "CANCELLED",
+        subscriptionStatus: "FREE",
         deleteScheduledAt: { gte: warningStart, lte: warningEnd },
       },
       select: {
@@ -79,10 +79,10 @@ export const preDeletionWarning = inngest.createFunction(
             ``,
             `This is a reminder that your Wedding Planner data for "${wedding.coupleName}" will be permanently deleted on ${deleteDate}.`,
             ``,
-            `If you'd like to keep your data, download an export before then:`,
+            `Your account is currently on the Free Tier, which has a limited number of guests. If you'd like to keep all your data beyond the guest limit, you can upgrade to a paid plan:`,
             `${appUrl}/billing`,
             ``,
-            `To reactivate your subscription and prevent deletion:`,
+            `If you'd like to keep your data, download an export before then:`,
             `${appUrl}/billing`,
             ``,
             `After ${deleteDate}, all your data — including guests, suppliers, and attachments — will be permanently removed and cannot be recovered.`,

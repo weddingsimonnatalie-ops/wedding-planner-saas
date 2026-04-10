@@ -1,0 +1,140 @@
+<h2>Dashboard layout options</h2>
+<p class="subtitle">All three put budget/payments and action items before summaries. Which flow feels right?</p>
+
+<div class="cards">
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A: Actions First, Then Summaries</div>
+        <div class="mockup-body" style="padding: 12px; font-size: 12px;">
+          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 8px; margin-bottom: 8px;">
+            <div style="font-weight: 600; color: #991b1b; margin-bottom: 4px;">⚠ Overdue Payments</div>
+            <div style="color: #666; font-size: 11px;">Full-width list with Mark as Paid</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
+              <div style="font-weight: 600; color: #334155; font-size: 11px;">📋 Tasks</div>
+              <div style="color: #999; font-size: 10px;">Overdue + due soon</div>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
+              <div style="font-weight: 600; color: #334155; font-size: 11px;">📅 Appointments</div>
+              <div style="color: #999; font-size: 10px;">Upcoming meetings</div>
+            </div>
+          </div>
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px; margin-bottom: 8px;">
+            <div style="font-weight: 600; color: #166534; font-size: 11px;">💰 Budget Overview</div>
+            <div style="color: #666; font-size: 10px;">Contracted / Paid / Remaining</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; margin-bottom: 8px;">
+            <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 6px; text-align: center; font-size: 10px;">💍 Countdown</div>
+            <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 6px; padding: 6px; text-align: center; font-size: 10px;">👥 Guests</div>
+            <div style="background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 6px; padding: 6px; text-align: center; font-size: 10px;">🪑 Seated</div>
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px; text-align: center; font-size: 10px;">📊 % Paid</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 6px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 10px;">Guest summary + Meals</div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 10px;">Suppliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Actions First</h3>
+      <p>Overdue payments → Tasks/Appointments → Budget → Quick stats → Guest details. Maximum urgency visibility.</p>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B: Countdown + Budget Lead, Then Actions</div>
+        <div class="mockup-body" style="padding: 12px; font-size: 12px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+            <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 8px;">
+              <div style="font-weight: 600; color: #7c3aed; font-size: 11px;">💍 Countdown</div>
+              <div style="color: #999; font-size: 10px;">142 days to go</div>
+            </div>
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px;">
+              <div style="font-weight: 600; color: #166534; font-size: 11px;">💰 Budget Overview</div>
+              <div style="color: #666; font-size: 10px;">Paid / Remaining / By category</div>
+            </div>
+          </div>
+          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 8px; margin-bottom: 8px;">
+            <div style="font-weight: 600; color: #991b1b; margin-bottom: 4px;">⚠ Overdue & Upcoming Payments</div>
+            <div style="color: #666; font-size: 10px;">Full list with Mark as Paid</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
+              <div style="font-weight: 600; color: #334155; font-size: 11px;">📋 Tasks</div>
+              <div style="color: #999; font-size: 10px;">Overdue + due soon</div>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
+              <div style="font-weight: 600; color: #334155; font-size: 11px;">📅 Appointments</div>
+              <div style="color: #999; font-size: 10px;">Upcoming meetings</div>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-bottom: 8px;">
+            <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 6px; padding: 6px; text-align: center; font-size: 10px;">👥 Guests</div>
+            <div style="background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 6px; padding: 6px; text-align: center; font-size: 10px;">🪑 Seated</div>
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px; text-align: center; font-size: 10px;">📊 % Paid</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 6px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 10px;">Guest summary + Meals</div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 10px;">Suppliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B: Countdown + Budget Lead</h3>
+      <p>Quick glance at wedding date + budget health, then immediately into payments and action items. Balanced urgency and context.</p>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C: Three-Section Dashboard</div>
+        <div class="mockup-body" style="padding: 12px; font-size: 12px;">
+          <div style="margin-bottom: 10px;">
+            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #6366f1; font-weight: 700; margin-bottom: 6px;">AT A GLANCE</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px;">
+              <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 6px; text-align: center; font-size: 10px;">💍 Countdown</div>
+              <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 6px; padding: 6px; text-align: center; font-size: 10px;">👥 Guests</div>
+              <div style="background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 6px; padding: 6px; text-align: center; font-size: 10px;">🪑 Seated</div>
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px; text-align: center; font-size: 10px;">📊 % Paid</div>
+            </div>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #dc2626; font-weight: 700; margin-bottom: 6px;">NEEDS ATTENTION</div>
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 8px; margin-bottom: 6px;">
+              <div style="font-weight: 600; color: #991b1b; font-size: 11px;">⚠ Overdue Payments</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 10px;">📋 Tasks (overdue/due soon)</div>
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 10px;">📅 Appointments</div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #059669; font-weight: 700; margin-bottom: 6px;">PROGRESS</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px;">
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px; font-size: 10px;">💰 Budget + Categories</div>
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 10px;">Suppliers</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 6px;">
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 10px;">Guest summary + Meals</div>
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; font-size: 10px;">Upcoming payments</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C: Three-Section Dashboard</h3>
+      <p>Explicit section labels: "At a Glance" → "Needs Attention" → "Progress". Clear visual hierarchy with section headings.</p>
+    </div>
+  </div>
+</div>

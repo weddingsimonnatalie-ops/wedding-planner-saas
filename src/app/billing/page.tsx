@@ -2,56 +2,38 @@ export const dynamic = "force-dynamic";
 
 import { requireServerContext } from "@/lib/server-context";
 import { prisma } from "@/lib/prisma";
-import { Heart, CreditCard, Calendar, Download, Zap } from "lucide-react";
-import { ActivateTrialButton } from "@/components/billing/ActivateTrialButton";
+import { Heart, CreditCard, Calendar, Download, Zap, Crown, Users, Mail, Upload, Music, Clock } from "lucide-react";
 import { SyncFromProviderButton } from "@/components/billing/SyncFromProviderButton";
-import { PayPalSubscriptionButton } from "@/components/billing/PayPalSubscriptionButton";
 import { syncWeddingFromStripe } from "@/lib/stripe-sync";
-import { syncWeddingFromPayPal } from "@/lib/paypal-sync";
 
 export default async function BillingPage() {
   const ctx = await requireServerContext(["ADMIN"]);
 
-  // Fetch wedding with billing provider info
+  // Fetch wedding billing info
   let wedding = await prisma.wedding.findUnique({
     where: { id: ctx.weddingId },
     select: {
       coupleName: true,
       subscriptionStatus: true,
-      billingProvider: true,
       stripeCustomerId: true,
       stripeSubscriptionId: true,
-      paypalSubscriptionId: true,
       currentPeriodEnd: true,
-      trialEndsAt: true,
-      gracePeriodEndsAt: true,
       cancelledAt: true,
       deleteScheduledAt: true,
     },
   });
 
-  // Auto-sync from provider on page load
-  // This recovers from missed webhooks
-  if (wedding) {
-    if (wedding.billingProvider === "STRIPE" && wedding.stripeCustomerId) {
-      await syncWeddingFromStripe(ctx.weddingId);
-    } else if (wedding.billingProvider === "PAYPAL" && wedding.paypalSubscriptionId) {
-      await syncWeddingFromPayPal(ctx.weddingId);
-    }
-
-    // Re-fetch to get fresh data after sync
+  // Auto-sync from Stripe on page load if user has a Stripe subscription
+  if (wedding?.stripeCustomerId) {
+    await syncWeddingFromStripe(ctx.weddingId);
     wedding = await prisma.wedding.findUnique({
       where: { id: ctx.weddingId },
       select: {
         coupleName: true,
         subscriptionStatus: true,
-        billingProvider: true,
         stripeCustomerId: true,
         stripeSubscriptionId: true,
-        paypalSubscriptionId: true,
         currentPeriodEnd: true,
-        trialEndsAt: true,
-        gracePeriodEndsAt: true,
         cancelledAt: true,
         deleteScheduledAt: true,
       },
@@ -59,23 +41,19 @@ export default async function BillingPage() {
   }
 
   const statusLabel: Record<string, string> = {
-    TRIALING: "Trial",
+    FREE: "Free Tier",
     ACTIVE: "Active",
     PAST_DUE: "Payment overdue",
-    CANCELLED: "Cancelled",
-    PAUSED: "Paused",
   };
 
   const statusColour: Record<string, string> = {
-    TRIALING: "text-blue-600 bg-blue-50",
+    FREE: "text-gray-600 bg-gray-50",
     ACTIVE: "text-green-600 bg-green-50",
     PAST_DUE: "text-amber-600 bg-amber-50",
-    CANCELLED: "text-red-600 bg-red-50",
-    PAUSED: "text-gray-600 bg-gray-50",
   };
 
-  const status = wedding?.subscriptionStatus ?? "TRIALING";
-  const provider = wedding?.billingProvider ?? "STRIPE";
+  const status = wedding?.subscriptionStatus ?? "FREE";
+  const isFree = status === "FREE";
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
@@ -86,14 +64,16 @@ export default async function BillingPage() {
         <h1 className="text-2xl font-semibold text-gray-900">Billing</h1>
       </div>
 
-      <SyncFromProviderButton provider={provider} />
+      {wedding?.stripeCustomerId && (
+        <SyncFromProviderButton provider="stripe" />
+      )}
 
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="font-semibold text-gray-900">Wedding Planner</h2>
             <p className="text-sm text-gray-500">
-              Standard plan · £12/month · {provider === "PAYPAL" ? "PayPal" : "Card"}
+              {isFree ? "Free Tier" : "Standard plan · £12/month · Card"}
             </p>
           </div>
           <span
@@ -117,12 +97,12 @@ export default async function BillingPage() {
           </div>
         )}
 
-        {wedding?.trialEndsAt && status === "TRIALING" && (
-          <div className="flex items-center gap-2 text-sm text-blue-600">
+        {wedding?.currentPeriodEnd && status === "PAST_DUE" && (
+          <div className="flex items-center gap-2 text-sm text-amber-600">
             <Calendar className="w-4 h-4" />
             <span>
-              Trial ends:{" "}
-              {new Date(wedding.trialEndsAt).toLocaleDateString("en-GB", {
+              Access continues until:{" "}
+              {new Date(wedding.currentPeriodEnd).toLocaleDateString("en-GB", {
                 day: "numeric",
                 month: "long",
                 year: "numeric",
@@ -131,12 +111,12 @@ export default async function BillingPage() {
           </div>
         )}
 
-        {wedding?.gracePeriodEndsAt && status === "PAST_DUE" && (
-          <div className="flex items-center gap-2 text-sm text-amber-600">
+        {wedding?.deleteScheduledAt && isFree && wedding.cancelledAt && (
+          <div className="flex items-center gap-2 text-sm text-red-600">
             <Calendar className="w-4 h-4" />
             <span>
-              Grace period ends:{" "}
-              {new Date(wedding.gracePeriodEndsAt).toLocaleDateString("en-GB", {
+              Data will be deleted on:{" "}
+              {new Date(wedding.deleteScheduledAt).toLocaleDateString("en-GB", {
                 day: "numeric",
                 month: "long",
                 year: "numeric",
@@ -146,34 +126,59 @@ export default async function BillingPage() {
         )}
       </div>
 
-      {status === "TRIALING" && (
+      {isFree && (
         <div className="bg-white rounded-xl border border-primary/20 p-6 mb-4">
           <div className="flex items-start gap-3 mb-4">
             <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-              <Zap className="w-4 h-4 text-primary" />
+              <Crown className="w-4 h-4 text-primary" />
             </div>
             <div>
               <h2 className="font-semibold text-gray-900 mb-1">
-                Start your subscription now
+                Upgrade to unlock everything
               </h2>
               <p className="text-sm text-gray-500">
-                Unlock email sending and all features immediately — don&apos;t
-                wait for your trial to end.
+                £12/month — cancel anytime. Unlock all features with no limits.
               </p>
             </div>
           </div>
-          <ActivateTrialButton
-            provider={provider}
-            hasSubscription={
-              provider === "STRIPE"
-                ? !!wedding?.stripeSubscriptionId
-                : !!wedding?.paypalSubscriptionId
-            }
-          />
+
+          <div className="space-y-2 mb-4 text-sm">
+            <div className="flex items-center gap-2 text-gray-600">
+              <Users className="w-4 h-4 text-primary" />
+              <span>Unlimited guests</span>
+              <span className="text-gray-400">· Free tier: 30 max</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-600">
+              <Mail className="w-4 h-4 text-primary" />
+              <span>Email sending &amp; RSVPs</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-600">
+              <Upload className="w-4 h-4 text-primary" />
+              <span>File uploads</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-600">
+              <Clock className="w-4 h-4 text-primary" />
+              <span>Wedding day timeline</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-600">
+              <Music className="w-4 h-4 text-primary" />
+              <span>Music playlists</span>
+            </div>
+          </div>
+
+          <form action="/api/billing/checkout" method="POST">
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+            >
+              <Zap className="w-4 h-4" />
+              Upgrade now
+            </button>
+          </form>
         </div>
       )}
 
-      {provider === "STRIPE" ? (
+      {!isFree && wedding?.stripeCustomerId && (
         <>
           <form action="/api/billing/portal" method="POST">
             <button
@@ -188,28 +193,6 @@ export default async function BillingPage() {
             You&apos;ll be redirected to Stripe to manage your subscription, payment
             method, and invoices.
           </p>
-        </>
-      ) : (
-        <>
-          <PayPalSubscriptionButton
-            status={status}
-            paypalSubscriptionId={wedding?.paypalSubscriptionId ?? null}
-          />
-          {status !== "CANCELLED" && status !== "PAST_DUE" && (
-            <p className="text-xs text-gray-400 text-center mt-4">
-              PayPal subscriptions are managed through your PayPal account. To update
-              your payment method, visit{" "}
-              <a
-                href="https://www.paypal.com/myaccount/autopay/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                paypal.com
-              </a>
-              .
-            </p>
-          )}
         </>
       )}
 

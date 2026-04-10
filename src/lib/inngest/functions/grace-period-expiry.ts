@@ -9,21 +9,33 @@ export const gracePeriodExpiry = inngest.createFunction(
     const expiredWeddings = await prisma.wedding.findMany({
       where: {
         subscriptionStatus: "PAST_DUE",
-        gracePeriodEndsAt: { lt: now },
+        currentPeriodEnd: { lt: now },
       },
-      select: { id: true },
+      select: { id: true, weddingDate: true },
     });
-
-    const retentionDays = parseInt(process.env.DATA_RETENTION_DAYS ?? "90", 10);
 
     for (const wedding of expiredWeddings) {
       await step.run(`cancel-wedding-${wedding.id}`, async () => {
+        // Calculate deleteScheduledAt based on wedding date
+        let deleteScheduledAt: Date;
+        if (wedding.weddingDate && new Date(wedding.weddingDate) > now) {
+          // Wedding is in the future — keep data for 60 days after the wedding
+          const weddingDate = new Date(wedding.weddingDate);
+          deleteScheduledAt = new Date(weddingDate.getTime() + 60 * 24 * 60 * 60 * 1000);
+        } else if (wedding.weddingDate) {
+          // Wedding is in the past — keep data for 60 days from now
+          deleteScheduledAt = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+        } else {
+          // No wedding date set — keep data for 365 days from now
+          deleteScheduledAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+        }
+
         await prisma.wedding.update({
           where: { id: wedding.id },
           data: {
-            subscriptionStatus: "CANCELLED",
+            subscriptionStatus: "FREE",
             cancelledAt: now,
-            deleteScheduledAt: new Date(now.getTime() + retentionDays * 24 * 60 * 60 * 1000),
+            deleteScheduledAt,
           },
         });
 
@@ -34,7 +46,7 @@ export const gracePeriodExpiry = inngest.createFunction(
       });
     }
 
-    console.log(`[grace-period-expiry] Cancelled ${expiredWeddings.length} expired weddings`);
-    return { cancelled: expiredWeddings.length };
+    console.log(`[grace-period-expiry] Downgraded ${expiredWeddings.length} expired weddings to Free Tier`);
+    return { downgraded: expiredWeddings.length };
   }
 );

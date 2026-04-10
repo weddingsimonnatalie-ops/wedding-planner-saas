@@ -8,7 +8,7 @@ export const markOverduePayments = inngest.createFunction(
     const now = new Date();
 
     const activeWeddings = await prisma.wedding.findMany({
-      where: { subscriptionStatus: { in: ["TRIALING", "ACTIVE", "PAST_DUE"] } },
+      where: { subscriptionStatus: { in: ["FREE", "ACTIVE", "PAST_DUE"] } },
       select: { id: true },
     });
 

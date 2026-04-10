@@ -72,16 +72,9 @@ model TrustedDevice {
 // --- WEDDING / MULTI-TENANCY ---
 
 enum SubStatus {
-  TRIALING
+  FREE
   ACTIVE
   PAST_DUE
-  CANCELLED
-  PAUSED
-}
-
-enum BillingProvider {
-  STRIPE
-  PAYPAL
 }
 
 model Wedding {
@@ -100,14 +93,9 @@ model Wedding {
   stripeCustomerId     String?         @unique
   stripeSubscriptionId String?         @unique
 
-  // Billing (provider-agnostic)
-  billingProvider      BillingProvider @default(STRIPE)
-  paypalSubscriptionId String?         @unique
-  subscriptionStatus   SubStatus       @default(TRIALING)
-  subscriptionPlan     String?
+  // Billing
+  subscriptionStatus   SubStatus       @default(FREE)
   currentPeriodEnd     DateTime?
-  trialEndsAt          DateTime?
-  gracePeriodEndsAt    DateTime?
 
   // Event name configuration
   ceremonyEnabled        Boolean @default(true)
@@ -192,13 +180,6 @@ model StripeEvent {
   processedAt DateTime @default(now())
 
   @@index([processedAt])
-}
-
-model PayPalEvent {
-  id          String   @id @default(cuid())
-  eventId     String   @unique
-  eventType   String
-  processedAt DateTime @default(now())
 }
 
 // Singleton global config — always has exactly one row with id = "global"

@@ -21,7 +21,6 @@ type SessionUser = {
 type WeddingContext = {
   subscriptionStatus: SubStatus;
   currentPeriodEnd: Date | null;
-  gracePeriodEndsAt: Date | null;
 };
 
 type AuthSuccess = {
@@ -103,7 +102,6 @@ export async function requireRole(
           select: {
             subscriptionStatus: true,
             currentPeriodEnd: true,
-            gracePeriodEndsAt: true,
           },
         },
       },
@@ -126,14 +124,14 @@ export async function requireRole(
       };
     }
 
-    // Step 4: check subscription status (skip for billing/portal routes that need to work when lapsed)
-    const { subscriptionStatus, currentPeriodEnd, gracePeriodEndsAt } = member.wedding;
+    // Step 4: check subscription status — block lapsed PAST_DUE (past their billing period end)
+    // FREE users are allowed through (they have limited features gated elsewhere)
+    const { subscriptionStatus, currentPeriodEnd } = member.wedding;
     if (
       !options?.allowLapsed &&
-      (subscriptionStatus === "CANCELLED" ||
-        (subscriptionStatus === "PAST_DUE" &&
-          gracePeriodEndsAt !== null &&
-          gracePeriodEndsAt < new Date()))
+      subscriptionStatus === "PAST_DUE" &&
+      currentPeriodEnd !== null &&
+      currentPeriodEnd < new Date()
     ) {
       return {
         authorized: false,
@@ -165,7 +163,7 @@ export async function requireRole(
       user: sessionUser,
       weddingId,
       role: member.role,
-      wedding: { subscriptionStatus, currentPeriodEnd, gracePeriodEndsAt },
+      wedding: { subscriptionStatus, currentPeriodEnd },
     };
   } catch (error) {
     console.error("requireRole error:", error);
@@ -184,17 +182,14 @@ export const requireAdminOrRsvpManager = (req: NextRequest) =>
 /**
  * Check whether the current subscription allows product email sending.
  * Only ACTIVE and PAST_DUE (within grace period) subscriptions may send emails.
- * TRIALING, CANCELLED, PAUSED, and lapsed PAST_DUE accounts are blocked.
- *
- * Call this after requireRole() has already confirmed the subscription is not
- * fully lapsed — this adds the extra check that blocks TRIALING accounts.
+ * FREE tier accounts are blocked.
  */
 export function requireEmailFeature(subStatus: SubStatus): NextResponse | null {
   if (subStatus === "ACTIVE" || subStatus === "PAST_DUE") return null;
   const message =
-    subStatus === "TRIALING"
-      ? "Email sending requires a paid subscription. Upgrade your trial to send emails."
-      : "Email sending requires an active subscription. Please reactivate your plan.";
+    subStatus === "FREE"
+      ? "Email sending requires a paid subscription. Upgrade to send emails."
+      : "Email sending requires an active subscription.";
   return NextResponse.json({ error: message }, { status: 402 });
 }
 
@@ -205,23 +200,33 @@ export function requireEmailFeature(subStatus: SubStatus): NextResponse | null {
  */
 export function getEmailBlockReason(subStatus: SubStatus): string | null {
   if (subStatus === "ACTIVE" || subStatus === "PAST_DUE") return null;
-  if (subStatus === "TRIALING") return "Upgrade to a paid plan to send emails";
+  if (subStatus === "FREE") return "Upgrade to a paid plan to send emails";
   return "Email sending requires an active subscription";
 }
 
 /**
  * Check whether the current subscription allows file uploads.
  * Only ACTIVE and PAST_DUE (within grace period) subscriptions may upload files.
- * TRIALING, CANCELLED, PAUSED, and lapsed PAST_DUE accounts are blocked.
- *
- * Call this after requireRole() has already confirmed the subscription is not
- * fully lapsed — this adds the extra check that blocks TRIALING accounts.
+ * FREE tier accounts are blocked.
  */
 export function requireUploadFeature(subStatus: SubStatus): NextResponse | null {
   if (subStatus === "ACTIVE" || subStatus === "PAST_DUE") return null;
   const message =
-    subStatus === "TRIALING"
-      ? "File uploads require a paid subscription. Upgrade your trial to upload files."
-      : "File uploads require an active subscription. Please reactivate your plan.";
+    subStatus === "FREE"
+      ? "File uploads require a paid subscription. Upgrade to upload files."
+      : "File uploads require an active subscription.";
+  return NextResponse.json({ error: message }, { status: 402 });
+}
+
+/**
+ * Check whether the current subscription allows access to premium features
+ * (Timeline, Music). Only ACTIVE and PAST_DUE subscriptions have access.
+ */
+export function requirePremiumFeature(subStatus: SubStatus): NextResponse | null {
+  if (subStatus === "ACTIVE" || subStatus === "PAST_DUE") return null;
+  const message =
+    subStatus === "FREE"
+      ? "This feature requires a paid subscription. Upgrade to access it."
+      : "This feature requires an active subscription.";
   return NextResponse.json({ error: message }, { status: 402 });
 }
