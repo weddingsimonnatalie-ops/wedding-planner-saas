@@ -506,47 +506,50 @@ Other settings pages:
 
 ## Billing (`/billing`)
 
-Subscription management with provider choice (Stripe or PayPal). Users select their payment method at registration.
+Subscription management with Stripe. New users start on the Free Tier (no payment required).
 
 **Registration flow:**
-- Payment method selector: "Card (Stripe)" or "PayPal"
-- Stripe: redirects to Stripe Checkout for card collection
-- PayPal: redirects to PayPal approval flow, then captures subscription ID on return
+- Simple name/email/password form — no payment required
+- Creates Wedding with `subscriptionStatus: "FREE"` immediately
+- "Upgrade" button on billing page starts Stripe Checkout for paid plan
 
-**Billing page:**
-- Auto-syncs from provider on page load (recovers from missed webhooks)
-- Shows subscription status badge: Trial / Active / Payment overdue / Cancelled
-- Stripe users: "Manage subscription in Stripe" button → Stripe billing portal
-- PayPal users:
-  - Active/Trialing: "Cancel PayPal subscription" button with confirmation
-  - Cancelled: "Reactivate subscription" button
-  - Past due: Payment overdue warning + reactivate button
-- Download my data: exports all wedding data as JSON
+**Billing page (Free Tier):**
+- Shows current plan (Free Tier), guest limit (30), and blocked features list
+- Prominent "Upgrade now" CTA button → Stripe Checkout
+- Auto-syncs from Stripe on page load (recovers from missed webhooks)
+
+**Billing page (Paid — ACTIVE/PAST_DUE):**
+- Shows current plan, next billing date, and Stripe customer portal link
+- "Manage subscription in Stripe" button → Stripe billing portal
+
+**Downgrade gate (`/billing/downgrade`):**
+- Shown when cancelled subscription has >30 guests
+- Two options: upgrade to paid plan, or remove guests until count ≤ 30
+- Guest removal interface with checkboxes and count indicator
+- Auto-redirects back to dashboard once guest count is within limit
+
+**Suspended page (`/billing/suspended`):**
+- Shown when PAST_DUE period has expired (past `currentPeriodEnd`)
+- Option to reactivate subscription or continue with Free Tier (if guest count allows)
 
 **Subscription lifecycle:**
-- Trial: 14 days free (configurable via `TRIAL_DAYS`)
-- Active: subscription active, all features enabled
-- Past due: payment failed, 7-day grace period (configurable via `GRACE_PERIOD_DAYS`)
-  - Email sending and file uploads blocked during grace period
+- **Free Tier:** No payment, up to 30 guests, no Timeline/Music/Email/File Uploads
+- **Active:** Paid subscription, full access, no limits
+- **Past Due:** Payment failed, access continues until `currentPeriodEnd`
+  - Email sending and file uploads blocked during past-due period
   - Full access otherwise
-- Cancelled: subscription terminated, data retained for 90 days (configurable via `DATA_RETENTION_DAYS`)
+- **Downgrade to Free:** Cancelled subscription downgrades to FREE
+  - Hard gate at `/billing/downgrade` if >30 guests
+  - Data purged based on wedding date (60 days after wedding date, or 365 days if no date)
 
-**Feature gates (applied via `requireRole()` in `src/lib/api-auth.ts`):**
-- `TRIALING`: Full access except email/file uploads
+**Feature gates (applied via `src/lib/permissions.ts` and `src/lib/api-auth.ts`):**
+- `FREE`: 30-guest cap, no Timeline, Music, Email, or File Uploads
 - `ACTIVE`: Full access
-- `PAST_DUE` (within grace): Full access except email/file uploads
-- `PAST_DUE` (expired grace): Blocked, redirect to `/billing/suspended`
-- `CANCELLED`: Blocked, redirect to `/billing/suspended`
-
-**Provider-specific behavior:**
-- **Stripe**: Trial can be ended early via "Activate subscription now" button (sets `trial_end: "now"`); billing portal for payment method changes
-- **PayPal**: Trial activates automatically; reactivation available for suspended/cancelled subscriptions via PayPal API; no billing portal (payment method changes via paypal.com)
+- `PAST_DUE` (within current period): Full access except email/file uploads
 
 **Webhooks:**
-- Stripe: `checkout.session.completed`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.deleted`, `customer.subscription.trial_will_end`
-- PayPal: `BILLING.SUBSCRIPTION.CREATED`, `BILLING.SUBSCRIPTION.ACTIVATED`, `BILLING.SUBSCRIPTION.CANCELLED`, `BILLING.SUBSCRIPTION.SUSPENDED`, `BILLING.SUBSCRIPTION.EXPIRED`, `BILLING.SUBSCRIPTION.PAYMENT.FAILED`, `PAYMENT.SALE.COMPLETED`
-- All webhooks are idempotent (event IDs stored to prevent duplicate processing)
+- Stripe: `checkout.session.completed`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.deleted`
+- All webhooks are idempotent (event IDs stored in `StripeEvent` to prevent duplicate processing)
 
 **Nightly reconciliation (Inngest cron jobs):**
-- `stripe-reconcile`: 2 AM UTC — syncs all non-cancelled Stripe subscriptions
-- `paypal-reconcile`: 2:30 AM UTC — syncs all non-cancelled PayPal subscriptions
+- `stripe-reconcile`: 2 AM UTC — syncs all ACTIVE/PAST_DUE Stripe subscriptions

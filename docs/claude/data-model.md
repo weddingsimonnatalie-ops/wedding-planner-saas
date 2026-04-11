@@ -141,22 +141,20 @@ Timeline events track the wedding day schedule. Key fields:
 ## Wedding
 
 Multi-tenant wedding record. Key billing fields:
-- `billingProvider` — `STRIPE | PAYPAL` (default: `STRIPE`)
-- `stripeCustomerId` — Stripe customer ID (for Stripe users)
+- `stripeCustomerId` — Stripe customer ID
 - `stripeSubscriptionId` — Stripe subscription ID
-- `paypalSubscriptionId` — PayPal subscription ID (for PayPal users)
-- `subscriptionStatus` — `TRIALING | ACTIVE | PAST_DUE | CANCELLED | PAUSED`
+- `subscriptionStatus` — `FREE | ACTIVE | PAST_DUE`
 - `currentPeriodEnd` — next billing date
-- `trialEndsAt` — when trial ends
-- `gracePeriodEndsAt` — when grace period expires (PAST_DUE status)
-- `cancelledAt` — when subscription was cancelled
-- `deleteScheduledAt` — when data will be deleted (90 days after cancellation)
+- `cancelledAt` — when subscription was cancelled (downgraded to FREE)
+- `deleteScheduledAt` — when data will be purged (60 days after wedding date for FREE, or 60 days after cancellation for previously-paid users)
 
-The `subscriptionStatus` enum is provider-agnostic — both Stripe and PayPal map to the same values.
+**Free Tier (subscriptionStatus = FREE):** 30-guest cap, no Timeline/Music/Email/File Uploads. Cancelled paid subscriptions downgrade to FREE.
 
-## StripeEvent / PayPalEvent
+**Purge logic:** `deleteScheduledAt` is calculated based on wedding date — 60 days after wedding date if set, 365 days from cancellation if not. Active/PAST_DUE subscriptions are never purged.
 
-Idempotency tables for webhook processing. Store processed event IDs to prevent duplicate handling. Both have the same structure: `id`, `eventId` (unique), `eventType`, `processedAt`.
+## StripeEvent
+
+Idempotency table for Stripe webhook processing. Stores processed event IDs to prevent duplicate handling. Structure: `id`, `eventId` (unique), `eventType`, `processedAt`.
 
 ## AdminAuditLog
 

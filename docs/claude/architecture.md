@@ -57,9 +57,8 @@ Inngest handles scheduled tasks (cron) and event-triggered functions. When `INNG
 | Function | Schedule | Purpose |
 |----------|----------|---------|
 | `appointment-reminders` | Hourly (`0 * * * *`) | Send appointment reminder emails |
-| `stripe-reconcile` | Daily 2 AM UTC | Sync all Stripe subscriptions with DB |
-| `paypal-reconcile` | Daily 2:30 AM UTC | Sync all PayPal subscriptions with DB |
-| `grace-period-expiry` | Daily 5 AM UTC | Move expired grace periods to CANCELLED |
+| `stripe-reconcile` | Daily 2 AM UTC | Sync all ACTIVE/PAST_DUE Stripe subscriptions with DB |
+| `grace-period-expiry` | Daily 5 AM UTC | Move PAST_DUE with expired currentPeriodEnd to FREE |
 | `mark-overdue-payments` | Daily 6 AM UTC | Mark overdue payments on dashboard |
 | `pre-deletion-warning` | Daily 2 AM UTC | Send warning before account deletion |
 | `purge-expired-weddings` | Daily 4 AM UTC | Delete expired cancelled accounts |
@@ -68,11 +67,8 @@ Inngest handles scheduled tasks (cron) and event-triggered functions. When `INNG
 | Event | Trigger | Function |
 |-------|---------|----------|
 | `wedding/created` | New signup | Send welcome email |
-| `stripe/trial.will_end` | Stripe webhook | Send trial ending reminder |
 | `stripe/payment.failed` | Stripe webhook | Send payment failure email |
 | `stripe/sync.delayed` | Null subscription | Recover subscription ID after 30s |
-| `paypal/payment.failed` | PayPal webhook | Send payment failure email |
-| `wedding/cancelled` | Cancellation | Schedule data export |
 
 **Redundancy with reminder daemon:**
 Appointment reminders have two mechanisms: the tsx daemon (always runs locally) and Inngest (runs when configured). If Inngest is not configured, the daemon ensures reminders still work. If both run, the daemon and Inngest may both send reminders — this is acceptable (idempotent, duplicates are harmless).

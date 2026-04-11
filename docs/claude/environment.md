@@ -42,23 +42,14 @@ All variables are in `.env` and passed to the `app` container via `docker-compos
 | `STRIPE_WEBHOOK_SECRET` | Yes | Webhook signing secret from Stripe CLI or dashboard (`whsec_...`). |
 | `STRIPE_PRICE_ID_STANDARD` | Yes | Price ID for the standard monthly plan (`price_...`). |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Yes | Stripe publishable key (`pk_test_...` or `pk_live_...`). |
-| `TRIAL_DAYS` | No | Trial period length in days. Default: `14`. |
-| `GRACE_PERIOD_DAYS` | No | Days after payment failure before full suspension. Default: `7`. |
 | `DATA_RETENTION_DAYS` | No | Days after cancellation before data deletion. Default: `90`. |
 
-## PayPal Billing (optional — alternative to Stripe)
+## Free Tier
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `PAYPAL_CLIENT_ID` | PayPal required | PayPal REST API client ID from Developer Dashboard. |
-| `PAYPAL_CLIENT_SECRET` | PayPal required | PayPal REST API client secret from Developer Dashboard. |
-| `PAYPAL_MODE` | No | `sandbox` for testing, `live` for production. Default: `sandbox`. |
-| `PAYPAL_WEBHOOK_ID` | PayPal required | Webhook ID from PayPal Developer Dashboard. |
-| `PAYPAL_PLAN_ID_STANDARD` | PayPal required | Billing plan ID (created via PayPal API or dashboard). |
-
-**Note**: PayPal and Stripe can both be configured simultaneously. Users choose their payment method at registration. If neither is configured, the app will not start. If only one is configured, only that payment option is shown.
-
-**Setup guide**: See `docs/paypal-setup.md` for detailed PayPal configuration instructions.
+New users start on the Free Tier (no payment required). Limits:
+- 30 guests maximum
+- No Timeline, Music, Email sending, or File Uploads
+- Upgrade to paid plan via Stripe checkout to unlock all features
 
 **SMTP notes**: If `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS` are all blank, the email library returns `ok: true` but logs to console — the app does not error on missing SMTP config. This is useful during development.
 
