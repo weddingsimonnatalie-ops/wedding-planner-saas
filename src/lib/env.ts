@@ -65,8 +65,6 @@ export function validateEnv(): void {
     console.warn("[env] STRIPE_SECRET_KEY not set — Stripe features will fail");
   if (!process.env.STRIPE_WEBHOOK_SECRET)
     console.warn("[env] STRIPE_WEBHOOK_SECRET not set — webhook signature verification will fail");
-  if (!process.env.STRIPE_PRICE_ID_STANDARD)
-    console.warn("[env] STRIPE_PRICE_ID_STANDARD not set — checkout will fail");
 
   console.log("[env] Environment validated successfully");
 }

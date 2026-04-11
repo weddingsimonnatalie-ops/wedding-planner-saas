@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { Heart, CreditCard, Calendar, Download, Zap, Crown, Users, Mail, Upload, Music, Clock } from "lucide-react";
 import { SyncFromProviderButton } from "@/components/billing/SyncFromProviderButton";
 import { syncWeddingFromStripe } from "@/lib/stripe-sync";
+import { headers } from "next/headers";
+import { stripe } from "@/lib/stripe";
+import { getCurrencyFromCountry, getLookupKey } from "@/lib/billing-currency";
 
 export default async function BillingPage() {
   const ctx = await requireServerContext(["ADMIN"]);
@@ -40,6 +43,29 @@ export default async function BillingPage() {
     });
   }
 
+  // Detect currency from Cloudflare country header and fetch price for display
+  const headersList = await headers();
+  const country = headersList.get("cf-ipcountry");
+  const currency = getCurrencyFromCountry(country);
+  const lookupKey = getLookupKey(currency);
+
+  let priceDisplay = "";
+  try {
+    const prices = await stripe.prices.list({ lookup_keys: [lookupKey], limit: 1 });
+    const price = prices.data[0];
+    if (price && price.unit_amount) {
+      const amount = price.unit_amount / 100;
+      const formatted = new Intl.NumberFormat("en", {
+        style: "currency",
+        currency: price.currency.toUpperCase(),
+        minimumFractionDigits: 0,
+      }).format(amount);
+      priceDisplay = `${formatted}/month`;
+    }
+  } catch {
+    // Non-fatal — fall back to empty string; UI handles it gracefully
+  }
+
   const statusLabel: Record<string, string> = {
     FREE: "Free Tier",
     ACTIVE: "Active",
@@ -73,7 +99,7 @@ export default async function BillingPage() {
           <div>
             <h2 className="font-semibold text-gray-900">Wedding Planner</h2>
             <p className="text-sm text-gray-500">
-              {isFree ? "Free Tier" : "Standard plan · £12/month · Card"}
+              {isFree ? "Free Tier" : `Standard plan${priceDisplay ? ` · ${priceDisplay}` : ""} · Card`}
             </p>
           </div>
           <span
@@ -137,7 +163,7 @@ export default async function BillingPage() {
                 Upgrade to unlock everything
               </h2>
               <p className="text-sm text-gray-500">
-                £12/month — cancel anytime. Unlock all features with no limits.
+                {priceDisplay ? `${priceDisplay} — ` : ""}cancel anytime. Unlock all features with no limits.
               </p>
             </div>
           </div>

@@ -34,11 +34,8 @@ export const auth = betterAuth({
   },
   user: {
     additionalFields: {
-      role: {
-        type: "string",
-        required: true,
-        input: false, // Don't allow setting during registration
-      },
+      // role was removed from User — it is now per-wedding on WeddingMember.
+      // session.ts reads it via (session.user as any).role ?? "VIEWER".
       twoFactorEnabled: {
         type: "boolean",
         required: true,
@@ -90,7 +87,14 @@ export const auth = betterAuth({
     },
   },
   secret,
-  trustedOrigins: [baseURL],
+  trustedOrigins: [
+    baseURL,
+    // Additional origins for local network access (e.g. http://192.168.x.x:3001)
+    // Set BETTER_AUTH_TRUSTED_ORIGINS as a comma-separated list in .env
+    ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS
+      ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
+      : []),
+  ],
 });
 
 export type Session = typeof auth.$Infer.Session.session;

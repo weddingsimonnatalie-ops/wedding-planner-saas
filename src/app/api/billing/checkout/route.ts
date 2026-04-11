@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 import { handleDbError } from "@/lib/db-error";
+import { getCurrencyFromCountry, getLookupKey } from "@/lib/billing-currency";
 
 /**
  * POST /api/billing/checkout
@@ -37,10 +38,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const priceId = process.env.STRIPE_PRICE_ID_STANDARD;
-    if (!priceId) {
+    // Detect user's currency from Cloudflare country header (proxied traffic only)
+    const country = req.headers.get("cf-ipcountry");
+    const currency = getCurrencyFromCountry(country);
+    const lookupKey = getLookupKey(currency);
+
+    const prices = await stripe.prices.list({ lookup_keys: [lookupKey], limit: 1 });
+    const price = prices.data[0];
+
+    if (!price) {
+      console.error(`billing/checkout: no price found for lookup key "${lookupKey}" (country: ${country})`);
       return NextResponse.json({ error: "Billing not configured" }, { status: 503 });
     }
+
+    const priceId = price.id;
 
     const appUrl = (process.env.NEXTAUTH_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
@@ -86,7 +97,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       `billing/checkout: created session for wedding ${auth.weddingId} (customer ${customerId})`
     );
 
-    return NextResponse.json({ checkoutUrl: checkoutSession.url });
+    // 303 See Other — converts the browser's POST into a GET when following the redirect
+    return NextResponse.redirect(checkoutSession.url!, { status: 303 });
   } catch (error) {
     return handleDbError(error);
   }

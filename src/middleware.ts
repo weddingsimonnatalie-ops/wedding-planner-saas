@@ -34,6 +34,20 @@ const noWeddingContextPaths = [
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Redirect already-authenticated users away from the register page
+  if (pathname.startsWith("/register")) {
+    let session;
+    try {
+      session = await auth.api.getSession({ headers: request.headers });
+    } catch {
+      // If session check fails, just let them through to the register page
+    }
+    if (session) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next();
+  }
+
   // Allow public paths
   if (publicPaths.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
