@@ -40,9 +40,15 @@ All variables are in `.env` and passed to the `app` container via `docker-compos
 |----------|----------|-------------|
 | `STRIPE_SECRET_KEY` | Yes | Stripe secret API key (`sk_test_...` or `sk_live_...`). |
 | `STRIPE_WEBHOOK_SECRET` | Yes | Webhook signing secret from Stripe CLI or dashboard (`whsec_...`). |
-| `STRIPE_PRICE_ID_STANDARD` | Yes | Price ID for the standard monthly plan (`price_...`). |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Yes | Stripe publishable key (`pk_test_...` or `pk_live_...`). |
 | `DATA_RETENTION_DAYS` | No | Days after cancellation before data deletion. Default: `90`. |
+
+**No price IDs needed.** Prices are resolved at runtime via Stripe lookup keys: `monthly-gbp-1`, `monthly-euro-1`, `monthly-usd-1`. Currency is auto-detected from the `CF-IPCountry` header injected by Cloudflare (GB→GBP, eurozone→EUR, everyone else→USD). See `src/lib/billing-currency.ts`.
+
+## Auth
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `BETTER_AUTH_TRUSTED_ORIGINS` | No | Comma-separated additional origins trusted by Better Auth. Use in dev when accessing the app via a LAN IP that differs from `NEXTAUTH_URL` (e.g. `http://192.168.0.187:3001`). Not needed in production. |
 
 ## Free Tier
 

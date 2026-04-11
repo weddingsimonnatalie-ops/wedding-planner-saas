@@ -9,6 +9,7 @@ type SyncableFields = {
   currentPeriodEnd: Date | null;
   cancelledAt: Date | null;
   deleteScheduledAt: Date | null;
+  subscriptionCurrency: string;
 };
 
 export type SyncResult = {
@@ -122,6 +123,7 @@ export async function syncWeddingFromStripe(weddingId: string): Promise<SyncResu
       stripeCustomerId: true,
       stripeSubscriptionId: true,
       subscriptionStatus: true,
+      subscriptionCurrency: true,
       currentPeriodEnd: true,
       cancelledAt: true,
       deleteScheduledAt: true,
@@ -177,6 +179,7 @@ export async function syncWeddingFromStripe(weddingId: string): Promise<SyncResu
   const sub = subscription as unknown as StripeSubscriptionData;
 
   const newStatus = stripeStatusToSubStatus(subscription.status);
+  const newSubscriptionCurrency = subscription.currency ?? wedding.subscriptionCurrency;
   if (newStatus === null) {
     return {
       changed: false,
@@ -216,6 +219,7 @@ export async function syncWeddingFromStripe(weddingId: string): Promise<SyncResu
     currentPeriodEnd: wedding.currentPeriodEnd,
     cancelledAt: wedding.cancelledAt,
     deleteScheduledAt: wedding.deleteScheduledAt,
+    subscriptionCurrency: wedding.subscriptionCurrency,
   };
 
   const after: SyncableFields = {
@@ -224,6 +228,7 @@ export async function syncWeddingFromStripe(weddingId: string): Promise<SyncResu
     currentPeriodEnd: newCurrentPeriodEnd,
     cancelledAt: newCancelledAt,
     deleteScheduledAt: newDeleteScheduledAt,
+    subscriptionCurrency: newSubscriptionCurrency,
   };
 
   const changed =
@@ -231,7 +236,8 @@ export async function syncWeddingFromStripe(weddingId: string): Promise<SyncResu
     before.stripeSubscriptionId !== after.stripeSubscriptionId ||
     before.currentPeriodEnd?.getTime() !== after.currentPeriodEnd?.getTime() ||
     before.cancelledAt?.getTime() !== after.cancelledAt?.getTime() ||
-    before.deleteScheduledAt?.getTime() !== after.deleteScheduledAt?.getTime();
+    before.deleteScheduledAt?.getTime() !== after.deleteScheduledAt?.getTime() ||
+    before.subscriptionCurrency !== after.subscriptionCurrency;
 
   // ── Write ──────────────────────────────────────────────────────────────────
 
@@ -244,6 +250,7 @@ export async function syncWeddingFromStripe(weddingId: string): Promise<SyncResu
         currentPeriodEnd: newCurrentPeriodEnd,
         cancelledAt: newCancelledAt,
         deleteScheduledAt: newDeleteScheduledAt,
+        subscriptionCurrency: newSubscriptionCurrency,
       },
     });
     console.log(`[stripe-sync] wedding ${weddingId} updated`, {

@@ -92,6 +92,7 @@ model Wedding {
   // Stripe
   stripeCustomerId     String?         @unique
   stripeSubscriptionId String?         @unique
+  subscriptionCurrency String          @default("gbp")  // ISO code: "gbp" | "eur" | "usd"
 
   // Billing
   subscriptionStatus   SubStatus       @default(FREE)

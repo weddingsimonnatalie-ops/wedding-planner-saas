@@ -78,6 +78,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       });
     }
 
+    // Record the billing currency chosen at checkout
+    await prisma.wedding.update({
+      where: { id: auth.weddingId },
+      data: { subscriptionCurrency: currency },
+    });
+
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ["card"],
