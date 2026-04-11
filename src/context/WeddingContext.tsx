@@ -115,3 +115,25 @@ export function getMusicBlockReason(status: SubStatus): string | null {
   if (status === "FREE") return "Upgrade to a paid plan to access Music";
   return "Music requires an active subscription";
 }
+
+/**
+ * Returns a user-facing tooltip message explaining why adding guests is blocked,
+ * or null when the subscription allows more guests. Only blocks when FREE tier
+ * has reached the 30-guest cap.
+ */
+export function getGuestCapBlockReason(status: SubStatus, guestCount: number): string | null {
+  if (status === "ACTIVE" || status === "PAST_DUE") return null;
+  if (status === "FREE" && guestCount >= 30) return "Upgrade to a paid plan to add more than 30 guests";
+  return null;
+}
+
+/**
+ * Returns a user-facing tooltip message explaining why adding suppliers is blocked,
+ * or null when the subscription allows more suppliers. Only blocks when FREE tier
+ * has reached the 30-supplier cap.
+ */
+export function getSupplierCapBlockReason(status: SubStatus, supplierCount: number): string | null {
+  if (status === "ACTIVE" || status === "PAST_DUE") return null;
+  if (status === "FREE" && supplierCount >= 30) return "Upgrade to a paid plan to add more than 30 suppliers";
+  return null;
+}

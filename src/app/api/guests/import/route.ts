@@ -17,14 +17,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const { weddingId } = auth;
 
     // Free Tier guest cap: max 30 guests
-    if (auth.wedding.subscriptionStatus === "FREE") {
-      const guestCount = await prisma.guest.count({ where: { weddingId } });
-      if (guestCount >= 30) {
-        return NextResponse.json(
-          { error: "Free Tier allows a maximum of 30 guests. Upgrade to import more." },
-          { status: 403 }
-        );
-      }
+    const currentGuestCount = auth.wedding.subscriptionStatus === "FREE"
+      ? await prisma.guest.count({ where: { weddingId } })
+      : 0;
+
+    if (auth.wedding.subscriptionStatus === "FREE" && currentGuestCount >= 30) {
+      return NextResponse.json(
+        { error: "Free Tier allows a maximum of 30 guests. Upgrade to import more." },
+        { status: 403 }
+      );
     }
 
     const body = await req.json();
@@ -169,6 +170,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             skipped++;
           }
         }
+    }
+
+    // Free Tier cap check: block import if it would exceed 30 guests
+    if (auth.wedding.subscriptionStatus === "FREE" && currentGuestCount + toCreate.length > 30) {
+      return NextResponse.json(
+        { error: `Free Tier allows a maximum of 30 guests. You have ${currentGuestCount} guests and this import would add ${toCreate.length} more. Upgrade to add unlimited guests.` },
+        { status: 403 }
+      );
     }
 
     // Execute batched operations in a single transaction

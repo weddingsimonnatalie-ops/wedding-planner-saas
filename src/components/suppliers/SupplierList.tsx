@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Plus, Download, Upload, ChevronDown, FileSpreadsheet, Briefcase } from "lucide-react";
 import { fetchApi } from "@/lib/fetch";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useWedding } from "@/context/WeddingContext";
+import { useWedding, getSupplierCapBlockReason } from "@/context/WeddingContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
+import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import { SupplierModal } from "./SupplierModal";
 import { CsvImportModal } from "./CsvImportModal";
 import { CSV_TEMPLATE_HEADERS, CSV_TEMPLATE_EXAMPLE } from "@/lib/supplier-csv";
@@ -45,8 +47,8 @@ function supplierTotals(s: Supplier) {
 }
 
 export function SupplierList({ initialSuppliers, initialStatus = "" }: { initialSuppliers: Supplier[]; initialStatus?: string }) {
-  const { can: perms } = usePermissions();
-  const { currencySymbol } = useWedding();
+  const { can: perms, isAdmin } = usePermissions();
+  const { currencySymbol, subscriptionStatus } = useWedding();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
@@ -57,6 +59,10 @@ export function SupplierList({ initialSuppliers, initialStatus = "" }: { initial
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [error, setError] = useState("");
   const [showStats, setShowStats] = useState(false);
+
+  const supplierCapBlockReason = getSupplierCapBlockReason(subscriptionStatus, suppliers.length);
+  const atCap = !!supplierCapBlockReason;
+  const nearCap = subscriptionStatus === "FREE" && suppliers.length >= 25 && suppliers.length < 30;
 
   const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(CSV_TEMPLATE_HEADERS + CSV_TEMPLATE_EXAMPLE)}`;
 
@@ -109,6 +115,21 @@ export function SupplierList({ initialSuppliers, initialStatus = "" }: { initial
         </div>
       )}
 
+      {(nearCap || atCap) && (
+        <div className={`rounded-lg px-4 py-3 text-sm font-medium flex items-center justify-between gap-4 mb-4 ${atCap ? "bg-red-50 text-red-800 border border-red-200" : "bg-amber-50 text-amber-800 border border-amber-200"}`}>
+          <span>
+            {atCap
+              ? "You've reached the 30-supplier Free Tier limit. Upgrade to add unlimited suppliers."
+              : `You're using ${suppliers.length} of 30 free suppliers. Upgrade to add unlimited suppliers.`}
+          </span>
+          {isAdmin && (
+            <Link href="/billing" className="shrink-0 underline hover:no-underline font-semibold">
+              Upgrade
+            </Link>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold text-gray-900">Suppliers</h1>
@@ -134,20 +155,24 @@ export function SupplierList({ initialSuppliers, initialStatus = "" }: { initial
           </button>
           {perms.editSuppliers && (
             <>
-              <button
-                type="button"
-                onClick={() => setIsImportOpen(true)}
-                className="hidden md:flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-              >
-                <Upload className="w-4 h-4" /> Import
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
-              >
-                <Plus className="w-4 h-4" /> Add Supplier
-              </button>
+              <UpgradePrompt active={atCap} reason={supplierCapBlockReason ?? ""}>
+                <button
+                  type="button"
+                  onClick={atCap ? undefined : () => setIsImportOpen(true)}
+                  className={`hidden md:flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium transition-colors ${atCap ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"}`}
+                >
+                  <Upload className="w-4 h-4" /> Import
+                </button>
+              </UpgradePrompt>
+              <UpgradePrompt active={atCap} reason={supplierCapBlockReason ?? ""}>
+                <button
+                  type="button"
+                  onClick={atCap ? undefined : () => setIsModalOpen(true)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${atCap ? "opacity-50 cursor-not-allowed bg-gray-300 text-gray-500" : "bg-primary text-white hover:bg-primary/90"}`}
+                >
+                  <Plus className="w-4 h-4" /> Add Supplier
+                </button>
+              </UpgradePrompt>
             </>
           )}
         </div>

@@ -148,7 +148,7 @@ Multi-tenant wedding record. Key billing fields:
 - `cancelledAt` — when subscription was cancelled (downgraded to FREE)
 - `deleteScheduledAt` — when data will be purged (60 days after wedding date for FREE, or 60 days after cancellation for previously-paid users)
 
-**Free Tier (subscriptionStatus = FREE):** 30-guest cap, no Timeline/Music/Email/File Uploads. Cancelled paid subscriptions downgrade to FREE.
+**Free Tier (subscriptionStatus = FREE):** 30-guest cap, 30-supplier cap, no Timeline/Music/Email/File Uploads. Cancelled paid subscriptions downgrade to FREE.
 
 **Purge logic:** `deleteScheduledAt` is calculated based on wedding date — 60 days after wedding date if set, 365 days from cancellation if not. Active/PAST_DUE subscriptions are never purged.
 

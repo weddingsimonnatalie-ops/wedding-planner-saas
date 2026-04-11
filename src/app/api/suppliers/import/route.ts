@@ -4,6 +4,7 @@ import { withTenantContext } from "@/lib/tenant";
 import { parseSupplierCsv } from "@/lib/supplier-csv";
 import { handleDbError } from "@/lib/db-error";
 import { invalidateCache } from "@/lib/cache";
+import { prisma } from "@/lib/prisma";
 
 type DupAction = "skip" | "update" | "create";
 
@@ -14,6 +15,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const auth = await requireAdmin(req);
     if (!auth.authorized) return auth.response;
     const { weddingId } = auth;
+
+    // Free Tier supplier cap: max 30 suppliers
+    const currentSupplierCount = auth.wedding.subscriptionStatus === "FREE"
+      ? await prisma.supplier.count({ where: { weddingId } })
+      : 0;
+
+    if (auth.wedding.subscriptionStatus === "FREE" && currentSupplierCount >= 30) {
+      return NextResponse.json(
+        { error: "Free Tier allows a maximum of 30 suppliers. Upgrade to import more." },
+        { status: 403 }
+      );
+    }
 
     const body = await req.json();
     const { csv, confirm, duplicateActions } = body;
@@ -205,6 +218,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           skipped++;
         }
       }
+    }
+
+    // Free Tier cap check: block import if it would exceed 30 suppliers
+    if (auth.wedding.subscriptionStatus === "FREE" && currentSupplierCount + toCreate.length > 30) {
+      return NextResponse.json(
+        { error: `Free Tier allows a maximum of 30 suppliers. You have ${currentSupplierCount} suppliers and this import would add ${toCreate.length} more. Upgrade to add unlimited suppliers.` },
+        { status: 403 }
+      );
     }
 
     // Execute batched operations

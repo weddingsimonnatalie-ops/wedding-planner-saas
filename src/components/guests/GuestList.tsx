@@ -10,7 +10,7 @@ import { PrintGuestListButton } from "./PrintGuestListButton";
 import { GuestModal } from "./GuestModal";
 import { CSV_TEMPLATE_HEADERS } from "@/lib/csv";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useWedding, getEmailBlockReason } from "@/context/WeddingContext";
+import { useWedding, getEmailBlockReason, getGuestCapBlockReason } from "@/context/WeddingContext";
 import { ReadOnlyBanner } from "@/components/ui/ReadOnlyBanner";
 import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
@@ -95,9 +95,13 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
   const router = useRouter();
   const perms = usePermissions();
   const { subscriptionStatus, eventNames } = useWedding();
+
   const events = getEvents(eventNames, true); // Include disabled events for filter options
   const canSendEmail = subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE";
   const emailBlockReason = getEmailBlockReason(subscriptionStatus);
+  const guestCapBlockReason = getGuestCapBlockReason(subscriptionStatus, totalGuests);
+  const atCap = !!guestCapBlockReason;
+  const nearCap = subscriptionStatus === "FREE" && totalGuests >= 25 && totalGuests < 30;
   const [isPending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
@@ -484,25 +488,45 @@ export function GuestList({ guests, groups, mealOptions, tables, totalGuests, st
             <Download className="w-4 h-4" /> Export
           </a>
           {perms.can.importExportGuests && (
-            <button
-              type="button"
-              onClick={() => setShowImport(true)}
-              className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Upload className="w-4 h-4" /> Import
-            </button>
+            <UpgradePrompt active={atCap} reason={guestCapBlockReason ?? ""}>
+              <button
+                type="button"
+                onClick={atCap ? undefined : () => setShowImport(true)}
+                className={`hidden md:flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg transition-colors ${atCap ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"}`}
+              >
+                <Upload className="w-4 h-4" /> Import
+              </button>
+            </UpgradePrompt>
           )}
           {perms.can.editGuests && (
-            <button
-              type="button"
-              onClick={() => setAddModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
-            >
-              <Plus className="w-4 h-4" /> Add guest
-            </button>
+            <UpgradePrompt active={atCap} reason={guestCapBlockReason ?? ""}>
+              <button
+                type="button"
+                onClick={atCap ? undefined : () => setAddModalOpen(true)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${atCap ? "opacity-50 cursor-not-allowed" : "bg-primary text-white hover:bg-primary/90"}`}
+              >
+                <Plus className="w-4 h-4" /> Add guest
+              </button>
+            </UpgradePrompt>
           )}
         </div>
       </div>
+
+      {/* Guest cap banner */}
+      {(nearCap || atCap) && (
+        <div className={`rounded-lg px-4 py-3 text-sm font-medium flex items-center justify-between gap-4 ${atCap ? "bg-red-50 text-red-800 border border-red-200" : "bg-amber-50 text-amber-800 border border-amber-200"}`}>
+          <span>
+            {atCap
+              ? "You've reached the 30-guest Free Tier limit. Upgrade to add unlimited guests."
+              : `You're using ${totalGuests} of 30 free guests. Upgrade to add unlimited guests.`}
+          </span>
+          {perms.isAdmin && (
+            <Link href="/billing" className="shrink-0 underline hover:no-underline font-semibold">
+              Upgrade
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Stats bar - collapsible on mobile, card grid on desktop */}
       <div className="flex flex-col gap-2 md:gap-3">

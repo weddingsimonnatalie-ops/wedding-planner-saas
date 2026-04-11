@@ -514,7 +514,7 @@ Subscription management with Stripe. New users start on the Free Tier (no paymen
 - "Upgrade" button on billing page starts Stripe Checkout for paid plan
 
 **Billing page (Free Tier):**
-- Shows current plan (Free Tier), guest limit (30), and blocked features list
+- Shows current plan (Free Tier), guest/supplier limits (30 each), and blocked features list
 - Prominent "Upgrade now" CTA button → Stripe Checkout
 - Auto-syncs from Stripe on page load (recovers from missed webhooks)
 
@@ -533,17 +533,17 @@ Subscription management with Stripe. New users start on the Free Tier (no paymen
 - Option to reactivate subscription or continue with Free Tier (if guest count allows)
 
 **Subscription lifecycle:**
-- **Free Tier:** No payment, up to 30 guests, no Timeline/Music/Email/File Uploads
+- **Free Tier:** No payment, up to 30 guests and 30 suppliers, no Timeline/Music/Email/File Uploads
 - **Active:** Paid subscription, full access, no limits
 - **Past Due:** Payment failed, access continues until `currentPeriodEnd`
   - Email sending and file uploads blocked during past-due period
   - Full access otherwise
 - **Downgrade to Free:** Cancelled subscription downgrades to FREE
-  - Hard gate at `/billing/downgrade` if >30 guests
+  - Hard gate at `/billing/downgrade` if >30 guests or >30 suppliers
   - Data purged based on wedding date (60 days after wedding date, or 365 days if no date)
 
 **Feature gates (applied via `src/lib/permissions.ts` and `src/lib/api-auth.ts`):**
-- `FREE`: 30-guest cap, no Timeline, Music, Email, or File Uploads
+- `FREE`: 30-guest cap, 30-supplier cap, no Timeline, Music, Email, or File Uploads
 - `ACTIVE`: Full access
 - `PAST_DUE` (within current period): Full access except email/file uploads
 

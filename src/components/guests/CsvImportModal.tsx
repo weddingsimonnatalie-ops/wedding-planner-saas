@@ -81,6 +81,7 @@ export function CsvImportModal({ onClose, onImported }: Props) {
     try {
       const res = await fetch("/api/guests/import", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ csv }),
       });
@@ -111,6 +112,7 @@ export function CsvImportModal({ onClose, onImported }: Props) {
     try {
       const res = await fetch("/api/guests/import", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ csv, confirm: true, duplicateActions: dupActions }),
       });

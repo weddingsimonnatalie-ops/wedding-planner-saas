@@ -10,6 +10,8 @@ export const tier = {
   canUpload: (status: SubStatus) => status === "ACTIVE" || status === "PAST_DUE",
   canAddGuest: (status: SubStatus, guestCount: number) =>
     status === "ACTIVE" || status === "PAST_DUE" || guestCount < 30,
+  canAddSupplier: (status: SubStatus, supplierCount: number) =>
+    status === "ACTIVE" || status === "PAST_DUE" || supplierCount < 30,
   isFreeTier: (status: SubStatus) => status === "FREE",
 } as const;
 
@@ -25,6 +27,20 @@ export function getMusicBlockReason(status: SubStatus): string | null {
   if (status === "ACTIVE" || status === "PAST_DUE") return null;
   if (status === "FREE") return "Upgrade to a paid plan to access Music";
   return "Music requires an active subscription";
+}
+
+/** Returns a user-facing tooltip for why adding guests is blocked, or null when allowed. */
+export function getGuestCapBlockReason(status: SubStatus, guestCount: number): string | null {
+  if (status === "ACTIVE" || status === "PAST_DUE") return null;
+  if (status === "FREE" && guestCount >= 30) return "Upgrade to a paid plan to add more than 30 guests";
+  return null;
+}
+
+/** Returns a user-facing tooltip for why adding suppliers is blocked, or null when allowed. */
+export function getSupplierCapBlockReason(status: SubStatus, supplierCount: number): string | null {
+  if (status === "ACTIVE" || status === "PAST_DUE") return null;
+  if (status === "FREE" && supplierCount >= 30) return "Upgrade to a paid plan to add more than 30 suppliers";
+  return null;
 }
 
 export const can = {

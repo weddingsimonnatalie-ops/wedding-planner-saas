@@ -48,6 +48,7 @@ All variables are in `.env` and passed to the `app` container via `docker-compos
 
 New users start on the Free Tier (no payment required). Limits:
 - 30 guests maximum
+- 30 suppliers maximum
 - No Timeline, Music, Email sending, or File Uploads
 - Upgrade to paid plan via Stripe checkout to unlock all features
 

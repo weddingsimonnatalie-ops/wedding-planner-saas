@@ -72,6 +72,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const { weddingId } = auth;
 
+    // Free Tier supplier cap: max 30 suppliers
+    if (auth.wedding.subscriptionStatus === "FREE") {
+      const supplierCount = await prisma.supplier.count({ where: { weddingId } });
+      if (supplierCount >= 30) {
+        return NextResponse.json(
+          { error: "Free Tier allows a maximum of 30 suppliers. Upgrade to add more." },
+          { status: 403 }
+        );
+      }
+    }
+
     const data: SupplierCreateBody = await req.json();
     if (!data.name?.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });

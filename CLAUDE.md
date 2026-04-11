@@ -9,10 +9,10 @@ This file provides full project context for Claude Code sessions. Read this befo
 A **self-hosted wedding planning web app** built for Simon and Natalie's personal use. The app is deployed on a Mac mini at home behind a Cloudflare Tunnel so it is accessible from anywhere without port-forwarding.
 
 ### What it does
-- Guest management with per-event invitations (ceremony, reception, afterparty)
+- Guest management with per-event invitations (ceremony, reception, afterparty) — Free Tier cap: 30 guests
 - Public RSVP page per guest (no login required) with per-event responses and meal choice
 - Seating planner with drag-and-drop list view and react-konva visual view
-- Supplier/vendor management with status tracking, payments, and file attachments
+- Supplier/vendor management with status tracking, payments, and file attachments — Free Tier cap: 30 suppliers
 - Budget tracking (contracted vs paid)
 - Appointment scheduler with email reminders
 - Task management with priorities, due dates, categories, recurring tasks, and role-based permissions
@@ -74,7 +74,8 @@ wedding-planner-saas/
 │   ├── instrumentation.ts     — Next.js startup hook; validates environment variables
 │   ├── middleware.ts          — Auth guard for all routes except login/rsvp/api-auth
 │   ├── context/
-│   │   └── RefreshContext.tsx — RefreshProvider + useRefresh() hook; cross-component refresh token
+│   │   ├── RefreshContext.tsx — RefreshProvider + useRefresh() hook; cross-component refresh token
+│   │   └── WeddingContext.tsx — WeddingProvider + useWedding() hook; subscription status, event names; getGuestCapBlockReason/getSupplierCapBlockReason helpers
 │   ├── hooks/
 │   │   ├── usePermissions.ts   — Role-based permission checks (can.editGuests, etc.)
 │   │   ├── usePullToRefresh.ts — Pull-to-refresh gesture hook for mobile list refresh
@@ -99,7 +100,7 @@ wedding-planner-saas/
 │   │   ├── filename.ts        — sanitizeFilename(), buildContentDisposition(): safe filename handling
 │   │   ├── rate-limit.ts      — checkRateLimit(), extractIp(), getBulkLimits(): Redis-backed rate limiting
 │   │   ├── cache.ts           — getCached(), invalidateCache(): in-memory TTL cache for reference data
-│   │   ├── permissions.ts     — can.* permission helpers
+│   │   ├── permissions.ts     — can.* permission helpers; tier.canAddGuest/canAddSupplier + getGuestCapBlockReason/getSupplierCapBlockReason
 │   │   └── appointmentReminders.ts — checkAppointmentReminders() called by daemon
 │   ├── scripts/
 │   │   └── reminder-daemon.ts — Long-running process; calls startReminderJob()
