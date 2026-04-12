@@ -66,5 +66,9 @@ export function validateEnv(): void {
   if (!process.env.STRIPE_WEBHOOK_SECRET)
     console.warn("[env] STRIPE_WEBHOOK_SECRET not set — webhook signature verification will fail");
 
+  // Ollama is optional — AI timeline generation degrades gracefully when missing.
+  if (!process.env.OLLAMA_API_KEY)
+    console.warn("[env] OLLAMA_API_KEY not set — AI timeline generation will be unavailable");
+
   console.log("[env] Environment validated successfully");
 }

@@ -1,11 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Clock, MapPin, Briefcase, Loader2 } from "lucide-react";
+import { Plus, MapPin, Briefcase, Loader2, Sparkles } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useWedding } from "@/context/WeddingContext";
+import { getAiTimelineBlockReason } from "@/lib/permissions";
 import { TimelineEventModal } from "./TimelineEventModal";
+import { TimelineGenerateModal } from "./TimelineGenerateModal";
 import { TimelinePrintView } from "./TimelinePrintView";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 
 interface TimelineEvent {
   id: string;
@@ -57,11 +61,14 @@ function getEventColour(category: { colour: string } | null): string {
 
 export function TimelineList() {
   const { can } = usePermissions();
+  const { subscriptionStatus } = useWedding();
+  const aiBlockReason = getAiTimelineBlockReason(subscriptionStatus);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<TimelineEvent | null>(null);
 
   useEffect(() => {
@@ -143,13 +150,25 @@ export function TimelineList() {
         <div className="flex items-center gap-2">
           <TimelinePrintView />
           {can.editTimeline && (
-            <button
-              onClick={handleAdd}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
-            >
-              <Plus className="w-4 h-4" />
-              Add event
-            </button>
+            <>
+              <UpgradePrompt active={aiBlockReason !== null} reason={aiBlockReason ?? ""}>
+                <button
+                  onClick={() => setShowGenerateModal(true)}
+                  disabled={aiBlockReason !== null}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Generate
+                </button>
+              </UpgradePrompt>
+              <button
+                onClick={handleAdd}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90"
+              >
+                <Plus className="w-4 h-4" />
+                Add event
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -230,12 +249,23 @@ export function TimelineList() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Add/edit modal */}
       {showModal && (
         <TimelineEventModal
           event={editingEvent}
           onClose={handleModalClose}
           onSave={handleModalSave}
+        />
+      )}
+
+      {/* AI generate modal */}
+      {showGenerateModal && (
+        <TimelineGenerateModal
+          onClose={() => setShowGenerateModal(false)}
+          onSave={() => {
+            setShowGenerateModal(false);
+            loadData();
+          }}
         />
       )}
     </div>
