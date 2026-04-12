@@ -8,6 +8,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Wedding Planner",
   description: "Your personal wedding planning app",
+  icons: { icon: "/favicon.svg" },
 };
 
 export const viewport: Viewport = {
