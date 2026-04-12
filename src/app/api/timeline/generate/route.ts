@@ -3,9 +3,8 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, requirePremiumFeature } from "@/lib/api-auth";
 import { withTenantContext } from "@/lib/tenant";
-import { apiJson } from "@/lib/api-response";
 import { handleDbError } from "@/lib/db-error";
-import { generateFromOllama, OllamaError } from "@/lib/ollama";
+import { streamFromOllama, OllamaError } from "@/lib/ollama";
 
 export interface DraftTimelineEvent {
   title: string;
@@ -48,19 +47,10 @@ function buildPrompt(
 ): { systemPrompt: string; userPrompt: string } {
   const systemPrompt = `You are a professional wedding day coordinator. Generate a detailed, realistic wedding day timeline.
 
-Return ONLY a valid JSON object in this exact format — no markdown, no explanation, no extra text:
-{
-  "events": [
-    {
-      "title": "Event name",
-      "startTime": "YYYY-MM-DDTHH:mm:ss",
-      "durationMins": 60,
-      "location": "Location name or null",
-      "notes": "Brief helpful note or null",
-      "supplierName": "Exact supplier name from the list or null"
-    }
-  ]
-}
+Output each event as a separate JSON object on its own line (JSONL format).
+Do NOT wrap events in an array. Do NOT add any other text, markdown, or explanation.
+Each line must be a complete, valid JSON object with exactly these fields:
+{"title":"...","startTime":"YYYY-MM-DDTHH:mm:ss","durationMins":60,"location":"...or null","notes":"...or null","supplierName":"...or null"}
 
 Rules:
 - startTime must use the wedding date provided, in ISO 8601 format (e.g. 2026-06-14T14:00:00)
@@ -110,9 +100,43 @@ ${events.length > 0 ? events.join("\n") : "No specific events configured yet —
 Suppliers:
 ${supplierLines}
 
-Generate a complete wedding day timeline. Where a supplier is relevant to an event, set supplierName to their exact name from the list above.`;
+Generate a complete wedding day timeline in JSONL format (one JSON object per line). Where a supplier is relevant to an event, set supplierName to their exact name from the list above.`;
 
   return { systemPrompt, userPrompt };
+}
+
+function normaliseEvent(
+  raw: Record<string, unknown>,
+  supplierLookup: Map<string, string>
+): DraftTimelineEvent | null {
+  if (typeof raw.title !== "string" || typeof raw.startTime !== "string") return null;
+
+  const rawSupplierName =
+    typeof raw.supplierName === "string" && raw.supplierName.trim()
+      ? raw.supplierName.trim()
+      : null;
+  const supplierId = rawSupplierName
+    ? (supplierLookup.get(rawSupplierName.toLowerCase()) ?? null)
+    : null;
+
+  return {
+    title: raw.title.trim(),
+    startTime: raw.startTime,
+    durationMins:
+      typeof raw.durationMins === "number"
+        ? Math.max(5, Math.round(raw.durationMins))
+        : 30,
+    location:
+      typeof raw.location === "string" && raw.location.trim()
+        ? raw.location.trim()
+        : null,
+    notes:
+      typeof raw.notes === "string" && raw.notes.trim()
+        ? raw.notes.trim()
+        : null,
+    supplierId,
+    supplierName: rawSupplierName,
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -167,92 +191,86 @@ export async function POST(req: NextRequest) {
     }
 
     const { systemPrompt, userPrompt } = buildPrompt(weddingData, suppliers);
-
-    // Call Ollama Cloud
-    let rawContent: string;
-    try {
-      rawContent = await generateFromOllama([
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ]);
-    } catch (error) {
-      if (error instanceof OllamaError) {
-        console.error("[timeline/generate] Ollama error:", error.message);
-        return NextResponse.json({ error: error.message }, { status: 502 });
-      }
-      throw error;
-    }
-
-    // Parse AI response
-    let parsed: { events?: unknown[] };
-    try {
-      parsed = JSON.parse(rawContent);
-    } catch {
-      console.error("[timeline/generate] Invalid JSON from Ollama:", rawContent.slice(0, 200));
-      return NextResponse.json(
-        { error: "AI returned invalid JSON. Please try again." },
-        { status: 502 }
-      );
-    }
-
-    if (!Array.isArray(parsed?.events)) {
-      return NextResponse.json(
-        { error: "AI returned an unexpected format. Please try again." },
-        { status: 502 }
-      );
-    }
-
-    // Build case-insensitive supplier name → id lookup
     const supplierLookup = new Map(
       suppliers.map((s) => [s.name.toLowerCase(), s.id])
     );
 
-    // Normalise events and attach matched supplier IDs
-    const events: DraftTimelineEvent[] = parsed.events
-      .filter(
-        (e): e is Record<string, unknown> =>
-          typeof e === "object" && e !== null
-      )
-      .filter(
-        (e) => typeof e.title === "string" && typeof e.startTime === "string"
-      )
-      .map((e) => {
-        const rawSupplierName =
-          typeof e.supplierName === "string" && e.supplierName.trim()
-            ? e.supplierName.trim()
-            : null;
-        const supplierId = rawSupplierName
-          ? (supplierLookup.get(rawSupplierName.toLowerCase()) ?? null)
-          : null;
+    const encoder = new TextEncoder();
 
-        return {
-          title: String(e.title).trim(),
-          startTime: String(e.startTime),
-          durationMins:
-            typeof e.durationMins === "number"
-              ? Math.max(5, Math.round(e.durationMins))
-              : 30,
-          location:
-            typeof e.location === "string" && e.location.trim()
-              ? e.location.trim()
-              : null,
-          notes:
-            typeof e.notes === "string" && e.notes.trim()
-              ? e.notes.trim()
-              : null,
-          supplierId,
-          supplierName: rawSupplierName,
-        };
-      });
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (data: string) =>
+          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
 
-    if (events.length === 0) {
-      return NextResponse.json(
-        { error: "AI did not generate any events. Please try again." },
-        { status: 502 }
-      );
-    }
+        let lineBuffer = "";
+        let eventCount = 0;
 
-    return apiJson({ events });
+        try {
+          for await (const chunk of streamFromOllama([
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ])) {
+            lineBuffer += chunk;
+
+            // Extract complete lines from the buffer
+            const lines = lineBuffer.split("\n");
+            lineBuffer = lines.pop() ?? "";
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed) continue;
+              try {
+                const raw = JSON.parse(trimmed) as Record<string, unknown>;
+                const event = normaliseEvent(raw, supplierLookup);
+                if (event) {
+                  eventCount++;
+                  send(JSON.stringify(event));
+                }
+              } catch {
+                // skip unparseable partial lines
+              }
+            }
+          }
+
+          // Flush any remaining content in the buffer
+          if (lineBuffer.trim()) {
+            try {
+              const raw = JSON.parse(lineBuffer.trim()) as Record<string, unknown>;
+              const event = normaliseEvent(raw, supplierLookup);
+              if (event) {
+                eventCount++;
+                send(JSON.stringify(event));
+              }
+            } catch {
+              // ignore
+            }
+          }
+
+          if (eventCount === 0) {
+            send(JSON.stringify({ error: "AI did not generate any events. Please try again." }));
+          } else {
+            send("[DONE]");
+          }
+        } catch (error) {
+          const msg =
+            error instanceof OllamaError
+              ? error.message
+              : "AI generation failed. Please try again.";
+          console.error("[timeline/generate] stream error:", msg);
+          send(JSON.stringify({ error: msg }));
+        }
+
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+      },
+    });
   } catch (error) {
     return handleDbError(error);
   }
