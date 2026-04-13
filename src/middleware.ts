@@ -53,6 +53,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // API requests with a Bearer token bypass middleware entirely.
+  // auth.api.getSession() doesn't reliably read Bearer tokens in Edge runtime.
+  // The API route (requireRole / auth.api.getSession in Node.js runtime) handles
+  // authentication and authorisation with full Prisma access.
+  if (pathname.startsWith("/api/") && request.headers.get("authorization")?.startsWith("Bearer ")) {
+    return NextResponse.next();
+  }
+
   // Allow static files and Next.js internals
   if (
     pathname.startsWith("/_next") ||
