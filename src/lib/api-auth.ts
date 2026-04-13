@@ -102,8 +102,8 @@ export async function requireRole(
           response: NextResponse.json({ error: "No wedding context" }, { status: 401 }),
         };
       }
-      // Basic UUID format guard to reject obviously malformed values
-      if (!/^[0-9a-f-]{36}$/i.test(headerWeddingId)) {
+      // Basic format guard — accept CUIDs and UUIDs, reject obviously malformed values
+      if (!/^[a-z0-9_-]{10,40}$/i.test(headerWeddingId)) {
         return {
           authorized: false,
           response: NextResponse.json({ error: "Invalid wedding context" }, { status: 401 }),
