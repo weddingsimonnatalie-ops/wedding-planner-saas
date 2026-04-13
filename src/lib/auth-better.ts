@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { bearer } from "better-auth/plugins";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
@@ -86,6 +87,9 @@ export const auth = betterAuth({
       },
     },
   },
+  plugins: [
+    bearer(), // Enables Authorization: Bearer <token> auth for the mobile app
+  ],
   secret,
   trustedOrigins: [
     baseURL,

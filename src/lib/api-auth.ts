@@ -77,22 +77,40 @@ export async function requireRole(
 
     const sessionUser = session.user as SessionUser;
 
-    // Step 2: read and verify signed weddingId cookie
+    // Step 2: resolve weddingId — cookie path (web) or X-Wedding-Id header path (mobile)
+    let weddingId: string;
     const cookieValue = req.cookies.get(COOKIE_NAME)?.value;
-    if (!cookieValue) {
-      return {
-        authorized: false,
-        response: NextResponse.json({ error: "No wedding context" }, { status: 401 }),
-      };
+
+    if (cookieValue) {
+      // Web path: verify signed JWT cookie
+      const cookiePayload = await verifyWeddingCookie(cookieValue);
+      if (!cookiePayload) {
+        return {
+          authorized: false,
+          response: NextResponse.json({ error: "Invalid wedding context" }, { status: 401 }),
+        };
+      }
+      weddingId = cookiePayload.weddingId;
+    } else {
+      // Mobile path: accept raw weddingId from X-Wedding-Id header.
+      // Security: membership is still verified in Step 3 — a forged header only
+      // produces a "not a member" rejection, no data is exposed.
+      const headerWeddingId = req.headers.get("X-Wedding-Id");
+      if (!headerWeddingId) {
+        return {
+          authorized: false,
+          response: NextResponse.json({ error: "No wedding context" }, { status: 401 }),
+        };
+      }
+      // Basic UUID format guard to reject obviously malformed values
+      if (!/^[0-9a-f-]{36}$/i.test(headerWeddingId)) {
+        return {
+          authorized: false,
+          response: NextResponse.json({ error: "Invalid wedding context" }, { status: 401 }),
+        };
+      }
+      weddingId = headerWeddingId;
     }
-    const cookiePayload = await verifyWeddingCookie(cookieValue);
-    if (!cookiePayload) {
-      return {
-        authorized: false,
-        response: NextResponse.json({ error: "Invalid wedding context" }, { status: 401 }),
-      };
-    }
-    const weddingId = cookiePayload.weddingId;
 
     // Step 3: query WeddingMember to confirm role
     const member = await prisma.weddingMember.findUnique({

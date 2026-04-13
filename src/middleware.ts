@@ -84,6 +84,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Mobile API requests carry X-Wedding-Id header instead of a cookie.
+  // Pass through to the API route — requireRole() validates the bearer token
+  // and weddingId membership in the Node.js runtime (Prisma available).
+  if (pathname.startsWith("/api/") && request.headers.get("X-Wedding-Id")) {
+    return NextResponse.next();
+  }
+
   // Step 2: verify signed weddingId cookie
   const cookieValue = request.cookies.get(COOKIE_NAME)?.value;
 
