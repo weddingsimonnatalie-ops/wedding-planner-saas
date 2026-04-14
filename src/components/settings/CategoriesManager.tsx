@@ -230,7 +230,7 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
             (entityType === "planning" && (editAllocated[cat.id] ?? "") !== (cat.allocatedAmount != null ? String(cat.allocatedAmount) : ""));
 
           return (
-            <div key={cat.id} className="flex items-center gap-2 py-1.5 border-b border-gray-100 last:border-0">
+            <div key={cat.id} className="flex flex-wrap items-center gap-2 py-1.5 border-b border-gray-100 last:border-0">
               {/* Up/Down arrows */}
               <div className="flex flex-col gap-0.5">
                 <button
@@ -291,55 +291,58 @@ export function CategoriesManager({ entityType, apiBase }: Props) {
                 className="flex-1 min-w-0 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
               />
 
-              {/* Budget allocation (supplier only) */}
-              {entityType === "planning" && (
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <span className="text-xs text-gray-400">{currencySymbol}</span>
-                  <input
-                    type="number"
-                    value={editAllocated[cat.id] ?? ""}
-                    onChange={e => setEditAllocated(a => ({ ...a, [cat.id]: e.target.value }))}
-                    onKeyDown={e => e.key === "Enter" && isDirty && handleSaveRow(cat.id)}
-                    placeholder="Budget"
-                    className="w-24 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-              )}
+              {/* Row 2 on mobile: budget + active + save + delete */}
+              <div className="flex items-center gap-2 w-full sm:w-auto order-last sm:order-none">
+                {entityType === "planning" && (
+                  <div className="flex items-center gap-1 flex-1 sm:flex-none">
+                    <span className="text-xs text-gray-400">{currencySymbol}</span>
+                    <input
+                      type="number"
+                      value={editAllocated[cat.id] ?? ""}
+                      onChange={e => setEditAllocated(a => ({ ...a, [cat.id]: e.target.value }))}
+                      onKeyDown={e => e.key === "Enter" && isDirty && handleSaveRow(cat.id)}
+                      placeholder="Budget"
+                      className="flex-1 sm:flex-none px-2 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+                      style={{ minWidth: '4rem', width: `${Math.max(4, (editAllocated[cat.id] ?? "").length) + 3}ch` }}
+                    />
+                  </div>
+                )}
 
-              {/* Active toggle */}
-              <button
-                onClick={() => handleToggleActive(cat)}
-                className={`text-xs px-2 py-0.5 rounded-full border transition-colors flex-shrink-0 ${
-                  cat.isActive
-                    ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                    : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100"
-                }`}
-                title={cat.isActive ? "Click to disable" : "Click to enable"}
-              >
-                {cat.isActive ? "Active" : "Inactive"}
-              </button>
-
-              {/* Save button */}
-              {isDirty && (
+                {/* Active toggle */}
                 <button
-                  onClick={() => handleSaveRow(cat.id)}
-                  disabled={saving[cat.id]}
-                  className="flex items-center gap-1 px-2.5 py-1 bg-primary text-white rounded-lg text-xs font-medium disabled:opacity-50 flex-shrink-0"
+                  onClick={() => handleToggleActive(cat)}
+                  className={`text-xs px-2 py-0.5 rounded-full border transition-colors flex-shrink-0 ${
+                    cat.isActive
+                      ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                      : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100"
+                  }`}
+                  title={cat.isActive ? "Click to disable" : "Click to enable"}
                 >
-                  <Save className="w-3 h-3" />
-                  {saving[cat.id] ? "Saving…" : "Save"}
+                  {cat.isActive ? "Active" : "Inactive"}
                 </button>
-              )}
 
-              {/* Delete button */}
-              <button
-                onClick={() => handleDeleteClick(cat)}
-                disabled={categories.length <= 1}
-                className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 disabled:opacity-20 disabled:cursor-not-allowed"
-                title={categories.length <= 1 ? "Cannot delete the last category" : "Delete"}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+                {/* Save button */}
+                {isDirty && (
+                  <button
+                    onClick={() => handleSaveRow(cat.id)}
+                    disabled={saving[cat.id]}
+                    className="flex items-center gap-1 px-2.5 py-1 bg-primary text-white rounded-lg text-xs font-medium disabled:opacity-50 flex-shrink-0"
+                  >
+                    <Save className="w-3 h-3" />
+                    {saving[cat.id] ? "Saving…" : "Save"}
+                  </button>
+                )}
+
+                {/* Delete button */}
+                <button
+                  onClick={() => handleDeleteClick(cat)}
+                  disabled={categories.length <= 1}
+                  className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 disabled:opacity-20 disabled:cursor-not-allowed"
+                  title={categories.length <= 1 ? "Cannot delete the last category" : "Delete"}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           );
         })}
