@@ -10,7 +10,7 @@ import { MobileMenu } from "@/components/MobileMenu";
 import {
   LayoutDashboard, Users, LayoutGrid, Briefcase, Settings,
   Heart, LogOut, User, X, CalendarCheck, CreditCard,
-  Clock, PiggyBank, Music, Lock,
+  Clock, PiggyBank, Music, Lock, ArrowLeftRight,
 } from "lucide-react";
 import { UserRole, SubStatus } from "@prisma/client";
 import { fetchApi } from "@/lib/fetch";
@@ -33,10 +33,11 @@ const allNavItems = [
 interface LayoutShellProps {
   user?: { name?: string | null; email?: string | null; role?: UserRole };
   failedLoginCount?: number;
+  weddingCount?: number;
   children: React.ReactNode;
 }
 
-export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShellProps) {
+export function LayoutShell({ user, failedLoginCount = 0, weddingCount = 1, children }: LayoutShellProps) {
   const role = user?.role ?? "ADMIN";
   const { subscriptionStatus } = useWedding();
   const isFree = subscriptionStatus === "FREE";
@@ -157,6 +158,15 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
               </div>
               <span className="hidden sm:block">{user?.name ?? user?.email ?? "User"}</span>
             </Link>
+            {weddingCount > 1 && (
+              <Link
+                href="/select-wedding"
+                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors px-2 py-1.5 min-h-[44px] rounded-lg hover:bg-gray-100"
+              >
+                <ArrowLeftRight className="w-3.5 h-3.5" />
+                <span className="hidden sm:block">Switch Wedding</span>
+              </Link>
+            )}
             <button
               onClick={async () => { await signOut(); window.location.href = "/login"; }}
               className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors px-2 py-1.5 min-h-[44px] rounded-lg hover:bg-gray-100"
@@ -210,6 +220,7 @@ export function LayoutShell({ user, failedLoginCount = 0, children }: LayoutShel
         user={user}
         plannerBadge={plannerBadge}
         paymentBadge={paymentBadge}
+        weddingCount={weddingCount}
       />
     </div>
   );

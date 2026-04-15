@@ -14,7 +14,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const ctx = await getServerContext();
   if (!ctx) redirect("/login");
 
-  const [failedLoginCount, weddingBilling] = await Promise.all([
+  const [failedLoginCount, weddingBilling, weddingCount] = await Promise.all([
     ctx.userEmail
       ? prisma.loginAttempt.count({
           where: {
@@ -45,6 +45,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         rehearsalDinnerMealsEnabled: true,
       },
     }),
+    prisma.weddingMember.count({ where: { userId: ctx.userId } }),
   ]);
 
   // Subscription gate — redirect lapsed PAST_DUE users (past their billing period end) to billing/suspended
@@ -98,7 +99,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               currentPeriodEnd={weddingBilling.currentPeriodEnd}
             />
           )}
-          <LayoutShell user={user} failedLoginCount={failedLoginCount}>
+          <LayoutShell user={user} failedLoginCount={failedLoginCount} weddingCount={weddingCount}>
             <InactivityTimer />
             {children}
           </LayoutShell>
