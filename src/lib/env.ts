@@ -25,6 +25,7 @@ interface EnvConfig {
   // Optional
   redisUrl?: string;
   resendApiKey?: string;
+  seatingAppUrl?: string;
 }
 
 let config: EnvConfig | null = null;
@@ -42,11 +43,15 @@ export function getEnvConfig(): EnvConfig {
   // Optional: Resend (email sending)
   const resendApiKey = getEnv("RESEND_API_KEY");
 
+  // Optional: Seating visual tools app URL (for "Open Visual Tools" link)
+  const seatingAppUrl = getEnv("NEXT_PUBLIC_SEATING_APP_URL");
+
   config = {
     nextauthSecret,
     nextauthUrl,
     redisUrl,
     resendApiKey,
+    seatingAppUrl,
   };
 
   return config;

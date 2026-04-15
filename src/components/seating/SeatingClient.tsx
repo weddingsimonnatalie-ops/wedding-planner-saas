@@ -1,26 +1,13 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import dynamic from "next/dynamic";
-import Link from "next/link";
+import { useState, useCallback } from "react";
 import { fetchApi } from "@/lib/fetch";
-import type { GuestSummary, TableWithGuests, Room, MealOptionSummary } from "@/lib/seating-types";
+import type { GuestSummary, TableWithGuests, MealOptionSummary } from "@/lib/seating-types";
 import { isReceptionEligible } from "@/lib/seating-types";
 import { SeatingListView } from "./SeatingListView";
-import { UserRole, Orientation } from "@prisma/client";
-
-// Lazy-loaded heavy views — only downloaded when the tab is first opened
-const PlanDesignerView = dynamic(
-  () => import("./PlanDesignerView").then((m) => ({ default: m.PlanDesignerView })),
-  { loading: () => <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Loading…</div> }
-);
-const SeatingVisualView = dynamic(
-  () => import("./SeatingVisualView").then((m) => ({ default: m.SeatingVisualView })),
-  { ssr: false }
-);
+import type { UserRole } from "@prisma/client";
 
 interface Props {
-  initialRoom: Room;
   initialTables: TableWithGuests[];
   initialUnassigned: GuestSummary[];
   mealOptions: MealOptionSummary[];
@@ -36,19 +23,16 @@ function sortGuests<T extends { seatNumber: number | null; lastName: string; fir
   });
 }
 
-export function SeatingClient({ initialRoom, initialTables, initialUnassigned, mealOptions, role }: Props) {
-  const canUseVisual = role === "ADMIN" || role === undefined;
-  const [tab, setTab] = useState<"list" | "visual" | "plan">("list");
+export function SeatingClient({ initialTables, initialUnassigned, mealOptions, role }: Props) {
+  const isAdmin = role === "ADMIN" || role === undefined;
   const [tables, setTables] = useState<TableWithGuests[]>(initialTables);
   const [unassigned, setUnassigned] = useState<GuestSummary[]>(initialUnassigned);
-  const [room, setRoom] = useState<Room>(initialRoom);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   // Shared print dropdown
   const [showPrintMenu, setShowPrintMenu] = useState(false);
-  // Floor plan from list view: switch to visual, trigger print, switch back
-  const [triggerFloorPrint, setTriggerFloorPrint] = useState(false);
-  const tabBeforePrint = useRef<"list" | null>(null);
+
+  const seatingAppUrl = process.env.NEXT_PUBLIC_SEATING_APP_URL;
 
   function showToast(msg: string, ok = true) {
     setToast({ msg, ok });
@@ -56,6 +40,8 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
   }
 
   // ── Shared print functions ──────────────────────────────────────────────────
+
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
   async function printPlaceCards() {
     const res = await fetchApi("/api/seating/print-data");
@@ -68,12 +54,12 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
     }
     const cards = allGuests.map((g) => `
       <div class="card">
-        <div class="name">${g.firstName} ${g.lastName}</div>
-        <div class="table-label">${g.tableName}</div>
+        <div class="name">${esc(g.firstName)} ${esc(g.lastName)}</div>
+        <div class="table-label">${esc(g.tableName)}</div>
         ${g.seatNumber != null ? `<div class="seat">Seat ${g.seatNumber}</div>` : ""}
-        ${g.mealChoiceName ? `<div class="meal">${g.mealChoiceName}</div>` : ""}
+        ${g.mealChoiceName ? `<div class="meal">${esc(g.mealChoiceName)}</div>` : ""}
       </div>`).join("");
-    const html = `<!DOCTYPE html><html><head><style>
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
       @media print { @page { size: A4; margin: 10mm; } }
       body { font-family: Georgia, serif; margin: 0; }
       .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8mm; padding: 8mm; }
@@ -100,14 +86,14 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
     const sections = (data.tables ?? []).map((t: any) => {
       const rows = (t.guests ?? []).map((g: any) => {
         const seat = g.seatNumber != null ? ` — Seat ${g.seatNumber}` : "";
-        const meal = g.mealChoiceName ? ` (${g.mealChoiceName})` : "";
-        const diet = g.dietaryNotes ? ` [${g.dietaryNotes}]` : "";
-        return `<div class="row"><span class="gname">${g.firstName} ${g.lastName}${seat}</span><span class="detail">${meal}${diet}</span></div>`;
+        const meal = g.mealChoiceName ? ` (${esc(g.mealChoiceName)})` : "";
+        const diet = g.dietaryNotes ? ` [${esc(g.dietaryNotes)}]` : "";
+        return `<div class="row"><span class="gname">${esc(g.firstName)} ${esc(g.lastName)}${seat}</span><span class="detail">${meal}${diet}</span></div>`;
       }).join("");
-      const tnotes = t.notes ? `<div class="tnotes">${t.notes}</div>` : "";
-      return `<div class="section"><div class="tname">${t.name} — ${t.guests.length}/${t.capacity}</div>${tnotes}${rows}</div>`;
+      const tnotes = t.notes ? `<div class="tnotes">${esc(t.notes)}</div>` : "";
+      return `<div class="section"><div class="tname">${esc(t.name)} — ${t.guests.length}/${t.capacity}</div>${tnotes}${rows}</div>`;
     }).join("");
-    const html = `<!DOCTYPE html><html><head><style>
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
       @media print { @page { size: A4; margin: 15mm; } }
       body { font-family: Arial, sans-serif; font-size: 10pt; margin: 0; }
       h1 { font-size: 16pt; margin: 0 0 4px; }
@@ -121,7 +107,7 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
       .detail { color: #777; font-style: italic; }
     </style></head><body>
       <h1>Seating Plan</h1>
-      ${subtitle ? `<p class="sub">${subtitle}</p>` : ""}
+      ${subtitle ? `<p class="sub">${esc(subtitle)}</p>` : ""}
       ${sections}
     </body></html>`;
     const win = window.open();
@@ -129,27 +115,6 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
     win.document.write(html);
     win.document.close();
     win.onload = () => win.print();
-  }
-
-  function handleFloorPlanPrint() {
-    setShowPrintMenu(false);
-    if (tab === "visual") {
-      // Already on visual — trigger directly via the prop
-      setTriggerFloorPrint(true);
-    } else {
-      // Switch to visual, remember we came from list
-      tabBeforePrint.current = "list";
-      setTab("visual");
-      setTriggerFloorPrint(true);
-    }
-  }
-
-  function handleFloorPrintDone() {
-    setTriggerFloorPrint(false);
-    if (tabBeforePrint.current) {
-      setTab(tabBeforePrint.current);
-      tabBeforePrint.current = null;
-    }
   }
 
   // Assign a guest to a table
@@ -220,7 +185,6 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
       body: JSON.stringify({ seatNumber }),
     });
     if (res.ok) {
-      // Update local table guest seatNumber
       setTables((prev) =>
         prev.map((t) => ({
           ...t,
@@ -241,18 +205,6 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
     await assignGuest(guestId, tableId);
     return assignSeat(guestId, seatNumber);
   }, [assignGuest, assignSeat]);
-
-  // Silent PATCH — updates local state + calls API, no toast
-  const patchTable = useCallback(async (tableId: string, updates: Partial<TableWithGuests>) => {
-    setTables((prev) =>
-      prev.map((t) => t.id === tableId ? { ...t, ...updates } : t)
-    );
-    await fetch(`/api/tables/${tableId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
-    });
-  }, []);
 
   // Update table properties (with toast)
   const updateTable = useCallback(async (tableId: string, updates: Partial<TableWithGuests>) => {
@@ -290,7 +242,7 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
   }, [tables]);
 
   // Create table
-  const createTable = useCallback(async (data: { name: string; shape: string; capacity: number; positionX?: number; positionY?: number; orientation?: Orientation }) => {
+  const createTable = useCallback(async (data: { name: string; shape: string; capacity: number }) => {
     const res = await fetch("/api/tables", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -308,162 +260,27 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
     }
   }, []);
 
-  // Update room
-  const updateRoom = useCallback(async (updates: Partial<Room & { elements: any[] }>) => {
-    const res = await fetch(`/api/rooms/${room.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setRoom((prev) => ({ ...prev, ...updated }));
-    } else {
-      showToast("Failed to save room", false);
-    }
-  }, [room.id]);
-
-  const persistElements = useCallback(async (elements: Room["elements"]) => {
-    setRoom((prev) => ({ ...prev, elements }));
-    const res = await fetch(`/api/rooms/${room.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ elements }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      if (Array.isArray(updated?.elements)) {
-        setRoom((prev) => ({ ...prev, elements: updated.elements }));
-      }
-    }
-  }, [room.id]);
-
-  // ── Plan Designer callbacks ──────────────────────────────────────────────────
-
-  const handlePlanCreateTable = useCallback(async (name: string, capacity: number, orientation: Orientation) => {
-    await createTable({
-      name,
-      shape: "RECTANGULAR",
-      capacity,
-      positionX: 50 + tables.length * 30,
-      positionY: 50 + tables.length * 30,
-      orientation,
-    });
-  }, [createTable, tables.length]);
-
-  const handlePlanDeleteTable = useCallback(async (tableId: string) => {
-    await deleteTable(tableId);
-  }, [deleteTable]);
-
-  const handlePlanUpdatePosition = useCallback(async (tableId: string, x: number, y: number) => {
-    await patchTable(tableId, { positionX: x, positionY: y });
-  }, [patchTable]);
-
-  const handlePlanUpdateOrientation = useCallback(async (tableId: string, orientation: Orientation) => {
-    await patchTable(tableId, { orientation });
-  }, [patchTable]);
-
-  const handlePlanAssignSeat = useCallback(async (tableId: string, seatNumber: number, guestId: string | null) => {
-    if (guestId === null) {
-      // Find the guest currently in this seat and remove them
-      const table = tables.find((t) => t.id === tableId);
-      const guest = table?.guests.find((g) => g.seatNumber === seatNumber);
-      if (guest) {
-        await removeGuest(guest.id, tableId);
-      }
-    } else {
-      // Check if guest is already on this table
-      const guest = unassigned.find((g) => g.id === guestId);
-      if (!guest) return;
-
-      // Check if guest is already assigned to a table (move from another table)
-      const currentTable = tables.find((t) => t.guests.some((g) => g.id === guestId));
-      if (currentTable && currentTable.id !== tableId) {
-        // Remove from current table first
-        await removeGuest(guestId, currentTable.id);
-      }
-
-      // If not on any table, assign to this table
-      const targetTable = tables.find((t) => t.id === tableId);
-      if (!targetTable) return;
-
-      // Check if guest already on this table (just changing seat)
-      const alreadyOnTable = targetTable.guests.some((g) => g.id === guestId);
-
-      if (!alreadyOnTable) {
-        // Assign guest to table first
-        await assignGuest(guestId, tableId);
-      }
-
-      // Now assign the seat number
-      await assignSeat(guestId, seatNumber);
-    }
-  }, [tables, unassigned, assignGuest, removeGuest, assignSeat]);
-
-  const handlePlanUpdateTableName = useCallback(async (tableId: string, name: string) => {
-    await patchTable(tableId, { name });
-  }, [patchTable]);
-
-  const handlePlanUpdateTableCapacity = useCallback(async (tableId: string, capacity: number) => {
-    await patchTable(tableId, { capacity });
-  }, [patchTable]);
-
-  const handlePlanUpdateTableNotes = useCallback(async (tableId: string, notes: string | null) => {
-    await patchTable(tableId, { notes });
-  }, [patchTable]);
-
-  const handlePlanDuplicateTable = useCallback(async (tableId: string) => {
-    const table = tables.find((t) => t.id === tableId);
-    if (!table) return;
-
-    await createTable({
-      name: `${table.name} - Copy`,
-      shape: table.shape,
-      capacity: table.capacity,
-      positionX: table.positionX + 20,
-      positionY: table.positionY + 20,
-      orientation: table.orientation,
-    });
-  }, [tables, createTable]);
-
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <h1 className="text-2xl font-semibold text-gray-900">Seating Planner</h1>
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Tab switcher */}
-          <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
-            <button
-              onClick={() => setTab("list")}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                tab === "list" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
-              }`}
+          {/* Open external visual tools app */}
+          {isAdmin && seatingAppUrl && (
+            <a
+              href={`${seatingAppUrl}/seating`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
             >
-              List View
-            </button>
-            {canUseVisual && (
-              <button
-                onClick={() => setTab("visual")}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  tab === "visual" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Visual View
-              </button>
-            )}
-            {canUseVisual && (
-              <button
-                onClick={() => setTab("plan")}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  tab === "plan" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Plan Designer
-              </button>
-            )}
-          </div>
+              Open Visual Tools
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          )}
 
-          {/* Shared print dropdown */}
+          {/* Print dropdown */}
           <div className="relative">
             <button
               onClick={() => setShowPrintMenu((v) => !v)}
@@ -473,19 +290,28 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
             </button>
             {showPrintMenu && (
               <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1 min-w-[170px]">
-                <Link
-                  href="/seating/print-designer"
-                  onClick={() => setShowPrintMenu(false)}
-                  className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
-                >
-                  📊 Chart Designer
-                </Link>
-                <button
-                  onClick={handleFloorPlanPrint}
-                  className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
-                >
-                  🗺 Floor Plan
-                </button>
+                {seatingAppUrl && (
+                  <a
+                    href={`${seatingAppUrl}/seating/print-designer`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowPrintMenu(false)}
+                    className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                  >
+                    📊 Chart Designer ↗
+                  </a>
+                )}
+                {seatingAppUrl && (
+                  <a
+                    href={`${seatingAppUrl}/seating`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowPrintMenu(false)}
+                    className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                  >
+                    🗺 Floor Plan ↗
+                  </a>
+                )}
                 <button
                   onClick={() => { printPlaceCards(); setShowPrintMenu(false); }}
                   className="block w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
@@ -505,59 +331,19 @@ export function SeatingClient({ initialRoom, initialTables, initialUnassigned, m
       </div>
 
       <div className="flex-1 min-h-0">
-        {tab === "visual" && (
-          <div className="md:hidden mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-            The visual floor plan is best viewed on a larger screen. Switch to list view to manage guest seating on mobile.
-          </div>
-        )}
-        {tab === "list" ? (
-          <SeatingListView
-            tables={tables}
-            unassigned={unassigned}
-            mealOptions={mealOptions}
-            onAssign={assignGuest}
-            onRemove={removeGuest}
-            onCreateTable={createTable}
-            onDeleteTable={deleteTable}
-            onUpdateTable={updateTable}
-            onAssignSeat={assignSeat}
-            onAssignWithSeat={assignGuestWithSeat}
-            readOnly={role !== "ADMIN" && role !== undefined}
-          />
-        ) : tab === "visual" ? (
-          <SeatingVisualView
-            room={room}
-            tables={tables}
-            unassigned={unassigned}
-            mealOptions={mealOptions}
-            onCreateTable={createTable}
-            onDeleteTable={deleteTable}
-            onPatchTable={patchTable}
-            onUpdateTable={updateTable}
-            onUpdateRoom={updateRoom}
-            onPersistElements={persistElements}
-            onAssignGuest={assignGuest}
-            onRemoveGuest={removeGuest}
-            onAssignSeat={assignSeat}
-            triggerFloorPrint={triggerFloorPrint}
-            onFloorPrintDone={handleFloorPrintDone}
-          />
-        ) : (
-          <PlanDesignerView
-            tables={tables}
-            unassigned={unassigned}
-            mealOptions={mealOptions}
-            onCreateTable={handlePlanCreateTable}
-            onDeleteTable={handlePlanDeleteTable}
-            onUpdateTablePosition={handlePlanUpdatePosition}
-            onUpdateTableOrientation={handlePlanUpdateOrientation}
-            onUpdateTableName={handlePlanUpdateTableName}
-            onUpdateTableCapacity={handlePlanUpdateTableCapacity}
-            onUpdateTableNotes={handlePlanUpdateTableNotes}
-            onDuplicateTable={handlePlanDuplicateTable}
-            onAssignSeat={handlePlanAssignSeat}
-          />
-        )}
+        <SeatingListView
+          tables={tables}
+          unassigned={unassigned}
+          mealOptions={mealOptions}
+          onAssign={assignGuest}
+          onRemove={removeGuest}
+          onCreateTable={createTable}
+          onDeleteTable={deleteTable}
+          onUpdateTable={updateTable}
+          onAssignSeat={assignSeat}
+          onAssignWithSeat={assignGuestWithSeat}
+          readOnly={role !== "ADMIN" && role !== undefined}
+        />
       </div>
 
       {toast && (

@@ -45,27 +45,6 @@ export interface TableWithGuests {
   guests: GuestSummary[];
 }
 
-export interface RoomElement {
-  id: string;
-  type: string;
-  label: string | null;
-  positionX: number;
-  positionY: number;
-  width: number;
-  height: number;
-  rotation: number;
-  color: string;
-  locked: boolean;
-}
-
-export interface Room {
-  id: string;
-  name: string;
-  widthMetres: number;
-  heightMetres: number;
-  elements: RoomElement[];
-}
-
 export interface MealOptionSummary {
   id: string;
   name: string;

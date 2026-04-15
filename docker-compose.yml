@@ -62,7 +62,10 @@ services:
     restart: "no"
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SEATING_APP_URL: ${NEXT_PUBLIC_SEATING_APP_URL:-}
     restart: unless-stopped
     ports:
       - "3001:3000"
@@ -130,6 +133,35 @@ services:
       ADMIN_INTERNAL_SECRET: ${ADMIN_INTERNAL_SECRET:-}
       # AI timeline generation (Ollama Cloud)
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      # Seating visual tools app URL (NEXT_PUBLIC — baked in at build time)
+      NEXT_PUBLIC_SEATING_APP_URL: ${NEXT_PUBLIC_SEATING_APP_URL:-}
+
+  # Seating visual tools app — shares the same DB and auth as the main app
+  seating:
+    build:
+      context: ../wedding-planner-saas-seating
+      args:
+        NEXT_PUBLIC_APP_URL: ${SEATING_NEXT_PUBLIC_APP_URL:-http://192.168.6.249:3002}
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    environment:
+      DATABASE_URL: postgresql://wedding:${DB_PASSWORD}@db:5432/wedding
+      DIRECT_DATABASE_URL: postgresql://wedding:${DB_PASSWORD}@db:5432/wedding
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: http://192.168.6.249:3002
+      NEXT_PUBLIC_APP_URL: http://192.168.6.249:3002
+      NEXT_PUBLIC_MAIN_APP_URL: http://192.168.6.249:3001
+      BETTER_AUTH_TRUSTED_ORIGINS: http://192.168.6.249:3001,http://192.168.6.249:3002
 
   cloudflared:
       image: cloudflare/cloudflared:latest

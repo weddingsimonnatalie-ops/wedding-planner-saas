@@ -222,29 +222,6 @@ export interface TableResponse {
   createdAt: Date;
 }
 
-export interface RoomElementResponse {
-  id: string;
-  roomId: string;
-  type: string;
-  label: string | null;
-  positionX: number;
-  positionY: number;
-  width: number;
-  height: number;
-  rotation: number;
-  color: string;
-  locked: boolean;
-}
-
-export interface RoomResponse {
-  id: string;
-  name: string;
-  widthMetres: number;
-  heightMetres: number;
-  tables: TableResponse[];
-  elements: RoomElementResponse[];
-}
-
 // =============================================================================
 // SETTINGS TYPES
 // =============================================================================
@@ -406,21 +383,3 @@ export interface TableUpdateBody {
   orientation?: Orientation;
 }
 
-export interface RoomElementInput {
-  type: string;
-  label?: string | null;
-  positionX: number;
-  positionY: number;
-  width?: number;
-  height?: number;
-  rotation?: number;
-  color?: string;
-  locked?: boolean;
-}
-
-export interface RoomUpdateBody {
-  name?: string;
-  widthMetres?: number;
-  heightMetres?: number;
-  elements?: RoomElementInput[];
-}

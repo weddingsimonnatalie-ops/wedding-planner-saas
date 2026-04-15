@@ -73,7 +73,6 @@ export default async function SeatingPage() {
   return (
     <div className="h-full flex flex-col">
       <SeatingClient
-        initialRoom={room as any}
         initialTables={room.tables as any}
         initialUnassigned={unassignedGuests}
         mealOptions={mealOptions}

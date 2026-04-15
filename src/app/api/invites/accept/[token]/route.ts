@@ -8,6 +8,8 @@ import { signWeddingCookie, COOKIE_NAME, MAX_AGE_SECONDS } from "@/lib/wedding-c
 import { checkRateLimit, extractIp } from "@/lib/rate-limit";
 import { handleDbError } from "@/lib/db-error";
 
+const INVITE_CLAIMED = "INVITE_ALREADY_CLAIMED";
+
 type Params = { params: Promise<{ token: string }> };
 
 export async function POST(req: NextRequest, { params }: Params): Promise<NextResponse> {
@@ -49,19 +51,18 @@ export async function POST(req: NextRequest, { params }: Params): Promise<NextRe
       // Existing user path: add them to the wedding
       const userId = session.user.id;
 
-      const existing = await prisma.weddingMember.findUnique({
-        where: { userId_weddingId: { userId, weddingId: invite.weddingId } },
-      });
-
-      if (!existing) {
-        await prisma.weddingMember.create({
-          data: { userId, weddingId: invite.weddingId, role: invite.role },
+      await prisma.$transaction(async (tx) => {
+        const claimResult = await tx.weddingInvite.updateMany({
+          where: { id: invite.id, usedAt: null },
+          data: { usedAt: new Date(), usedBy: userId },
         });
-      }
+        if (claimResult.count === 0) throw new Error(INVITE_CLAIMED);
 
-      await prisma.weddingInvite.update({
-        where: { id: invite.id },
-        data: { usedAt: new Date(), usedBy: userId },
+        await tx.weddingMember.upsert({
+          where: { userId_weddingId: { userId, weddingId: invite.weddingId } },
+          create: { userId, weddingId: invite.weddingId, role: invite.role },
+          update: {},
+        });
       });
 
       // Issue wedding cookie for the new wedding context
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest, { params }: Params): Promise<NextRe
         sameSite: "lax",
         maxAge: MAX_AGE_SECONDS,
         path: "/",
+        domain: process.env.COOKIE_DOMAIN || undefined,
       });
       return response;
     }
@@ -123,33 +125,39 @@ export async function POST(req: NextRequest, { params }: Params): Promise<NextRe
       );
     }
 
+    // Hash before entering the transaction — bcrypt is CPU-bound and holding a
+    // DB connection open during hashing wastes resources / risks tx timeout.
     const hashed = await bcrypt.hash(password, 10);
 
-    // Create User + Account
-    const newUser = await prisma.user.create({
-      data: {
-        name: name.trim(),
-        email: normalizedEmail,
-        accounts: {
-          create: {
-            providerId: "credential",
-            accountId: normalizedEmail,
-            password: hashed,
+    // Create User + Account, atomically claim the invite, and create WeddingMember.
+    // Using an interactive transaction ensures all three either commit or roll back together.
+    const newUser = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          name: name.trim(),
+          email: normalizedEmail,
+          accounts: {
+            create: {
+              providerId: "credential",
+              accountId: normalizedEmail,
+              password: hashed,
+            },
           },
         },
-      },
-    });
+      });
 
-    // Create WeddingMember and mark invite used in parallel
-    await Promise.all([
-      prisma.weddingMember.create({
-        data: { userId: newUser.id, weddingId: invite.weddingId, role: invite.role },
-      }),
-      prisma.weddingInvite.update({
-        where: { id: invite.id },
-        data: { usedAt: new Date(), usedBy: newUser.id },
-      }),
-    ]);
+      const claimResult = await tx.weddingInvite.updateMany({
+        where: { id: invite.id, usedAt: null },
+        data: { usedAt: new Date(), usedBy: created.id },
+      });
+      if (claimResult.count === 0) throw new Error(INVITE_CLAIMED);
+
+      await tx.weddingMember.create({
+        data: { userId: created.id, weddingId: invite.weddingId, role: invite.role },
+      });
+
+      return created;
+    });
 
     // Set wedding cookie so it's ready after the client signs in
     const cookieToken = await signWeddingCookie({ weddingId: invite.weddingId, role: invite.role });
@@ -160,9 +168,13 @@ export async function POST(req: NextRequest, { params }: Params): Promise<NextRe
       sameSite: "lax",
       maxAge: MAX_AGE_SECONDS,
       path: "/",
+      domain: process.env.COOKIE_DOMAIN || undefined,
     });
     return response;
   } catch (error) {
+    if (error instanceof Error && error.message === INVITE_CLAIMED) {
+      return NextResponse.json({ error: "This invite has already been used" }, { status: 410 });
+    }
     return handleDbError(error);
   }
 }

@@ -10,6 +10,8 @@ const publicPaths = [
   "/rsvp",
   "/invite",
   "/unsubscribe",
+  "/forgot-password",
+  "/reset-password",
   "/api/auth",
   "/api/register",
   "/api/rsvp",
@@ -18,6 +20,8 @@ const publicPaths = [
   "/api/inngest",
   "/api/invites/accept",
   "/api/auth/session-check",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
   "/api/internal",
 ];
 
@@ -124,6 +128,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!login|rsvp|unsubscribe|api/auth|api/register|api/rsvp|api/health|api/webhooks|api/inngest|api/internal|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|register|rsvp|unsubscribe|forgot-password|reset-password|api/auth|api/register|api/rsvp|api/health|api/webhooks|api/inngest|api/internal|_next/static|_next/image|favicon.ico).*)",
   ],
 };
