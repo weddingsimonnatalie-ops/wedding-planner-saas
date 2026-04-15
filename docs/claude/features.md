@@ -220,62 +220,7 @@ Three roles defined in the `UserRole` Prisma enum:
 - Seat badges: click to open inline seat selector; taken seats show occupant name and are disabled
 - Empty seats footer: lists specific unoccupied seat numbers when any seats are numbered, otherwise shows count
 
-**Visual view**
-- react-konva `Stage` with draggable/resizable/rotatable tables and room elements
-- `SeatingVisualView` is dynamically imported with `ssr: false` (Konva requires `window`/`document`)
-- Konva `Transformer` handles resize (8 handles) and rotation natively
-- Scale normalisation: `transformEnd` resets `scaleX/Y` to 1 and writes new `width`/`height` to DB via PATCH
-- Tables rendered as `Circle` / `Rect` / `Ellipse` matching shape; round and oval tables keep aspect ratio
-- Seat positions drawn around table perimeter (algorithmically distributed per shape)
-  - Click empty seat → opens seat assignment popup (HTML overlay, positioned via world→screen transform accounting for rotation)
-  - Click occupied seat → move or remove seat assignment
-- Guest names shown on seat circles at 150%+ zoom
-- Snap-to-grid (toggle, 10/20/40 px dot grid), undo/redo (Ctrl+Z, 50-step history)
-- Multi-select: drag rectangle or Shift+click; move multiple objects together
-- Align and distribute tools
-- Table colour coding with 12 presets
-- Properties panel syncs with canvas selection; includes shape dropdown, capacity warning, and notes textarea (saves on blur via PATCH); guest list in properties panel sorted by seat number ascending (nulls last), then lastName, firstName
-- Right-click context menu: lock/unlock/delete
-- Table `colour`, `width`, `height`, `locked`, `notes` stored in DB; RoomElement `locked` stored in DB
-- Tables with notes show a ℹ icon in the top-right corner on the canvas
-
-**Plan Designer view** (third tab)
-- Excel-style grid tables for designing printed seating plans
-- Tables rendered as blocks with header row (table name + guest count) and seat rows (seat number + guest name)
-- Horizontal orientation: seats as columns, guests in single row below
-- Vertical orientation: seats as rows, guest names in second column
-- **Canvas controls**:
-  - Zoom: mouse wheel or +/- buttons (0.25x to 3x)
-  - Pan: Space + drag canvas, or arrow navigation buttons
-  - Fit All button: auto-zoom to fit all tables in view
-  - Grid snap: toggle with 10/20/50px options
-- **Drag & drop**:
-  - Drag tables to reposition (debounced API update)
-  - Collision detection: red border on overlapping tables
-  - Multi-select: Shift+click to select multiple tables, drag all together
-- **Table management**:
-  - Add table: modal with name, capacity, orientation (H/V)
-  - Delete table: button with confirmation (unassigns all guests)
-  - Inline rename: double-click table name header
-  - Toggle orientation: H/V badge button
-  - Duplicate table: creates copy with "- Copy" suffix
-  - Undo/redo: Ctrl+Z / Ctrl+Shift+Z (50-step history)
-- **Seat assignment**:
-  - Click seat → modal with unassigned guests list
-  - Search unassigned guests by name
-  - Tabs: Unassigned / All Guests / On Other Tables
-  - Drag guest from unassigned list directly to seat
-  - Conflict handling: swap/replace options when dropping on occupied seat
-- **Print** button opens modal with:
-  - Portrait/Landscape orientation selection
-  - Font size slider (6-16px)
-  - Spacing slider (Compact to Extra Spacious — spreads tables from center)
-  - Show last names toggle (checked by default)
-  - Show meals toggle (unchecked by default) — displays meal choice in a separate row below guest names (horizontal orientation) or inline to the right (vertical orientation); horizontal tables automatically increase in height to accommodate the meal row
-  - Output: styled HTML matching visual layout, scaled to fit one page
-- **Dark mode**: toggle button, persisted to localStorage
-- `Table.orientation` field (HORIZONTAL/VERTICAL) stored in DB
-- Components: `src/components/seating/PlanDesignerView.tsx`, `src/components/seating/PlanTableBlock.tsx`
+**Visual view, Plan Designer, and Print Designer** have been extracted to a separate app (`/Users/simonblythe/wedding-root/wedding-planner-saas-seating/`). See Section 3 of CLAUDE.md for details.
 
 **Seating filter rules**
 - Unassigned panel only shows guests with `invitedToReception=true AND attendingReception≠false`
@@ -289,22 +234,6 @@ Three roles defined in the `UserRole` Prisma enum:
 - If no seats are available, displaced guests are unassigned (moved back to the unassigned list)
 
 **Known limitation**: The seating planner assumes one room (auto-created on first visit). The data model supports multiple rooms but the UI only shows one.
-
-## Print Designer (`/seating/print-designer`)
-
-- Dedicated page for designing printable seating chart posters
-- Accessible from Seating → Print ▾ → Chart Designer
-- **Settings panel** (left side):
-  - Orientation: Horizontal (landscape) or Vertical (portrait)
-  - Paper size: A4 or Letter
-  - Columns per page: 2 / 3 / 4 (horizontal layout only)
-  - Font size: Small / Medium / Large
-  - Display options: Show seat numbers, Show last names, Show meal choices
-- **Preview area** (right side): Live preview of the layout before printing
-- **Print button**: Opens styled HTML in new window for printing
-- Table blocks show: table name, guest count/capacity, guest names with optional seat numbers and meal choices
-- Page breaks handled with `break-inside: avoid` CSS
-- Components: `src/components/seating/PrintDesigner.tsx`, `src/components/seating/PrintTableBlock.tsx`
 
 ## Suppliers (`/suppliers`, `/suppliers/[id]`)
 

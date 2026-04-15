@@ -1,12 +1,19 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache openssl
+
+# NEXT_PUBLIC_* vars are inlined at build time, not runtime.
+# Pass them as build args so they're available during next build.
+ARG NEXT_PUBLIC_SEATING_APP_URL=""
 COPY package*.json ./
 RUN npm ci
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache openssl
+
+ARG NEXT_PUBLIC_SEATING_APP_URL=""
+ENV NEXT_PUBLIC_SEATING_APP_URL=$NEXT_PUBLIC_SEATING_APP_URL
 
 # Copy deps first for better caching
 COPY --from=deps /app/node_modules ./node_modules

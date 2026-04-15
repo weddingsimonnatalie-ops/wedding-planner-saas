@@ -77,16 +77,11 @@ Appointment reminders have two mechanisms: the tsx daemon (always runs locally) 
 
 When accessed via a Cloudflare Tunnel the `Host` header differs from `NEXTAUTH_URL`. Set `NEXTAUTH_URL` in `.env` to the **public** Cloudflare Tunnel domain (e.g. `https://wedding.yourdomain.com`) — this is what Better Auth uses to validate redirect URLs and build RSVP email links. Without this, auth redirects break.
 
-## react-konva SSR workaround
+## Seating visual tools — separate app
 
-Konva requires `window` and `document` — it crashes on Next.js server-side rendering. `SeatingVisualView` is dynamically imported in `SeatingClient` with `{ ssr: false }`. Do not remove this or move `SeatingVisualView` to a server component.
+The Visual View, Plan Designer, and Print Designer have been extracted to a separate Next.js app (`/Users/simonblythe/wedding-root/wedding-planner-saas-seating/`). The main SaaS app retains only the list view (`SeatingListView.tsx`) and print place cards/seating list (`SeatingClient.tsx`). Users access the visual tools via an "Open Visual Tools" button that links to `seating.ourvowstory.com`.
 
-Konva's Node.js build also references the `canvas` npm package (for server-side rendering support it doesn't use here). This causes a webpack build error. Fixed in `next.config.js` by marking `canvas` as a webpack external:
-```js
-config.externals = [...config.externals, { canvas: "canvas" }]
-```
-
-**Note:** Because of the custom webpack config, the build script uses `--webpack` flag (`next build --webpack`). Dev uses `--turbopack` flag for faster local development. Do not remove the `--webpack` flag from the build script.
+The separate app shares the same PostgreSQL database and auth system — no cross-origin API calls are needed.
 
 ## middleware.ts — do not rename to proxy.ts
 
@@ -94,7 +89,7 @@ Better Auth requires Edge runtime, which is not supported by Next.js 16's `proxy
 
 ## `randomId()` helper instead of `crypto.randomUUID()`
 
-`crypto.randomUUID()` is only available in secure contexts (HTTPS / localhost). The seating visual view generates client-side temporary element IDs before they get real DB IDs. A custom `randomId()` using `Math.random()` is used instead so the app works over plain HTTP (e.g. local IP access).
+`crypto.randomUUID()` is only available in secure contexts (HTTPS / localhost). The seating app (separate repo) generates client-side temporary element IDs before they get real DB IDs. A custom `randomId()` using `Math.random()` is used instead so the app works over plain HTTP (e.g. local IP access).
 
 ## PARTIAL rsvpStatus
 
@@ -202,12 +197,60 @@ export function invalidateCache(key: string): void;
 - Throws clear error messages for missing/invalid config
 - App fails fast with helpful error instead of cryptic runtime failure
 
+## Atomic check-and-claim pattern (invite acceptance)
+
+For operations where a token/resource must be claimed by exactly one concurrent request, use `updateMany` with a `usedAt: null` (or similar) guard inside an interactive transaction. The DB evaluates the predicate atomically; `count === 0` means another request already claimed it.
+
+```typescript
+const INVITE_CLAIMED = "INVITE_ALREADY_CLAIMED";
+
+const newUser = await prisma.$transaction(async (tx) => {
+  // ... create user ...
+
+  const claimResult = await tx.weddingInvite.updateMany({
+    where: { id: invite.id, usedAt: null },   // atomic guard
+    data: { usedAt: new Date(), usedBy: created.id },
+  });
+  if (claimResult.count === 0) throw new Error(INVITE_CLAIMED);
+
+  // ... create member ...
+  return created;
+});
+```
+
+Catch the sentinel before `handleDbError`:
+```typescript
+} catch (error) {
+  if (error instanceof Error && error.message === INVITE_CLAIMED) {
+    return NextResponse.json({ error: "This invite has already been used" }, { status: 410 });
+  }
+  return handleDbError(error);
+}
+```
+
+**Rules:**
+- Hash passwords (bcrypt) **before** entering the transaction — CPU-bound work must not hold a DB connection open
+- Use `upsert` with `update: {}` for idempotent member creation inside the transaction
+- Applied in `src/app/api/invites/accept/[token]/route.ts` for both existing-user and new-user paths
+
+## Password reset flow
+
+Implemented in `src/app/api/auth/forgot-password/route.ts` and `src/app/api/auth/reset-password/[token]/route.ts`.
+
+- Tokens: `randomBytes(32).toString("hex")` (256-bit); 1-hour expiry; stored in `PasswordResetToken` table (migration 20260414000000)
+- Rate limited: 10/IP/15min + 3/email/15min on forgot-password; 5/token/15min on reset
+- Unused tokens for the user are deleted before a new one is created (prevents accumulation)
+- Token mark-used and password update are atomic via `prisma.$transaction([...])` (sequential)
+- `invalidateUserSessions()` called immediately after reset — all sessions terminated
+- Forgot-password always returns `{ ok: true }` regardless of whether the email exists (prevents enumeration)
+- UI pages: `src/app/(auth)/forgot-password/page.tsx` and `src/app/(auth)/reset-password/page.tsx`
+
 ## API response types
 
 `src/types/api.ts` defines TypeScript interfaces for all API responses:
 - Entity types: `UserResponse`, `GuestResponse`, `SupplierResponse`, `PaymentResponse`, etc.
 - Pagination types: `PaginationMeta` (total, hasMore) extended by list responses
-- Request body types: `SupplierCreateBody`, `TableUpdateBody`, `RoomUpdateBody`, etc.
+- Request body types: `SupplierCreateBody`, `TableUpdateBody`, etc.
 - Used in API routes for type-safe request parsing
 - Ensures consistent response shapes across all endpoints
 

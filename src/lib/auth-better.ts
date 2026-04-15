@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 
 // Use NEXTAUTH_URL from .env - this should be set to your production URL in prod
 // Local: http://192.168.6.249:3000
-// Prod: https://planner.simon-natalie.com
+// Prod: https://app.ourvowstory.com
 const baseURL = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
 // Secret for signing session tokens
@@ -14,11 +14,23 @@ const baseURL = process.env.NEXTAUTH_URL || "http://localhost:3000";
 // Falls back to a build-time placeholder (runtime validation in env.ts ensures real secret is set)
 const secret = process.env.NEXTAUTH_SECRET || process.env.BETTER_AUTH_SECRET || "build-time-placeholder-do-not-use-in-production";
 
+// When COOKIE_DOMAIN is set (e.g. .ourvowstory.com), cookies are scoped to the
+// parent domain so they travel between app.ourvowstory.com and seating.ourvowstory.com.
+// Leave blank in local development so cookies default to localhost.
+const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+
 export const auth = betterAuth({
   baseURL,
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  advanced: {
+    defaultCookieAttributes: {
+      domain: cookieDomain,
+      sameSite: "lax",
+      secure: baseURL.startsWith("https://"),
+    },
+  },
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 days (matches next-auth default)
     updateAge: 60 * 60 * 24, // Update session every 24 hours

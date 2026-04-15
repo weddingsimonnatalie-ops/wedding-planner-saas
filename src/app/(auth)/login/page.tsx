@@ -94,9 +94,17 @@ function CredentialsStep({ onNeedsTotp, onDone }: Step1Props) {
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-          Password
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            Password
+          </label>
+          <a
+            href="/forgot-password"
+            className="text-xs text-gray-500 hover:text-gray-700 hover:underline"
+          >
+            Forgot password?
+          </a>
+        </div>
         <input
           id="password"
           type="password"
@@ -336,6 +344,13 @@ function LoginForm() {
     window.location.href = destination;
   }
 
+  const passwordResetBanner = reason === "password-reset" && (
+    <div className="flex items-start gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2.5 text-sm text-green-800 mb-4">
+      <span className="shrink-0 mt-0.5">✓</span>
+      <span>Your password has been reset. Please sign in with your new password.</span>
+    </div>
+  );
+
   const timeoutBanner = reason === "timeout" && (
     <div className="flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2.5 text-sm text-blue-800 mb-4">
       <span className="shrink-0 mt-0.5">ℹ</span>
@@ -370,6 +385,7 @@ function LoginForm() {
   if (step === "totp") {
     return (
       <>
+        {passwordResetBanner}
         {timeoutBanner}
         {verifiedBanner}
         {errorBanner}
@@ -386,6 +402,7 @@ function LoginForm() {
 
   return (
     <>
+      {passwordResetBanner}
       {timeoutBanner}
       {verifiedBanner}
       {errorBanner}

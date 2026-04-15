@@ -53,6 +53,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     sameSite: "lax",
     maxAge: MAX_AGE_SECONDS,
     path: "/",
+    domain: process.env.COOKIE_DOMAIN || undefined,
   });
 
   return response;

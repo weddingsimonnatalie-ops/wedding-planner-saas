@@ -11,7 +11,7 @@ A **self-hosted wedding planning web app** built for Simon and Natalie's persona
 ### What it does
 - Guest management with per-event invitations (ceremony, reception, afterparty) — Free Tier cap: 30 guests
 - Public RSVP page per guest (no login required) with per-event responses and meal choice
-- Seating planner with drag-and-drop list view and react-konva visual view
+- Seating planner with drag-and-drop list view; visual/plan/print tools in separate app
 - Supplier/vendor management with status tracking, payments, and file attachments — Free Tier cap: 30 suppliers
 - Budget tracking (contracted vs paid)
 - Appointment scheduler with email reminders
@@ -32,12 +32,11 @@ A **self-hosted wedding planning web app** built for Simon and Natalie's persona
 | ORM | Prisma 6 |
 | Auth | Better Auth (credentials provider, database sessions) |
 | UI | Tailwind CSS + lucide-react icons |
-| Drag-and-drop | @dnd-kit/core (seating list view) |
-| Seating canvas | react-konva + konva (visual view) |
+| Drag-and-drop | @dnd-kit/core (seating list view only) |
 | 2FA | otplib (TOTP) + bcryptjs (backup code hashing) |
 | Email | Resend SDK + he (HTML entity escaping) |
 | Cache | Redis 7 (rate limiting for multi-instance) |
-| Container | Docker Compose (three services: `app` + `db` + `redis`) |
+| Container | Docker Compose (four services: `app` + `seating` + `db` + `redis`) |
 
 ### How to run
 ```bash
@@ -54,7 +53,7 @@ docker compose logs -f app
 docker compose down
 ```
 
-The app runs on port **3001**. Access at `http://<host-ip>:3001` locally or via Cloudflare Tunnel publicly.
+The app runs on port **3001**. The seating visual tools app runs on port **3002**. Access at `http://<host-ip>:3001` locally or via Cloudflare Tunnel publicly.
 
 ---
 
@@ -62,7 +61,7 @@ The app runs on port **3001**. Access at `http://<host-ip>:3001` locally or via 
 
 ```
 wedding-planner-saas/
-├── docker-compose.yml         — Three services: app + db (postgres:16) + redis (redis:7-alpine)
+├── docker-compose.yml         — Four services: app + seating + db (postgres:16) + redis (redis:7-alpine)
 ├── Dockerfile                 — Multi-stage build: deps → builder → runner
 ├── entrypoint.sh              — Runs migrations, seed, reminder daemon, then next start
 ├── .env                       — All secrets and config (never commit this)
@@ -91,7 +90,7 @@ wedding-planner-saas/
 │   │   ├── env.ts             — validateEnv(): startup validation of required environment variables
 │   │   ├── rsvpStatus.ts      — calculateRsvpStatus() — ACCEPTED/PARTIAL/DECLINED/PENDING logic
 │   │   ├── stripe-sync.ts     — syncWeddingFromStripe() — recover from missed webhooks
-│   │   ├── seating-types.ts   — GuestSummary, TableWithGuests, Room, isReceptionEligible()
+│   │   ├── seating-types.ts   — GuestSummary, TableWithGuests, MealOptionSummary, isReceptionEligible()
 │   │   ├── totp.ts            — TOTP generate/verify + backup code helpers
 │   │   ├── csv.ts             — Guest CSV import/export
 │   │   ├── fetch.ts           — fetchApi(): GET fetches with cache: 'no-store' (use in all client components)
@@ -109,7 +108,7 @@ wedding-planner-saas/
 │   │   ├── (dashboard)/       — All authenticated pages (layout wraps with sidebar nav)
 │   │   │   ├── page.tsx       — Dashboard
 │   │   │   ├── guests/        — Guest list + [id]
-│   │   │   ├── seating/       — Seating planner + print-designer/
+│   │   │   ├── seating/       — Seating planner (list view only; visual tools in separate app)
 │   │   │   ├── suppliers/     — Supplier list + [id]
 │   │   │   ├── payments/      — Cross-supplier payments page
 │   │   │   ├── appointments/  — Appointment list
@@ -142,11 +141,9 @@ wedding-planner-saas/
 │       │   ├── SupplierModal.tsx
 │       │   └── SupplierDetail.tsx
 │       ├── seating/
-│       │   ├── SeatingClient.tsx        — State manager + assign/remove/delete logic
+│       │   ├── SeatingClient.tsx        — List view state manager + "Open Visual Tools" external link
 │       │   ├── SeatingListView.tsx
-│       │   ├── SeatingVisualView.tsx    — react-konva canvas (dynamically imported, ssr:false)
-│       │   ├── PrintDesigner.tsx
-│       │   └── PrintTableBlock.tsx
+│       │   └── MobileSeatSheet.tsx
 │       ├── timeline/
 │       │   ├── TimelineList.tsx
 │       │   ├── TimelineEventModal.tsx
@@ -164,7 +161,28 @@ wedding-planner-saas/
 
 ---
 
-## 3. Admin Console
+## 3. Seating Visual Tools App
+
+A separate Next.js app for the seating Visual View, Plan Designer, and Print Designer. It is a **different repository and app** — it shares the same PostgreSQL database and auth system.
+
+| | Path |
+|--|------|
+| **Seating app** | `/Users/simonblythe/wedding-root/wedding-planner-saas-seating/` |
+| **Seating app repo** | `github.com/weddingsimonnatalie-ops/wedding-planner-seating` (private) |
+
+### How it works
+- Users click "Open Visual Tools" in the main app → opens `seating.ourvowstory.com` in a new tab
+- Auth cookies (`better-auth.session_token` + `wedding_id`) are shared via `.ourvowstory.com` parent domain
+- Same `NEXTAUTH_SECRET` — sessions are valid in both apps
+- Same DB — tables, rooms, and guest data are read/written directly
+- Runs on port **3002** locally, `seating.ourvowstory.com` in production
+
+### Migration ownership
+**All migrations run from this repo only.** The seating app copies `prisma/schema.prisma` — it never runs `prisma migrate`.
+
+---
+
+## 4. Admin Console
 
 A separate Next.js 16 operator console for managing SaaS accounts. It is a **different repository and app** — never modify this SaaS app as part of admin console work.
 
@@ -182,7 +200,7 @@ The admin console shares this app's PostgreSQL database and S3 bucket, but conne
 
 ---
 
-## 4. Reference Docs
+## 5. Reference Docs
 
 @import docs/claude/architecture.md
 @import docs/claude/data-model.md

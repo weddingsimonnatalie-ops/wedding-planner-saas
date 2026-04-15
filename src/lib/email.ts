@@ -328,4 +328,55 @@ export async function sendInviteEmail(
   return sendEmail({ to, subject, html, text });
 }
 
+/**
+ * Send a password reset email to a user.
+ */
+export async function sendPasswordResetEmail(
+  userEmail: string,
+  resetToken: string
+): Promise<{ ok: boolean; message: string }> {
+  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const resetUrl = `${baseUrl}/reset-password/${resetToken}`;
+  // Rose accent matching the login page branding
+  const accentColor = "#e11d48";
+
+  const subject = "Reset your password — Wedding Planner";
+
+  const text = `We received a request to reset the password for your Wedding Planner account.
+
+Reset your password here: ${resetUrl}
+
+This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email.`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family: Georgia, serif; background: #f9f7f4; margin: 0; padding: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9f7f4; padding: 40px 16px;">
+    <tr><td align="center">
+      <table cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 8px; padding: 48px 40px; max-width: 520px; width: 100%;">
+        <tr><td style="text-align: center; padding-bottom: 32px; border-bottom: 1px solid #e5e0d8;">
+          <h1 style="font-size: 26px; color: #1a1a1a; margin: 0; font-weight: normal;">Wedding Planner</h1>
+        </td></tr>
+        <tr><td style="padding-top: 32px;">
+          <p style="font-size: 16px; color: #333; margin: 0 0 16px;">Hi there,</p>
+          <p style="font-size: 16px; color: #333; margin: 0 0 32px; line-height: 1.6;">We received a request to reset the password for your account. Click the button below to choose a new password.</p>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr><td align="center" style="padding-bottom: 32px;">
+              <a href="${safeUrl(resetUrl)}" style="display: inline-block; background: ${accentColor}; color: #ffffff; text-decoration: none; padding: 14px 48px; border-radius: 6px; font-size: 16px; font-weight: bold; letter-spacing: 0.5px;">Reset password</a>
+            </td></tr>
+          </table>
+          <p style="font-size: 13px; color: #aaa; margin: 0 0 6px;">Or copy this link:</p>
+          <p style="font-size: 13px; word-break: break-all; margin: 0 0 32px;"><a href="${safeUrl(resetUrl)}" style="color: ${accentColor};">${esc(resetUrl)}</a></p>
+          <p style="font-size: 13px; color: #888; margin: 0; border-top: 1px solid #e5e0d8; padding-top: 24px;">This link expires in 1 hour. If you didn&rsquo;t request a password reset, you can safely ignore this email.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  return sendEmail({ to: userEmail, subject, html, text });
+}
+
 export { generateVerificationToken };
