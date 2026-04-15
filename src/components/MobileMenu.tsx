@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import {
   LayoutDashboard, Users, LayoutGrid, Briefcase, Settings,
-  Heart, LogOut, User, CalendarCheck, CreditCard, Clock, PiggyBank,
+  Heart, LogOut, User, CalendarCheck, CreditCard, Clock, PiggyBank, ArrowLeftRight,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
 
@@ -17,6 +17,7 @@ interface MobileMenuProps {
   user?: { name?: string | null; email?: string | null; role?: UserRole };
   plannerBadge: number;
   paymentBadge: number;
+  weddingCount?: number;
 }
 
 const allNavItems = [
@@ -31,7 +32,7 @@ const allNavItems = [
   { href: "/settings",  label: "Settings",  icon: Settings,        roles: ["ADMIN"] as UserRole[] },
 ] as const;
 
-export function MobileMenu({ open, onClose, user, plannerBadge, paymentBadge }: MobileMenuProps) {
+export function MobileMenu({ open, onClose, user, plannerBadge, paymentBadge, weddingCount = 1 }: MobileMenuProps) {
   const pathname = usePathname();
   const role = user?.role ?? "ADMIN";
 
@@ -109,6 +110,16 @@ export function MobileMenu({ open, onClose, user, plannerBadge, paymentBadge }: 
             <User className="w-5 h-5 shrink-0" />
             <span>Profile</span>
           </Link>
+          {weddingCount > 1 && (
+            <Link
+              href="/select-wedding"
+              onClick={onClose}
+              className="flex items-center gap-3 px-3 py-3 rounded-xl text-base text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            >
+              <ArrowLeftRight className="w-5 h-5 shrink-0" />
+              <span>Switch Wedding</span>
+            </Link>
+          )}
           <button
             type="button"
             onClick={handleSignOut}
