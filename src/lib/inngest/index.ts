@@ -9,3 +9,4 @@ export { purgeExpiredWeddings } from "@/lib/inngest/functions/purge-expired-wedd
 export { preDeletionWarning } from "@/lib/inngest/functions/pre-deletion-warning";
 export { stripeReconcile } from "@/lib/inngest/functions/stripe-reconcile";
 export { stripeSyncDelayed } from "@/lib/inngest/functions/stripe-sync-delayed";
+export { purgeAuditLogs } from "@/lib/inngest/functions/purge-audit-logs";

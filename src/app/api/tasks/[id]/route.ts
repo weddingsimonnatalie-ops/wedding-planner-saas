@@ -1,15 +1,14 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth-better";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireRole, requireAdmin } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { withTenantContext } from "@/lib/tenant";
 import { apiJson } from "@/lib/api-response";
 import { validateFields } from "@/lib/validation";
-import { verifyWeddingCookieId, COOKIE_NAME } from "@/lib/wedding-cookie";
+import { handleDbError } from "@/lib/db-error";
 
-import { handleDbError } from "@/lib/db-error";const INCLUDE = {
+const INCLUDE = {
   category: { select: { id: true, name: true, colour: true } },
   assignedTo: { select: { id: true, name: true, email: true } },
   supplier: { select: { id: true, name: true } },
@@ -17,16 +16,12 @@ import { handleDbError } from "@/lib/db-error";const INCLUDE = {
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function GET(_req: NextRequest, { params }: Params) {
+export async function GET(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
-    const session = await auth.api.getSession({ headers: _req.headers });
-    if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const cookieValue = _req.cookies.get(COOKIE_NAME)?.value;
-    if (!cookieValue) return NextResponse.json({ error: "No wedding context" }, { status: 401 });
-    const weddingId = await verifyWeddingCookieId(cookieValue);
-    if (!weddingId) return NextResponse.json({ error: "Invalid wedding context" }, { status: 401 });
+    const auth = await requireRole(["ADMIN", "VIEWER"], req);
+    if (!auth.authorized) return auth.response;
+    const { weddingId } = auth;
 
     const task = await withTenantContext(weddingId, (tx) =>
       tx.task.findUnique({
@@ -71,23 +66,28 @@ export async function PUT(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: errors[0] }, { status: 400 });
     }
 
-    if (categoryId !== undefined && categoryId !== null) {
-        const category = await withTenantContext(weddingId, (tx) =>
-          tx.planningCategory.findFirst({ where: { id: categoryId, weddingId } })
-        );
-        if (!category) return NextResponse.json({ error: "Invalid categoryId" }, { status: 400 });
-    }
+    const [category, user, supplier] = await withTenantContext(weddingId, (tx) =>
+      Promise.all([
+        categoryId !== undefined && categoryId !== null
+          ? tx.planningCategory.findFirst({ where: { id: categoryId, weddingId } })
+          : null,
+        assignedToId !== undefined && assignedToId !== null
+          ? prisma.user.findUnique({ where: { id: assignedToId } })
+          : null,
+        supplierId !== undefined && supplierId !== null
+          ? tx.supplier.findUnique({ where: { id: supplierId, weddingId } })
+          : null,
+      ])
+    );
 
-    if (assignedToId !== undefined && assignedToId !== null) {
-        const user = await prisma.user.findUnique({ where: { id: assignedToId } });
-        if (!user) return NextResponse.json({ error: "Invalid assignedToId" }, { status: 400 });
+    if (categoryId !== undefined && categoryId !== null && !category) {
+      return NextResponse.json({ error: "Invalid categoryId" }, { status: 400 });
     }
-
-    if (supplierId !== undefined && supplierId !== null) {
-        const supplier = await withTenantContext(weddingId, (tx) =>
-          tx.supplier.findUnique({ where: { id: supplierId, weddingId } })
-        );
-        if (!supplier) return NextResponse.json({ error: "Invalid supplierId" }, { status: 400 });
+    if (assignedToId !== undefined && assignedToId !== null && !user) {
+      return NextResponse.json({ error: "Invalid assignedToId" }, { status: 400 });
+    }
+    if (supplierId !== undefined && supplierId !== null && !supplier) {
+      return NextResponse.json({ error: "Invalid supplierId" }, { status: 400 });
     }
 
     const task = await withTenantContext(weddingId, (tx) =>

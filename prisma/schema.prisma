@@ -405,6 +405,7 @@ model Supplier {
   updatedAt        DateTime          @updatedAt
 
   @@index([weddingId])
+  @@index([weddingId, status])
 }
 
 // --- APPOINTMENTS ---
@@ -457,6 +458,7 @@ model Payment {
 
   @@index([weddingId])
   @@index([status, dueDate])
+  @@index([weddingId, status, dueDate])
 }
 
 enum PaymentStatus {
@@ -527,6 +529,7 @@ model Task {
 
   @@index([weddingId])
   @@index([isCompleted, dueDate])
+  @@index([weddingId, isCompleted, dueDate])
   @@index([assignedToId])
   @@index([categoryId])
   @@index([supplierId])

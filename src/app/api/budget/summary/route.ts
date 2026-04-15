@@ -13,44 +13,44 @@ export async function GET(req: NextRequest) {
     const { weddingId } = auth;
 
     const result = await withTenantContext(weddingId, async (tx) => {
-      // Get wedding total budget
-      const wedding = await tx.wedding.findUnique({
-        where: { id: weddingId },
-        select: { totalBudget: true },
-      });
-
-      // Get all supplier categories with allocated amounts
-      const categories = await tx.planningCategory.findMany({
-        where: { weddingId, isActive: true },
-        orderBy: { sortOrder: "asc" },
-        select: {
-          id: true,
-          name: true,
-          colour: true,
-          allocatedAmount: true,
-          suppliers: {
-            select: {
-              contractValue: true,
-              payments: {
-                where: { status: "PAID" },
-                select: { amount: true },
+      const [wedding, categories, unallocatedSuppliers] = await Promise.all([
+        // Get wedding total budget
+        tx.wedding.findUnique({
+          where: { id: weddingId },
+          select: { totalBudget: true },
+        }),
+        // Get all supplier categories with allocated amounts
+        tx.planningCategory.findMany({
+          where: { weddingId, isActive: true },
+          orderBy: { sortOrder: "asc" },
+          select: {
+            id: true,
+            name: true,
+            colour: true,
+            allocatedAmount: true,
+            suppliers: {
+              select: {
+                contractValue: true,
+                payments: {
+                  where: { status: "PAID" },
+                  select: { amount: true },
+                },
               },
             },
           },
-        },
-      });
-
-      // Get suppliers without a category (unallocated)
-      const unallocatedSuppliers = await tx.supplier.findMany({
-        where: { weddingId, categoryId: null },
-        select: {
-          contractValue: true,
-          payments: {
-            where: { status: "PAID" },
-            select: { amount: true },
+        }),
+        // Get suppliers without a category (unallocated)
+        tx.supplier.findMany({
+          where: { weddingId, categoryId: null },
+          select: {
+            contractValue: true,
+            payments: {
+              where: { status: "PAID" },
+              select: { amount: true },
+            },
           },
-        },
-      });
+        }),
+      ]);
 
       // Calculate per-category breakdown
       const categoryBreakdown = categories.map((cat) => {
